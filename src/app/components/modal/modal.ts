@@ -1,0 +1,23 @@
+import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
+
+/** Generic modal dialog. Visibility is a two-way `model()`; content is projected. */
+@Component({
+  selector: 'app-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:keydown.escape)': 'open.set(false)' },
+  template: `
+    @if (open()) {
+      <div class="modal-backdrop" (click)="open.set(false)">
+        <div class="modal" [class.wide]="wide()" role="dialog" [attr.aria-label]="title()" (click)="$event.stopPropagation()">
+          <h3>{{ title() }}</h3>
+          <ng-content />
+        </div>
+      </div>
+    }
+  `,
+})
+export class Modal {
+  readonly title = input.required<string>();
+  readonly wide = input(false);
+  readonly open = model(false);
+}

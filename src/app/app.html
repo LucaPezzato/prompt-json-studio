@@ -1,0 +1,680 @@
+<header class="topbar">
+  <div class="brand">
+    <img src="favicon.svg" alt="" class="logo" />
+    <div>
+      <h1>Prompt JSON Studio</h1>
+      <span class="subtitle">AI Image Structured JSON Prompt Builder &amp; Multi-Model Compiler</span>
+    </div>
+  </div>
+
+  <div class="magic-bar">
+    <span class="magic-icon">✨</span>
+    <input
+      type="text"
+      placeholder="Magic Expand: scrivi un'idea sintetica e premi Invio…"
+      [value]="magicIdea()"
+      (input)="magicIdea.set($any($event.target).value)"
+      (keydown.enter)="runMagicExpand()"
+    />
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="magicLoading() || !magicIdea().trim()"
+      (click)="runMagicExpand()"
+    >
+      {{ magicLoading() ? 'Generazione…' : 'Espandi' }}
+    </button>
+    <button
+      type="button"
+      class="btn icon"
+      title="Impostazioni Assistente AI"
+      (click)="openAiSettings()"
+    >⚙</button>
+  </div>
+
+  <div class="top-actions">
+    <button type="button" class="btn ghost" (click)="resetPrompt()" title="Nuovo prompt vuoto">＋ Nuovo</button>
+    <button type="button" class="btn ghost" (click)="showImport.set(true)" title="Importa JSON">📥 Importa</button>
+    <button type="button" class="btn ghost" (click)="exportJsonFile()" title="Esporta JSON (Ctrl+S)">💾 Esporta</button>
+    <button type="button" class="btn accent" (click)="showSavePreset.set(true)">★ Salva preset</button>
+  </div>
+</header>
+
+<nav class="mobile-switch">
+  <button
+    type="button"
+    [class.active]="mobileView() === 'builder'"
+    (click)="mobileView.set('builder')"
+  >🧩 Builder</button>
+  <button
+    type="button"
+    [class.active]="mobileView() === 'output'"
+    (click)="mobileView.set('output')"
+  >{{ '{ }' }} Output</button>
+</nav>
+
+<main class="layout">
+  <!-- ============ SIDEBAR TEMPLATES ============ -->
+  <app-template-sidebar
+    [templates]="templates()"
+    (selected)="onTemplateSelected($event)"
+    (deleted)="onTemplateDeleted($event)"
+  />
+
+  <!-- ============ BUILDER CANVAS ============ -->
+  <section class="builder" [class.hidden-mobile]="mobileView() !== 'builder'">
+    <div class="title-row">
+      <input
+        class="title-input"
+        type="text"
+        placeholder="Titolo del prompt…"
+        [value]="spec().meta.title"
+        (input)="store.set('meta', 'title', $any($event.target).value)"
+      />
+    </div>
+
+    <!-- SUBJECT -->
+    <app-section-block
+      title="Soggetto principale"
+      icon="👤"
+      accent="#ff79c6"
+      [(open)]="sectionSubjectOpen"
+    >
+      <div class="grid-2">
+        <app-smart-field
+          class="span-2"
+          label="Entità principale"
+          placeholder="Es. giovane corriere cyberpunk, flacone di profumo, drago titanico…"
+          [value]="spec().subject.primary_entity"
+          (valueChange)="store.set('subject', 'primary_entity', $event)"
+        />
+        <app-smart-field
+          class="span-2"
+          label="Descrizione dettagliata"
+          [multiline]="true"
+          placeholder="Tratti fisici, espressioni, età, dettagli unici…"
+          [value]="spec().subject.description"
+          (valueChange)="store.set('subject', 'description', $event)"
+        />
+        <app-smart-field
+          label="Posa / Azione"
+          placeholder="Cosa sta facendo il soggetto?"
+          [value]="spec().subject.pose_or_action"
+          (valueChange)="store.set('subject', 'pose_or_action', $event)"
+        />
+        <app-smart-field
+          label="Espressione / Mood"
+          placeholder="Focused, intense, serene, menacing…"
+          [value]="spec().subject.expression_or_mood"
+          (valueChange)="store.set('subject', 'expression_or_mood', $event)"
+        />
+        <app-smart-field
+          label="Abbigliamento / Materiali"
+          placeholder="Giacca techwear cromata, tessuto grezzo, ottone spazzolato…"
+          [value]="spec().subject.clothing_or_materials"
+          (valueChange)="store.set('subject', 'clothing_or_materials', $event)"
+        />
+        <app-smart-field
+          label="Posizione nel frame"
+          category="placement"
+          [value]="spec().subject.placement"
+          (valueChange)="store.set('subject', 'placement', $event)"
+        />
+      </div>
+
+      <!-- Additional subjects -->
+      <div class="sub-list">
+        @for (s of spec().additional_subjects; track s.id) {
+          <div class="sub-item">
+            <input
+              type="text"
+              placeholder="Elemento secondario"
+              [value]="s.entity"
+              (input)="store.updateSecondarySubject(s.id, 'entity', $any($event.target).value)"
+            />
+            <input
+              type="text"
+              placeholder="Dettagli"
+              [value]="s.details"
+              (input)="store.updateSecondarySubject(s.id, 'details', $any($event.target).value)"
+            />
+            <input
+              type="text"
+              placeholder="Posizione"
+              [value]="s.placement"
+              (input)="store.updateSecondarySubject(s.id, 'placement', $any($event.target).value)"
+            />
+            <button
+              type="button"
+              class="chip-x big"
+              title="Rimuovi"
+              (click)="store.removeSecondarySubject(s.id)"
+            >×</button>
+          </div>
+        }
+        <button type="button" class="btn dashed" (click)="store.addSecondarySubject()">
+          ＋ Aggiungi soggetto o elemento secondario
+        </button>
+      </div>
+    </app-section-block>
+
+    <!-- SCENE -->
+    <app-section-block
+      title="Scena &amp; Ambiente"
+      icon="🏞️"
+      accent="#50fa7b"
+      [(open)]="sectionSceneOpen"
+    >
+      <div class="grid-2">
+        <app-smart-field
+          class="span-2"
+          label="Ambiente / Location"
+          placeholder="Vicolo di Neo-Tokyo, cattedrale gotica diroccata, set fotografico tabletop…"
+          [value]="spec().scene.environment"
+          (valueChange)="store.set('scene', 'environment', $event)"
+        />
+        <app-smart-field
+          class="span-2"
+          label="Dettagli sfondo"
+          [multiline]="true"
+          placeholder="Cavi elettrici sospesi, pozzanghere riflettenti, vapore che sale dai tombini…"
+          [value]="spec().scene.background_details"
+          (valueChange)="store.set('scene', 'background_details', $event)"
+        />
+        <app-smart-field
+          label="Momento del giorno"
+          category="time_of_day"
+          [value]="spec().scene.time_of_day"
+          (valueChange)="store.set('scene', 'time_of_day', $event)"
+        />
+        <app-smart-field
+          label="Atmosfera / Meteo"
+          category="atmosphere_weather"
+          [value]="spec().scene.atmosphere_weather"
+          (valueChange)="store.set('scene', 'atmosphere_weather', $event)"
+        />
+      </div>
+    </app-section-block>
+
+    <!-- CAMERA -->
+    <app-section-block
+      title="Camera &amp; Ottica"
+      icon="📷"
+      accent="#8be9fd"
+      [(open)]="sectionCameraOpen"
+    >
+      <div class="grid-2">
+        <app-smart-field
+          label="Tipo di inquadratura"
+          category="shot_type"
+          [value]="spec().camera.shot_type"
+          (valueChange)="store.set('camera', 'shot_type', $event)"
+        />
+        <app-smart-field
+          label="Angolo di ripresa"
+          category="camera_angle"
+          [value]="spec().camera.angle"
+          (valueChange)="store.set('camera', 'angle', $event)"
+        />
+        <app-smart-field
+          label="Obiettivo / Lunghezza focale"
+          category="lens_focal_length"
+          [value]="spec().camera.lens_focal_length"
+          (valueChange)="store.set('camera', 'lens_focal_length', $event)"
+        />
+        <app-smart-field
+          label="Apertura / Profondità di campo"
+          category="aperture_depth_of_field"
+          [value]="spec().camera.aperture_depth_of_field"
+          (valueChange)="store.set('camera', 'aperture_depth_of_field', $event)"
+        />
+        <app-smart-field
+          class="span-2"
+          label="Corpo macchina / Pellicola"
+          category="camera_body_or_film"
+          [value]="spec().camera.camera_body_or_film"
+          (valueChange)="store.set('camera', 'camera_body_or_film', $event)"
+        />
+      </div>
+    </app-section-block>
+
+    <!-- LIGHTING -->
+    <app-section-block
+      title="Illuminazione &amp; Palette"
+      icon="💡"
+      accent="#f1fa8c"
+      [(open)]="sectionLightingOpen"
+    >
+      <div class="grid-2">
+        <app-smart-field
+          label="Luce principale (Key Light)"
+          category="key_light"
+          [value]="spec().lighting.key_light"
+          (valueChange)="store.set('lighting', 'key_light', $event)"
+        />
+        <app-smart-field
+          label="Luce secondaria / Ambientale (Fill)"
+          placeholder="Rimbalzo caldo sul pavimento bagnato, riverberi blu…"
+          [value]="spec().lighting.fill_or_ambient"
+          (valueChange)="store.set('lighting', 'fill_or_ambient', $event)"
+        />
+        <app-smart-field
+          label="Temperatura colore"
+          category="color_temperature"
+          [value]="spec().lighting.color_temperature"
+          (valueChange)="store.set('lighting', 'color_temperature', $event)"
+        />
+        <app-smart-field
+          label="Qualità delle ombre"
+          category="shadow_quality"
+          [value]="spec().lighting.shadow_quality"
+          (valueChange)="store.set('lighting', 'shadow_quality', $event)"
+        />
+
+        <div class="span-2 palette-box">
+          <label>Palette Colori (HEX)</label>
+          <div class="palette-row">
+            @for (c of spec().lighting.color_palette; track $index; let i = $index) {
+              <div class="color-item">
+                <input
+                  type="color"
+                  [value]="c"
+                  (input)="store.setColor(i, $any($event.target).value)"
+                />
+                <input
+                  type="text"
+                  class="hex"
+                  [value]="c"
+                  (input)="store.setColor(i, $any($event.target).value)"
+                />
+                <button
+                  type="button"
+                  class="chip-x"
+                  title="Rimuovi colore"
+                  (click)="store.removeColor(i)"
+                >×</button>
+              </div>
+            }
+            <button type="button" class="btn dashed small" (click)="store.addColor()">＋ Colore</button>
+          </div>
+          <div class="palette-presets">
+            @for (p of svc.colorPalettePresets; track p.name) {
+              <button
+                type="button"
+                class="palette-preset"
+                [title]="p.name"
+                (click)="store.setPalette(p.colors)"
+              >
+                @for (c of p.colors; track $index) {
+                  <span [style.background]="c"></span>
+                }
+                <em>{{ p.name }}</em>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    </app-section-block>
+
+    <!-- COMPOSITION -->
+    <app-section-block
+      title="Composizione &amp; Inquadratura"
+      icon="📐"
+      accent="#ffb86c"
+      [(open)]="sectionCompositionOpen"
+    >
+      <div class="grid-2">
+        <app-smart-field
+          label="Regola di inquadratura"
+          category="framing_rule"
+          [value]="spec().composition.framing_rule"
+          (valueChange)="store.set('composition', 'framing_rule', $event)"
+        />
+        <app-smart-field
+          label="Prospettiva"
+          category="perspective"
+          [value]="spec().composition.perspective"
+          (valueChange)="store.set('composition', 'perspective', $event)"
+        />
+        <app-smart-field
+          class="span-2"
+          label="Punto focale principale"
+          placeholder="Dove deve convergere lo sguardo dell'osservatore?"
+          [value]="spec().composition.focal_point"
+          (valueChange)="store.set('composition', 'focal_point', $event)"
+        />
+        <app-smart-field
+          class="span-2"
+          label="Elementi in primo piano (Foreground)"
+          placeholder="Ringhiera con gocce di pioggia sfuocate, rami di alberi…"
+          [value]="spec().composition.foreground_elements"
+          (valueChange)="store.set('composition', 'foreground_elements', $event)"
+        />
+      </div>
+    </app-section-block>
+
+    <!-- STYLE -->
+    <app-section-block
+      title="Stile &amp; Rendering"
+      icon="🎨"
+      accent="#bd93f9"
+      [(open)]="sectionStyleOpen"
+    >
+      <div class="grid-2">
+        <app-smart-field
+          label="Medium artistico"
+          category="medium"
+          [value]="spec().style_and_rendering.medium"
+          (valueChange)="store.set('style_and_rendering', 'medium', $event)"
+        />
+        <app-smart-field
+          label="Estetica / Movimento"
+          category="aesthetic"
+          [value]="spec().style_and_rendering.aesthetic"
+          (valueChange)="store.set('style_and_rendering', 'aesthetic', $event)"
+        />
+        <app-smart-field
+          class="span-2"
+          label="Color Grading"
+          category="color_grading"
+          [value]="spec().style_and_rendering.color_grading"
+          (valueChange)="store.set('style_and_rendering', 'color_grading', $event)"
+        />
+
+        <div class="span-2">
+          <label>Tag di Qualità &amp; Dettagli</label>
+          <div class="chips">
+            @for (tag of qualityTags(); track tag) {
+              <span
+                class="chip"
+                [class.active]="spec().style_and_rendering.quality_tags.includes(tag)"
+                (click)="store.toggleTag(tag)"
+              >
+                {{ spec().style_and_rendering.quality_tags.includes(tag) ? '✓ ' : '' }}{{ tag }}
+              </span>
+            }
+          </div>
+          <div class="inline-add">
+            <input
+              type="text"
+              placeholder="Aggiungi tag personalizzato…"
+              [value]="newCustomTag()"
+              (input)="newCustomTag.set($any($event.target).value)"
+              (keydown.enter)="addTag()"
+            />
+            <button type="button" class="btn small" (click)="addTag()">＋ Aggiungi</button>
+          </div>
+        </div>
+      </div>
+    </app-section-block>
+
+    <!-- TYPOGRAPHY -->
+    <app-section-block
+      title="Testo nell'immagine (Text-in-Image)"
+      icon="🔤"
+      accent="#ff5555"
+      [badge]="spec().typography.enabled ? 'Attivo' : null"
+      [(open)]="sectionTypographyOpen"
+    >
+      <div class="grid-2">
+        <label class="toggle span-2">
+          <input
+            type="checkbox"
+            [checked]="spec().typography.enabled"
+            (change)="store.set('typography', 'enabled', $any($event.target).checked)"
+          /> Includi testo tipografico esatto da renderizzare nell'immagine
+        </label>
+        @if (spec().typography.enabled) {
+          <app-smart-field
+            label="Testo esatto da mostrare"
+            placeholder="SECTOR 09, VERDANT N°4, COFFEE SHOP…"
+            [value]="spec().typography.exact_text"
+            (valueChange)="store.set('typography', 'exact_text', $event)"
+          />
+          <app-smart-field
+            label="Stile del font"
+            category="font_style"
+            [value]="spec().typography.font_style"
+            (valueChange)="store.set('typography', 'font_style', $event)"
+          />
+          <app-smart-field
+            class="span-2"
+            label="Posizionamento &amp; Materiale"
+            placeholder="Lettere al neon incise su insegna verticale, stampa a rilievo oro su carta cotone…"
+            [value]="spec().typography.placement_and_material"
+            (valueChange)="store.set('typography', 'placement_and_material', $event)"
+          />
+        }
+      </div>
+    </app-section-block>
+
+    <!-- TECHNICAL -->
+    <app-section-block
+      title="Parametri Tecnici"
+      icon="⚙️"
+      accent="#6272a4"
+      [(open)]="sectionTechnicalOpen"
+    >
+      <div class="grid-2">
+        <app-smart-field
+          label="Aspect Ratio"
+          category="aspect_ratio"
+          [value]="spec().technical_parameters.aspect_ratio"
+          (valueChange)="store.set('technical_parameters', 'aspect_ratio', $event)"
+        />
+        <div>
+          <label>Seed</label>
+          <div class="inline-add">
+            <input
+              type="number"
+              placeholder="Casuale (nessun seed)"
+              [value]="spec().technical_parameters.seed ?? ''"
+              (input)="store.set('technical_parameters', 'seed', $any($event.target).value ? +$any($event.target).value : null)"
+            />
+            <button type="button" class="btn small" title="Genera seed casuale" (click)="randomizeSeed()">🎲</button>
+            <button type="button" class="btn small" title="Rimuovi seed" (click)="store.set('technical_parameters', 'seed', null)">∅</button>
+          </div>
+        </div>
+        <app-smart-field
+          class="span-2"
+          label="Negative Prompt (cosa escludere)"
+          [multiline]="true"
+          placeholder="cartoon, anime, blurry, low resolution, bad anatomy, extra fingers, watermark…"
+          [value]="spec().technical_parameters.negative_prompt"
+          (valueChange)="store.set('technical_parameters', 'negative_prompt', $event)"
+        />
+        <div>
+          <label>Stylize (Midjourney --s): <b>{{ spec().technical_parameters.stylize }}</b></label>
+          <input
+            type="range"
+            min="0"
+            max="1000"
+            step="10"
+            [value]="spec().technical_parameters.stylize"
+            (input)="store.set('technical_parameters', 'stylize', +$any($event.target).value)"
+          />
+        </div>
+        <div>
+          <label>Chaos (Midjourney --c): <b>{{ spec().technical_parameters.chaos }}</b></label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            [value]="spec().technical_parameters.chaos"
+            (input)="store.set('technical_parameters', 'chaos', +$any($event.target).value)"
+          />
+        </div>
+        <label class="toggle span-2">
+          <input
+            type="checkbox"
+            [checked]="spec().technical_parameters.raw_mode"
+            (change)="store.set('technical_parameters', 'raw_mode', $any($event.target).checked)"
+          /> Raw Mode (--style raw per Midjourney, stile meno elaborato e più realistico)
+        </label>
+      </div>
+    </app-section-block>
+
+    <!-- CUSTOM PROPERTIES -->
+    <app-section-block
+      title="Elementi personalizzati extra"
+      icon="🧩"
+      accent="#50fa7b"
+      [badge]="spec().custom_properties.length || null"
+      [(open)]="sectionCustomOpen"
+    >
+      <p class="muted">
+        Aggiungi qualunque chiave/valore al JSON: in un blocco esistente (es. <code>camera.film_simulation</code>)
+        oppure come nuovo blocco alla radice (es. <code>character_consistency</code>, <code>brand_guidelines</code>).
+      </p>
+      @for (cp of spec().custom_properties; track cp.id) {
+        <div class="custom-row">
+          <select
+            [value]="cp.section"
+            (change)="store.updateCustomProperty(cp.id, 'section', $any($event.target).value)"
+          >
+            @for (s of customSections; track s.key) {
+              <option [value]="s.key">{{ s.label }}</option>
+            }
+          </select>
+          <input
+            type="text"
+            placeholder="Chiave (es. film_simulation)"
+            [value]="cp.key"
+            (input)="store.updateCustomProperty(cp.id, 'key', $any($event.target).value)"
+          />
+          <input
+            type="text"
+            placeholder="Valore (es. Classic Chrome)"
+            [value]="cp.value"
+            (input)="store.updateCustomProperty(cp.id, 'value', $any($event.target).value)"
+          />
+          <button
+            type="button"
+            class="chip-x big"
+            title="Rimuovi elemento"
+            (click)="store.removeCustomProperty(cp.id)"
+          >×</button>
+        </div>
+      }
+      <button type="button" class="btn dashed" (click)="store.addCustomProperty()">
+        ＋ Aggiungi proprietà personalizzata
+      </button>
+    </app-section-block>
+  </section>
+
+  <!-- ============ OUTPUT PANEL ============ -->
+  <app-output-panel
+    [class.hidden-mobile]="mobileView() !== 'output'"
+    [outputs]="compiledOutputs()"
+    [(tab)]="activeOutputTab"
+    (copy)="copyText($event)"
+  />
+</main>
+
+<!-- ============ MODALS ============ -->
+<!-- AI Settings Modal -->
+<app-modal title="⚙ Impostazioni Assistente AI" [(open)]="showSettings">
+  <p class="muted">
+    Senza API key, <b>Magic Expand</b> usa un analizzatore euristico offline. Se inserisci una chiave,
+    le chiamate partono direttamente dal tuo browser (salvata solo in <code>localStorage</code>).
+  </p>
+  <label>Provider</label>
+  <select [value]="aiProvider()" (change)="aiProvider.set($any($event.target).value)">
+    <option value="gemini">Google Gemini</option>
+    <option value="openai">OpenAI</option>
+    <option value="openrouter">OpenRouter</option>
+    <option value="ollama">Ollama (locale)</option>
+  </select>
+  <label>Modello</label>
+  <input
+    type="text"
+    placeholder="gemini-2.5-flash / gpt-4o-mini / llama3.2"
+    [value]="aiModel()"
+    (input)="aiModel.set($any($event.target).value)"
+  />
+  @if (aiProvider() === 'ollama') {
+    <label>URL Ollama locale</label>
+    <input
+      type="text"
+      placeholder="http://localhost:11434"
+      [value]="aiOllamaUrl()"
+      (input)="aiOllamaUrl.set($any($event.target).value)"
+    />
+  } @else {
+    <label>API Key</label>
+    <input
+      type="password"
+      placeholder="sk-... o AIza..."
+      [value]="aiApiKey()"
+      (input)="aiApiKey.set($any($event.target).value)"
+    />
+  }
+  <div class="modal-actions">
+    <button type="button" class="btn ghost" (click)="showSettings.set(false)">Annulla</button>
+    <button
+      type="button"
+      class="btn primary"
+      (click)="saveAiSettings()"
+    >Salva</button>
+  </div>
+</app-modal>
+
+<!-- Save Preset Modal -->
+<app-modal title="★ Salva come Preset" [(open)]="showSavePreset">
+  <label>Nome preset</label>
+  <input
+    type="text"
+    placeholder="Nome del preset…"
+    [value]="presetName()"
+    (input)="presetName.set($any($event.target).value)"
+  />
+  <label>Categoria</label>
+  <input
+    type="text"
+    [value]="presetCategory()"
+    (input)="presetCategory.set($any($event.target).value)"
+  />
+  <label>Descrizione breve</label>
+  <textarea
+    rows="2"
+    [value]="presetDescription()"
+    (input)="presetDescription.set($any($event.target).value)"
+  ></textarea>
+  <div class="modal-actions">
+    <button type="button" class="btn ghost" (click)="showSavePreset.set(false)">Annulla</button>
+    <button type="button" class="btn primary" (click)="savePreset()">Salva preset</button>
+  </div>
+</app-modal>
+
+<!-- Import JSON Modal -->
+<app-modal title="📥 Importa Prompt JSON" [wide]="true" [(open)]="showImport">
+  <p class="muted">
+    Incolla qualsiasi prompt JSON (anche esportato da ComfyUI o generato da GPT-4o / Midjourney).
+    Le proprietà standard verranno distribuite nei blocchi visivi e quelle sconosciute aggiunte come elementi personalizzati.
+  </p>
+  <textarea
+    rows="12"
+    class="mono"
+    placeholder='{ "subject": { "primary_entity": "..." }, ... }'
+    [value]="importText()"
+    (input)="importText.set($any($event.target).value)"
+  ></textarea>
+  <div class="modal-actions">
+    <label class="btn ghost file-btn">
+      📂 Carica da file .json
+      <input type="file" accept=".json,application/json" (change)="onImportFile($event)" hidden />
+    </label>
+    <button type="button" class="btn ghost" (click)="showImport.set(false)">Annulla</button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!importText().trim()"
+      (click)="applyImport()"
+    >Importa</button>
+  </div>
+</app-modal>
+
+<!-- Toast notification -->
+@if (toastMessage()) {
+  <div class="toast" role="status" aria-live="polite">{{ toastMessage() }}</div>
+}

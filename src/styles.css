@@ -1,0 +1,166 @@
+/* ===== Dracula design tokens ===== */
+:root {
+  --bg: #1e1f29;
+  --bg-2: #282a36;
+  --bg-3: #343746;
+  --line: #44475a;
+  --fg: #f8f8f2;
+  --muted: #8b93b8;
+  --comment: #6272a4;
+  --purple: #bd93f9;
+  --pink: #ff79c6;
+  --cyan: #8be9fd;
+  --green: #50fa7b;
+  --yellow: #f1fa8c;
+  --orange: #ffb86c;
+  --red: #ff5555;
+  --radius: 12px;
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 14px;
+}
+
+::selection { background: var(--purple); color: var(--bg); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
+
+code { font-family: var(--mono); color: var(--pink); font-size: 0.9em; }
+
+label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+input[type='text'], input[type='number'], input[type='password'], input:not([type]), textarea, select {
+  width: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+textarea { resize: vertical; line-height: 1.45; }
+textarea.mono { font-family: var(--mono); font-size: 12.5px; }
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(189, 147, 249, 0.18);
+}
+
+input[type='range'] { width: 100%; accent-color: var(--purple); }
+input[type='checkbox'] { accent-color: var(--green); width: 16px; height: 16px; }
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 8px 13px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.08s, background 0.15s, border-color 0.15s;
+  font-family: var(--font);
+}
+.btn:hover { border-color: var(--purple); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary { background: var(--purple); color: var(--bg); border-color: var(--purple); }
+.btn.primary:hover { background: #caa8fb; }
+.btn.accent { background: var(--pink); color: var(--bg); border-color: var(--pink); }
+.btn.ghost { background: transparent; }
+.btn.icon { padding: 8px 11px; }
+.btn.small { padding: 6px 10px; font-size: 12px; }
+.btn.dashed {
+  background: transparent;
+  border-style: dashed;
+  color: var(--muted);
+  width: 100%;
+  justify-content: center;
+  margin-top: 6px;
+}
+.btn.dashed.small { width: auto; margin: 0; }
+.btn.dashed:hover { color: var(--green); border-color: var(--green); }
+
+.mini-btn {
+  background: transparent;
+  border: none;
+  color: var(--comment);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: var(--font);
+}
+.mini-btn:hover { color: var(--cyan); background: var(--bg-3); }
+.mini-btn.save { color: var(--green); }
+
+.chip-x {
+  background: transparent;
+  border: none;
+  color: var(--comment);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 3px;
+}
+.chip-x:hover { color: var(--red); }
+.chip-x.big { font-size: 20px; padding: 0 8px; }
+
+/* ===== Smart field + chips ===== */
+.field { display: flex; flex-direction: column; }
+.field-head { display: flex; justify-content: space-between; align-items: center; min-height: 22px; }
+.field-head label { margin-bottom: 4px; }
+.field-actions { display: flex; gap: 2px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  cursor: pointer;
+  color: #d6d8e6;
+  transition: all 0.12s;
+  user-select: none;
+}
+.chip:hover { border-color: var(--accent, var(--purple)); color: var(--fg); }
+.chip.active {
+  background: color-mix(in srgb, var(--accent, var(--purple)) 22%, transparent);
+  border-color: var(--accent, var(--purple));
+  color: var(--fg);
+}
+.chip.custom { border-style: dashed; border-color: var(--green); }
+
+.muted { color: var(--muted); font-size: 12.5px; line-height: 1.5; }

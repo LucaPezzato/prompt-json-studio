@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="28" fill="#1e1f29"/>
+  <rect x="10" y="10" width="108" height="108" rx="22" fill="#282a36" stroke="#bd93f9" stroke-width="4"/>
+  <!-- Curly braces for JSON -->
+  <path d="M40 36 C30 36 30 48 30 56 C30 61 24 64 20 64 C24 64 30 67 30 72 C30 80 30 92 40 92" fill="none" stroke="#ff79c6" stroke-width="6" stroke-linecap="round"/>
+  <path d="M88 36 C98 36 98 48 98 56 C98 61 104 64 108 64 C104 64 98 67 98 72 C98 80 98 92 88 92" fill="none" stroke="#8be9fd" stroke-width="6" stroke-linecap="round"/>
+  <!-- Camera aperture / Sparkle in center -->
+  <path d="M64 38 L70 56 L88 64 L70 72 L64 90 L58 72 L40 64 L58 56 Z" fill="#f1fa8c"/>
+  <circle cx="64" cy="64" r="6" fill="#282a36"/>
+</svg>
