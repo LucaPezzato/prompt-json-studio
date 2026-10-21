@@ -114,15 +114,56 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await page.waitForTimeout(200);
   
   // Verify output JSON updates
-  const jsonPreview = await page.locator('pre.code').innerText();
+  let jsonPreview = await page.locator('pre.code').innerText();
   if (!jsonPreview.includes('Cyberpunk Detective in Rain - Special Edition')) {
     throw new Error('Title change was not reflected in the output JSON!');
   }
   console.log('✔ Title editing reactively updated JSON output preview!');
 
-  // Capture final screenshot
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-final-verified.png'), fullPage: false });
-  console.log('📸 Captured e2e-final-verified.png');
+  // 7. Test Realistic Templates in Sidebar
+  console.log('👉 Testing realistic photography templates in sidebar...');
+  const realisticTemplateCard = page.locator('.template-card:has-text("Candid 35mm Analog Street Portrait")');
+  await realisticTemplateCard.waitFor({ state: 'visible', timeout: 5000 });
+  await realisticTemplateCard.click();
+  await page.waitForTimeout(400);
+
+  const updatedTitle = await titleInput.inputValue();
+  console.log(`  Loaded template title: "${updatedTitle}"`);
+  if (!updatedTitle.includes('Trastevere')) {
+    throw new Error(`Expected Trastevere street portrait title, got: ${updatedTitle}`);
+  }
+
+  jsonPreview = await page.locator('pre.code').innerText();
+  if (!jsonPreview.includes('Kodak Portra 400') || !jsonPreview.includes('Leica M11')) {
+    throw new Error('Realistic photography parameters missing from compiled JSON!');
+  }
+  console.log('✔ Realistic template loaded with Kodak Portra 400 and Leica M11 parameters!');
+
+  // 8. Test Preset Dropdowns on smart fields
+  console.log('👉 Testing preset dropdown select elements on fields...');
+  const presetSelects = await page.locator('select.preset-select').all();
+  console.log(`  Found ${presetSelects.length} preset dropdown selects across fields`);
+  if (presetSelects.length < 15) {
+    throw new Error(`Expected at least 15 preset selects, found ${presetSelects.length}`);
+  }
+
+  // Select a preset from the first dropdown (primary_entity)
+  const firstSelect = presetSelects[0];
+  const options = await firstSelect.locator('option').allInnerTexts();
+  console.log(`  First dropdown options count: ${options.length} (sample: "${options[1]}")`);
+  await firstSelect.selectOption({ index: 1 });
+  await page.waitForTimeout(300);
+
+  const firstInputValue = await page.locator('app-smart-field input').first().inputValue();
+  console.log(`  First input value after dropdown selection: "${firstInputValue}"`);
+  if (firstInputValue !== options[1]) {
+    throw new Error(`Expected input to be "${options[1]}", but was "${firstInputValue}"`);
+  }
+  console.log('✔ Preset dropdown selection successfully populated input!');
+
+  // Capture final realistic screenshot
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-realistic-preset.png'), fullPage: false });
+  console.log('📸 Captured e2e-realistic-preset.png');
 
   if (errors.length > 0) {
     throw new Error(`Browser encountered ${errors.length} errors: ${errors.join('; ')}`);

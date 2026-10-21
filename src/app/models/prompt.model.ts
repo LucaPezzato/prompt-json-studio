@@ -103,7 +103,14 @@ export interface PromptTemplate {
 }
 
 export type PresetCategoryKey =
+  | 'primary_entity'
+  | 'subject_description'
+  | 'pose_or_action'
+  | 'expression_or_mood'
+  | 'clothing_or_materials'
   | 'placement'
+  | 'environment'
+  | 'background_details'
   | 'time_of_day'
   | 'atmosphere_weather'
   | 'shot_type'
@@ -112,16 +119,21 @@ export type PresetCategoryKey =
   | 'aperture_depth_of_field'
   | 'camera_body_or_film'
   | 'key_light'
+  | 'fill_or_ambient'
   | 'color_temperature'
   | 'shadow_quality'
   | 'framing_rule'
+  | 'focal_point'
+  | 'foreground_elements'
   | 'perspective'
   | 'medium'
   | 'aesthetic'
   | 'color_grading'
   | 'quality_tags'
   | 'font_style'
-  | 'aspect_ratio';
+  | 'typography_placement'
+  | 'aspect_ratio'
+  | 'negative_prompt';
 
 export type CustomOptionsMap = Record<PresetCategoryKey, string[]>;
 

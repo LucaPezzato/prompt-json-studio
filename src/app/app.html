@@ -114,33 +114,38 @@
         <app-smart-field
           class="span-2"
           label="Entità principale"
-          placeholder="Es. giovane corriere cyberpunk, flacone di profumo, drago titanico…"
+          category="primary_entity"
+          placeholder="Es. anziano artigiano con tratti segnati, leopardo delle nevi, flacone di profumo…"
           [value]="spec().subject.primary_entity"
           (valueChange)="store.set('subject', 'primary_entity', $event)"
         />
         <app-smart-field
           class="span-2"
           label="Descrizione dettagliata"
+          category="subject_description"
           [multiline]="true"
-          placeholder="Tratti fisici, espressioni, età, dettagli unici…"
+          placeholder="Tratti fisici, espressioni, rughe, pori della pelle, dettagli unici…"
           [value]="spec().subject.description"
           (valueChange)="store.set('subject', 'description', $event)"
         />
         <app-smart-field
           label="Posa / Azione"
+          category="pose_or_action"
           placeholder="Cosa sta facendo il soggetto?"
           [value]="spec().subject.pose_or_action"
           (valueChange)="store.set('subject', 'pose_or_action', $event)"
         />
         <app-smart-field
           label="Espressione / Mood"
-          placeholder="Focused, intense, serene, menacing…"
+          category="expression_or_mood"
+          placeholder="Calmo, autentico, intenso, fiero…"
           [value]="spec().subject.expression_or_mood"
           (valueChange)="store.set('subject', 'expression_or_mood', $event)"
         />
         <app-smart-field
           label="Abbigliamento / Materiali"
-          placeholder="Giacca techwear cromata, tessuto grezzo, ottone spazzolato…"
+          category="clothing_or_materials"
+          placeholder="Giacca in lino naturale, maglione in lana merino, tweed inglese…"
           [value]="spec().subject.clothing_or_materials"
           (valueChange)="store.set('subject', 'clothing_or_materials', $event)"
         />
@@ -200,15 +205,17 @@
         <app-smart-field
           class="span-2"
           label="Ambiente / Location"
-          placeholder="Vicolo di Neo-Tokyo, cattedrale gotica diroccata, set fotografico tabletop…"
+          category="environment"
+          placeholder="Vicolo di Trastevere, cresta dell'Himalaya, villa sul Lago di Como…"
           [value]="spec().scene.environment"
           (valueChange)="store.set('scene', 'environment', $event)"
         />
         <app-smart-field
           class="span-2"
           label="Dettagli sfondo"
+          category="background_details"
           [multiline]="true"
-          placeholder="Cavi elettrici sospesi, pozzanghere riflettenti, vapore che sale dai tombini…"
+          placeholder="Muri in terracotta, panni stesi, vette montuose, lago a specchio…"
           [value]="spec().scene.background_details"
           (valueChange)="store.set('scene', 'background_details', $event)"
         />
@@ -287,7 +294,8 @@
         />
         <app-smart-field
           label="Luce secondaria / Ambientale (Fill)"
-          placeholder="Rimbalzo caldo sul pavimento bagnato, riverberi blu…"
+          category="fill_or_ambient"
+          placeholder="Rimbalzo caldo da pietre, riverberi blu, pannello riflettente…"
           [value]="spec().lighting.fill_or_ambient"
           (valueChange)="store.set('lighting', 'fill_or_ambient', $event)"
         />
@@ -373,6 +381,7 @@
         <app-smart-field
           class="span-2"
           label="Punto focale principale"
+          category="focal_point"
           placeholder="Dove deve convergere lo sguardo dell'osservatore?"
           [value]="spec().composition.focal_point"
           (valueChange)="store.set('composition', 'focal_point', $event)"
@@ -380,7 +389,8 @@
         <app-smart-field
           class="span-2"
           label="Elementi in primo piano (Foreground)"
-          placeholder="Ringhiera con gocce di pioggia sfuocate, rami di alberi…"
+          category="foreground_elements"
+          placeholder="Rami d'albero sfocati, gocce d'acqua, lama d'acqua della piscina…"
           [value]="spec().composition.foreground_elements"
           (valueChange)="store.set('composition', 'foreground_elements', $event)"
         />
@@ -476,6 +486,7 @@
           <app-smart-field
             class="span-2"
             label="Posizionamento &amp; Materiale"
+            category="typography_placement"
             placeholder="Lettere al neon incise su insegna verticale, stampa a rilievo oro su carta cotone…"
             [value]="spec().typography.placement_and_material"
             (valueChange)="store.set('typography', 'placement_and_material', $event)"
@@ -515,6 +526,7 @@
         <app-smart-field
           class="span-2"
           label="Negative Prompt (cosa escludere)"
+          category="negative_prompt"
           [multiline]="true"
           placeholder="cartoon, anime, blurry, low resolution, bad anatomy, extra fingers, watermark…"
           [value]="spec().technical_parameters.negative_prompt"
