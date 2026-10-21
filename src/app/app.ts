@@ -93,6 +93,30 @@ export class App {
     return [...new Set([...defaultList, ...current])];
   });
 
+  collapseAll(): void {
+    this.sectionSubjectOpen.set(false);
+    this.sectionSceneOpen.set(false);
+    this.sectionCameraOpen.set(false);
+    this.sectionLightingOpen.set(false);
+    this.sectionCompositionOpen.set(false);
+    this.sectionStyleOpen.set(false);
+    this.sectionTypographyOpen.set(false);
+    this.sectionTechnicalOpen.set(false);
+    this.sectionCustomOpen.set(false);
+  }
+
+  expandAll(): void {
+    this.sectionSubjectOpen.set(true);
+    this.sectionSceneOpen.set(true);
+    this.sectionCameraOpen.set(true);
+    this.sectionLightingOpen.set(true);
+    this.sectionCompositionOpen.set(true);
+    this.sectionStyleOpen.set(true);
+    this.sectionTypographyOpen.set(true);
+    this.sectionTechnicalOpen.set(true);
+    this.sectionCustomOpen.set(true);
+  }
+
   // Actions
   onTemplateSelected(t: PromptTemplate): void {
     this.store.replace(t.spec);

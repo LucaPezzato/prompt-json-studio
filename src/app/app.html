@@ -63,14 +63,43 @@
 
   <!-- ============ BUILDER CANVAS ============ -->
   <section class="builder" [class.hidden-mobile]="mobileView() !== 'builder'">
-    <div class="title-row">
-      <input
-        class="title-input"
-        type="text"
-        placeholder="Titolo del prompt…"
-        [value]="spec().meta.title"
-        (input)="store.set('meta', 'title', $any($event.target).value)"
-      />
+    <!-- TITLE & CONTROLS CARD -->
+    <div class="title-card">
+      <div class="title-card-top">
+        <div class="title-card-label">
+          <span class="sparkle">🎯</span>
+          <span>PROMPT PRODUCTION BRIEF</span>
+        </div>
+        <div class="expand-collapse-btns">
+          <button type="button" class="mini-btn-pill" (click)="expandAll()" title="Espandi tutte le sezioni">
+            ▾ Espandi tutto
+          </button>
+          <button type="button" class="mini-btn-pill" (click)="collapseAll()" title="Comprimi tutte le sezioni">
+            ▸ Comprimi tutto
+          </button>
+        </div>
+      </div>
+      <div class="title-input-wrap">
+        <input
+          class="title-input"
+          type="text"
+          placeholder="Dai un titolo a questo prompt (es. Cyberpunk Courier in Neo-Tokyo)…"
+          [value]="spec().meta.title"
+          (input)="store.set('meta', 'title', $any($event.target).value)"
+        />
+      </div>
+      <div class="title-card-badges">
+        <span class="meta-tag">📐 {{ spec().technical_parameters.aspect_ratio }}</span>
+        @if (spec().style_and_rendering.medium) {
+          <span class="meta-tag">🎨 {{ spec().style_and_rendering.medium }}</span>
+        }
+        @if (spec().camera.lens_focal_length) {
+          <span class="meta-tag">📷 {{ spec().camera.lens_focal_length.split(' ')[0] }}</span>
+        }
+        @if (spec().typography.enabled && spec().typography.exact_text) {
+          <span class="meta-tag text">🔤 "{{ spec().typography.exact_text }}"</span>
+        }
+      </div>
     </div>
 
     <!-- SUBJECT -->
@@ -78,6 +107,7 @@
       title="Soggetto principale"
       icon="👤"
       accent="#ff79c6"
+      [summary]="spec().subject.primary_entity || 'Nessun soggetto specificato'"
       [(open)]="sectionSubjectOpen"
     >
       <div class="grid-2">
@@ -163,6 +193,7 @@
       title="Scena &amp; Ambiente"
       icon="🏞️"
       accent="#50fa7b"
+      [summary]="spec().scene.environment || 'Ambiente non specificato'"
       [(open)]="sectionSceneOpen"
     >
       <div class="grid-2">
@@ -201,6 +232,7 @@
       title="Camera &amp; Ottica"
       icon="📷"
       accent="#8be9fd"
+      [summary]="(spec().camera.shot_type || '') + (spec().camera.lens_focal_length ? ' • ' + spec().camera.lens_focal_length.split(' ')[0] : '')"
       [(open)]="sectionCameraOpen"
     >
       <div class="grid-2">
@@ -243,6 +275,7 @@
       title="Illuminazione &amp; Palette"
       icon="💡"
       accent="#f1fa8c"
+      [summary]="spec().lighting.key_light || 'Illuminazione standard'"
       [(open)]="sectionLightingOpen"
     >
       <div class="grid-2">
@@ -321,6 +354,7 @@
       title="Composizione &amp; Inquadratura"
       icon="📐"
       accent="#ffb86c"
+      [summary]="spec().composition.framing_rule || 'Regola compositiva standard'"
       [(open)]="sectionCompositionOpen"
     >
       <div class="grid-2">
@@ -358,6 +392,7 @@
       title="Stile &amp; Rendering"
       icon="🎨"
       accent="#bd93f9"
+      [summary]="(spec().style_and_rendering.medium || '') + (spec().style_and_rendering.aesthetic ? ' • ' + spec().style_and_rendering.aesthetic : '')"
       [(open)]="sectionStyleOpen"
     >
       <div class="grid-2">
@@ -414,6 +449,7 @@
       icon="🔤"
       accent="#ff5555"
       [badge]="spec().typography.enabled ? 'Attivo' : null"
+      [summary]="spec().typography.enabled && spec().typography.exact_text ? spec().typography.exact_text : 'Disattivato'"
       [(open)]="sectionTypographyOpen"
     >
       <div class="grid-2">
@@ -453,6 +489,7 @@
       title="Parametri Tecnici"
       icon="⚙️"
       accent="#6272a4"
+      [summary]="spec().technical_parameters.aspect_ratio + (spec().technical_parameters.raw_mode ? ' • Raw' : '')"
       [(open)]="sectionTechnicalOpen"
     >
       <div class="grid-2">
@@ -520,6 +557,7 @@
       icon="🧩"
       accent="#50fa7b"
       [badge]="spec().custom_properties.length || null"
+      [summary]="spec().custom_properties.length ? spec().custom_properties.length + ' proprietà extra' : 'Nessuna proprietà extra'"
       [(open)]="sectionCustomOpen"
     >
       <p class="muted">
