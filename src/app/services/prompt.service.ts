@@ -1031,6 +1031,24 @@ export class PromptService {
     effect(() => this.persist(CUSTOM_OPTIONS_STORAGE_KEY, this.customOptions()));
     effect(() => this.persist(USER_PRESETS_STORAGE_KEY, this.userPresets()));
     effect(() => this.persist(AI_CONFIG_STORAGE_KEY, this.aiConfig()));
+    this.tryLoadEnvConfig();
+  }
+
+  private async tryLoadEnvConfig(): Promise<void> {
+    if (this.aiConfig().apiKey) return;
+    try {
+      const res = await fetch('/env.json');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.GEMINI_API_KEY && !this.aiConfig().apiKey) {
+          this.aiConfig.update((c) => ({
+            ...c,
+            apiKey: data.GEMINI_API_KEY,
+            model: data.DEFAULT_MODEL || c.model || 'gemini-3.8-flash',
+          }));
+        }
+      }
+    } catch {}
   }
 
   createEmptySpec(): ImagePromptSpec {
@@ -1418,7 +1436,7 @@ export class PromptService {
 
     let rawJson = '';
     if (config.provider === 'gemini') {
-      const model = config.model || 'gemini-2.5-flash';
+      const model = config.model || 'gemini-3.8-flash';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
         config.apiKey
       )}`;
@@ -1482,7 +1500,7 @@ export class PromptService {
     return {
       provider: 'gemini',
       apiKey: '',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       ollamaUrl: 'http://localhost:11434',
     };
   }

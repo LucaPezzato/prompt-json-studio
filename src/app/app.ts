@@ -215,7 +215,7 @@ export class App {
 
   // AI Settings modal signals
   readonly aiProvider = signal<string>('gemini');
-  readonly aiModel = signal<string>('gemini-2.5-flash');
+  readonly aiModel = signal<string>('gemini-3.8-flash');
   readonly aiApiKey = signal<string>('');
   readonly aiOllamaUrl = signal<string>('http://localhost:11434');
 
