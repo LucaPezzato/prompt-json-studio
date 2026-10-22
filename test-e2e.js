@@ -38,8 +38,8 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   // 2. Verify Section Blocks
   const blocks = await page.locator('app-section-block').all();
   console.log(`✔ Found ${blocks.length} app-section-block components`);
-  if (blocks.length !== 9) {
-    throw new Error(`Expected 9 blocks, found ${blocks.length}`);
+  if (blocks.length !== 10) {
+    throw new Error(`Expected 10 blocks, found ${blocks.length}`);
   }
 
   // 3. Test "Comprimi tutto"
@@ -101,7 +101,7 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
       throw new Error(`Block #${i + 1} expected to be expanded!`);
     }
   }
-  console.log('✔ All 9 blocks expanded smoothly!');
+  console.log('✔ All 10 blocks expanded smoothly!');
 
   // Screenshot when all expanded
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-all-expanded.png'), fullPage: false });
@@ -147,14 +147,15 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
     throw new Error(`Expected at least 15 preset selects, found ${presetSelects.length}`);
   }
 
-  // Select a preset from the first dropdown (primary_entity)
+  // Select a preset from the first dropdown (in Genere & Età or primary_entity)
   const firstSelect = presetSelects[0];
   const options = await firstSelect.locator('option').allInnerTexts();
   console.log(`  First dropdown options count: ${options.length} (sample: "${options[1]}")`);
   await firstSelect.selectOption({ index: 1 });
   await page.waitForTimeout(300);
 
-  const firstInputValue = await page.locator('app-smart-field input').first().inputValue();
+  const parentField = page.locator('app-smart-field:has(select.preset-select)').first();
+  const firstInputValue = await parentField.locator('input').inputValue();
   console.log(`  First input value after dropdown selection: "${firstInputValue}"`);
   if (firstInputValue !== options[1]) {
     throw new Error(`Expected input to be "${options[1]}", but was "${firstInputValue}"`);
@@ -200,10 +201,82 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
 
   fs.unlinkSync(testImgPath);
 
+  // 10. Test Character Sheet & Visual Consistency
+  console.log('👉 Testing Character Sheet & Consistency section...');
+  const charTemplateCard = page.locator('.template-card:has-text("Character Turnaround 360° Realistico")');
+  await charTemplateCard.waitFor({ state: 'visible', timeout: 5000 });
+  await charTemplateCard.click();
+  await page.waitForTimeout(400);
+
+  // Verify Character Sheet block is visible and populated
+  const charBlock = page.locator('app-section-block:has-text("Scheda Personaggio")');
+  await charBlock.waitFor({ state: 'visible', timeout: 5000 });
+  
+  // Make sure it's opened
+  const charHead = charBlock.locator('.head-btn');
+  const isCharOpen = await charHead.getAttribute('aria-expanded');
+  if (isCharOpen !== 'true') {
+    await charHead.click();
+    await page.waitForTimeout(300);
+  }
+
+  // Check saved characters in library bar
+  const charPills = await charBlock.locator('.char-pill').all();
+  console.log(`  Found ${charPills.length} saved characters in library bar`);
+  if (charPills.length < 2) {
+    throw new Error(`Expected at least 2 pre-seeded characters, found ${charPills.length}`);
+  }
+
+  // Click Ren Takahashi pill
+  const renPill = charBlock.locator('.char-pill:has-text("Ren Takahashi")');
+  await renPill.click();
+  await page.waitForTimeout(300);
+
+  // Check that character name input updated to Ren Takahashi
+  const charNameInput = charBlock.locator('app-smart-field[label="Nome del Personaggio"] input');
+  const loadedName = await charNameInput.inputValue();
+  console.log(`  Loaded character into sheet: "${loadedName}"`);
+  if (!loadedName.includes('Ren Takahashi')) {
+    throw new Error(`Expected Ren Takahashi, got: ${loadedName}`);
+  }
+
+  // Test "Inietta nel Soggetto della Scena"
+  const injectBtn = charBlock.locator('button.char-apply-btn');
+  await injectBtn.click();
+  await page.waitForTimeout(300);
+
+  const subjectEntityInput = page.locator('app-section-block:has-text("Soggetto principale") app-smart-field[label="Entità principale"] input');
+  const injectedEntity = await subjectEntityInput.inputValue();
+  console.log(`  Subject primary entity after injection: "${injectedEntity}"`);
+  if (!injectedEntity.includes('Ren Takahashi')) {
+    throw new Error(`Expected Ren Takahashi injected into subject, got: ${injectedEntity}`);
+  }
+
+  // Test adding cref URL and verifying Midjourney output
+  const crefInput = charBlock.locator('app-smart-field:has-text("--cref") input');
+  await crefInput.fill('https://cdn.example.com/ren-turnaround.jpg');
+  await page.waitForTimeout(200);
+
+  // Switch to Midjourney tab
+  const mjTabBtn = page.locator('button.tab:has-text("Midjourney")');
+  await mjTabBtn.click();
+  await page.waitForTimeout(300);
+
+  const mjPromptText = await page.locator('pre.code').innerText();
+  console.log('  Midjourney output sample:', mjPromptText.slice(0, 140));
+  if (!mjPromptText.includes('--cref https://cdn.example.com/ren-turnaround.jpg') || !mjPromptText.includes('--cw 100')) {
+    throw new Error('Midjourney output does not contain --cref or --cw 100!');
+  }
+  console.log('✔ Character Sheet --cref correctly compiled into Midjourney prompt!');
+
+  // Capture character sheet screenshot
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-character-sheet.png'), fullPage: false });
+  console.log('📸 Captured e2e-character-sheet.png');
+
   if (errors.length > 0) {
     throw new Error(`Browser encountered ${errors.length} errors: ${errors.join('; ')}`);
   }
 
-  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS (INCLUDING REVERSE PHOTO) PASSED PERFECTLY!');
+  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS (INCLUDING CHARACTER SHEET) PASSED PERFECTLY!');
   await browser.close();
 })();

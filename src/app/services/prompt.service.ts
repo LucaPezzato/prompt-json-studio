@@ -1,15 +1,35 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
 import {
   AiAssistantConfig,
+  CharacterSheetBlock,
   CustomOptionsMap,
   ImagePromptSpec,
   PresetCategoryKey,
   PromptTemplate,
+  SavedCharacter,
 } from '../models/prompt.model';
 
 const USER_PRESETS_STORAGE_KEY = 'prompt_json_studio_user_presets_v1';
 const CUSTOM_OPTIONS_STORAGE_KEY = 'prompt_json_studio_custom_options_v1';
 const AI_CONFIG_STORAGE_KEY = 'prompt_json_studio_ai_config_v1';
+const SAVED_CHARACTERS_STORAGE_KEY = 'prompt_json_studio_saved_characters_v1';
+
+export const DEFAULT_CHARACTER_SHEET: CharacterSheetBlock = {
+  enabled: false,
+  character_name: '',
+  gender_and_age: 'Young woman, 26 years old',
+  ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
+  eye_details: 'Almond-shaped hazel eyes with amber gold flecks and dark lash line',
+  hair_details: 'Chestnut brown wavy shoulder-length hair parted slightly off-center',
+  distinctive_marks: 'Tiny faint beauty mark under the left eye, natural skin pores and micro-texture',
+  body_build: 'Athletic, slender build, upright posture',
+  signature_outfit: 'Textured ivory linen button-up shirt and high-waisted charcoal trousers',
+  signature_props: 'Delicate vintage gold signet ring on the right ring finger',
+  layout_mode: 'turnaround_4_views',
+  views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
+  background_style: 'Neutral light-grey seamless studio backdrop with soft floor shadow',
+  cref_url: '',
+};
 
 export interface ColorPalettePreset {
   name: string;
@@ -341,9 +361,326 @@ export class PromptService {
       'Food & Tabletop: plastic food, fake props, dry surface, unappetizing, harsh flash, blurry, dirty dishes, artificial colors',
       'Universal Anti-Artifact: blurry, low resolution, bad anatomy, bad hands, missing fingers, extra limbs, mutated, watermark, signature, username, jpeg artifacts',
     ],
+    character_gender_age: [
+      'Young woman, 26 years old',
+      'Man in early 30s, 32 years old',
+      'Distinguished mature man, 54 years old',
+      'Teenage protagonist, 18 years old',
+      'Elderly artisan / mentor, 68 years old',
+      'Athletic young female operative, 24 years old',
+    ],
+    character_eyes: [
+      'Almond-shaped hazel eyes with amber flecks and warm natural catchlight',
+      'Piercing pale blue eyes with dark limbal rings and focused gaze',
+      'Deep warm espresso brown eyes with subtle smile lines',
+      'Intense dark eyes with sharp defined double eyelids',
+      'Striking emerald green eyes with subtle gold sectoral heterochromia',
+    ],
+    character_hair: [
+      'Chestnut wavy shoulder-length hair with loose face-framing strands',
+      'Short textured crop with clean tapered fade on sides and back',
+      'Messy raven-black undercut tied in a small half-bun',
+      'Long platinum blonde hair with natural wave and center part',
+      'Silver-streaked dark hair with slicked-back gentleman styling',
+      'Coily textured natural afro with sculpted edges',
+    ],
+    character_marks: [
+      'Natural delicate freckles dusted across the bridge of the nose and cheekbones',
+      'Small faint vertical scar bisecting the right eyebrow',
+      'Subtle beauty mark just below the outer corner of the left eye',
+      'Distinctive geometric cybernetic neural interface at the left temple',
+      'Weathered laugh lines around the eyes and authentic skin micro-pores',
+      'Intricate minimalist black-ink geometric tattoo on the right collarbone',
+    ],
+    character_build: [
+      'Slender, athletic build with upright natural posture',
+      'Broad-shouldered, muscular athletic build, confident stance',
+      'Tall and lean with elegant poised frame',
+      'Compact, agile gymnast build with defined musculature',
+      'Stocky, rugged, sturdy physique with broad chest',
+    ],
+    character_background: [
+      'Neutral light-grey seamless studio void with soft natural floor shadow',
+      'Pristine seamless white cyclorama studio wall with high-key soft lighting',
+      'Minimalist dark charcoal grey studio backdrop with subtle rim illumination',
+      'Industrial textured concrete studio wall with neutral diffuse ambient light',
+    ],
   };
 
   readonly builtInTemplates: PromptTemplate[] = [
+    {
+      id: 'character-sheet-turnaround-360',
+      name: 'Character Turnaround 360° Realistico',
+      category: 'Schede Personaggio (Consistenza)',
+      badgeColor: '#ff79c6',
+      description: 'Foglio modello multi-angolo (Frontale, 3/4, Profilo, Posteriore) per consistenza perfetta del personaggio in Midjourney (--cref) e FLUX.',
+      spec: {
+        meta: {
+          version: '2.0',
+          title: 'Character Turnaround: Elena Vance (4 Viste)',
+          target_engine: 'universal',
+        },
+        character_sheet: {
+          enabled: true,
+          character_name: 'Elena Vance',
+          gender_and_age: 'Young woman, 26 years old',
+          ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
+          eye_details: 'Almond-shaped hazel eyes with amber gold flecks and dark lash line',
+          hair_details: 'Chestnut brown wavy shoulder-length hair parted slightly off-center',
+          distinctive_marks: 'Tiny faint beauty mark under the left eye, natural skin pores and micro-texture',
+          body_build: 'Athletic, slender build, upright posture',
+          signature_outfit: 'Textured ivory linen button-up shirt and high-waisted charcoal trousers',
+          signature_props: 'Delicate vintage gold signet ring on the right ring finger',
+          layout_mode: 'turnaround_4_views',
+          views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
+          background_style: 'Neutral light-grey seamless studio backdrop with soft floor shadow',
+          cref_url: '',
+        },
+        subject: {
+          primary_entity: 'Elena Vance, 26 year old woman',
+          description: 'Turnaround character model sheet showing the same woman from four simultaneous angles in a single frame',
+          pose_or_action: 'Standing in relaxed model sheet poses: front view, three-quarter view, side profile view, and back view',
+          expression_or_mood: 'Calm, neutral, consistent facial expression across all views',
+          clothing_or_materials: 'Textured ivory linen button-up shirt and high-waisted charcoal trousers',
+          placement: 'Center frame, horizontal lineup',
+        },
+        additional_subjects: [],
+        scene: {
+          environment: 'Seamless neutral light-grey studio cyclorama',
+          background_details: 'Pure uniform studio void, soft shadow at feet, zero clutter, perfect for character isolation',
+          time_of_day: 'Overcast morning (Diffused light)',
+          atmosphere_weather: 'Clear crisp air with razor-sharp micro-contrast',
+        },
+        camera: {
+          shot_type: 'Full body shot (Environmental portrait)',
+          angle: 'Eye-level angle (Natural human perspective)',
+          lens_focal_length: '85mm f/1.4 Prime Portrait Lens',
+          aperture_depth_of_field: 'f/8 optical sweet-spot, maximum edge-to-edge sharpness',
+          camera_body_or_film: 'Hasselblad H6D-100c / X2D Medium Format (100MP)',
+        },
+        lighting: {
+          key_light: 'Large diffused north-facing window softbox light',
+          fill_or_ambient: 'Subtle white foam-core reflector filling facial shadows cleanly',
+          color_temperature: 'Neutral daylight (5500K - 5600K)',
+          shadow_quality: 'Soft diffused wrap-around shadows',
+          color_palette: ['#282a36', '#d6d8e6', '#e0a96d', '#6272a4'],
+        },
+        composition: {
+          framing_rule: 'Centered symmetrical composition',
+          focal_point: 'Consistent facial features and costume details across all four angles',
+          foreground_elements: 'Clean unobstructed foreground with clear direct line of sight',
+          perspective: 'Natural 1-point linear human eye perspective',
+        },
+        style_and_rendering: {
+          medium: 'Photorealistic photography',
+          aesthetic: 'Raw Naturalistic Portraiture (Human imperfections, authentic soul)',
+          color_grading: 'Clean neutral documentary grade (True-to-life colors and white balance)',
+          quality_tags: [
+            'natural skin pores & micro-details',
+            '8k resolution',
+            'hyper-detailed textures',
+            'consistent character turnaround',
+          ],
+        },
+        typography: {
+          enabled: false,
+          exact_text: '',
+          font_style: 'Bold geometric sans-serif (Futura / Helvetica)',
+          placement_and_material: '',
+        },
+        technical_parameters: {
+          aspect_ratio: '16:9',
+          negative_prompt: 'inconsistent character, different faces, distorted anatomy, cartoon, blurry, busy background, cropped limbs',
+          seed: 104928,
+          stylize: 100,
+          chaos: 0,
+          raw_mode: true,
+        },
+        custom_properties: [],
+      },
+    },
+    {
+      id: 'character-sheet-cyberpunk-agent',
+      name: 'Cyberpunk Operative Model Sheet',
+      category: 'Schede Personaggio (Consistenza)',
+      badgeColor: '#8be9fd',
+      description: 'Foglio modello multi-vista di personaggio cyberpunk con impianto neurale e abbigliamento techwear per referenza visiva costante.',
+      spec: {
+        meta: {
+          version: '2.0',
+          title: 'Character Turnaround: Ren Takahashi',
+          target_engine: 'universal',
+        },
+        character_sheet: {
+          enabled: true,
+          character_name: 'Ren Takahashi',
+          gender_and_age: 'Man in early 30s, 31 years old',
+          ethnicity_and_skin: 'East Asian heritage, pale smooth complexion with sharp defined jawline',
+          eye_details: 'Sharp hooded dark amber eyes with intense focused gaze',
+          hair_details: 'Raven black textured undercut fade with loose strands over forehead',
+          distinctive_marks: 'Sleek subcutaneous chrome neural interface glow port at the left temple',
+          body_build: 'Lean athletic runner physique, broad shoulders',
+          signature_outfit: 'Matte black waterproof techwear bomber jacket with sealed seams and dark cargo pants',
+          signature_props: 'Titanium minimalist cuff bracelet on right wrist',
+          layout_mode: 'turnaround_4_views',
+          views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
+          background_style: 'Minimalist dark charcoal grey studio backdrop with subtle rim illumination',
+          cref_url: '',
+        },
+        subject: {
+          primary_entity: 'Ren Takahashi, 31 year old operative',
+          description: 'Character design turnaround sheet showing front, 3/4, side, and rear angles in a single frame',
+          pose_or_action: 'Standing upright in neutral character model turnaround lineup',
+          expression_or_mood: 'Focused, solemn, stoic expression',
+          clothing_or_materials: 'Matte black waterproof techwear bomber jacket and tactical dark trousers',
+          placement: 'Center frame, horizontal lineup',
+        },
+        additional_subjects: [],
+        scene: {
+          environment: 'Minimalist dark grey studio void',
+          background_details: 'Clean uniform dark background with subtle floor contact shadow',
+          time_of_day: 'Midnight / Deep night',
+          atmosphere_weather: 'Clear crisp air with razor-sharp micro-contrast',
+        },
+        camera: {
+          shot_type: 'Full body shot (Environmental portrait)',
+          angle: 'Eye-level angle (Natural human perspective)',
+          lens_focal_length: '85mm f/1.4 Prime Portrait Lens',
+          aperture_depth_of_field: 'f/8 optical sweet-spot, maximum edge-to-edge sharpness',
+          camera_body_or_film: 'Sony A7R V (High-Resolution 61MP)',
+        },
+        lighting: {
+          key_light: 'Subtle cool rim / edge backlighting accentuating silhouettes',
+          fill_or_ambient: 'Soft diffuse studio fill light',
+          color_temperature: 'Dual-tone warm key / cool fill contrast',
+          shadow_quality: 'Soft diffused wrap-around shadows',
+          color_palette: ['#00f0ff', '#bd93f9', '#282a36', '#f8f8f2'],
+        },
+        composition: {
+          framing_rule: 'Centered symmetrical composition',
+          focal_point: 'Consistent face and techwear costume details across all views',
+          foreground_elements: 'Clean unobstructed foreground with clear direct line of sight',
+          perspective: 'Natural 1-point linear human eye perspective',
+        },
+        style_and_rendering: {
+          medium: 'Cinematic film still',
+          aesthetic: 'Gritty Cyberpunk Noir',
+          color_grading: 'Rich velvety blacks with crisp vibrant micro-contrast',
+          quality_tags: [
+            'hyper-detailed textures',
+            '8k resolution',
+            'character turnaround sheet',
+            'subsurface scattering (SSS)',
+          ],
+        },
+        typography: {
+          enabled: false,
+          exact_text: '',
+          font_style: 'Cyberpunk stenciled holographic HUD',
+          placement_and_material: '',
+        },
+        technical_parameters: {
+          aspect_ratio: '16:9',
+          negative_prompt: 'inconsistent character, deformed face, cartoon, blurry, noisy background',
+          seed: 492103,
+          stylize: 120,
+          chaos: 0,
+          raw_mode: true,
+        },
+        custom_properties: [],
+      },
+    },
+    {
+      id: 'character-sheet-expressions-grid',
+      name: 'Griglia Espressioni Facciali (Expression Sheet)',
+      category: 'Schede Personaggio (Consistenza)',
+      badgeColor: '#50fa7b',
+      description: 'Foglio modello con 6 espressioni facciali dello stesso personaggio (neutra, sorriso, intensa, sorpresa, seria, risata) per consistenza emotiva nelle scene.',
+      spec: {
+        meta: {
+          version: '2.0',
+          title: 'Expression Sheet: Elena Vance (6 Espressioni)',
+          target_engine: 'universal',
+        },
+        character_sheet: {
+          enabled: true,
+          character_name: 'Elena Vance',
+          gender_and_age: 'Young woman, 26 years old',
+          ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
+          eye_details: 'Almond-shaped hazel eyes with amber gold flecks',
+          hair_details: 'Chestnut brown wavy shoulder-length hair parted slightly off-center',
+          distinctive_marks: 'Tiny faint beauty mark under the left eye, natural skin pores',
+          body_build: 'Slender, athletic build',
+          signature_outfit: 'Textured ivory linen button-up shirt',
+          signature_props: 'Small gold hoop earrings',
+          layout_mode: 'expressions_grid',
+          views: ['Neutral expression', 'Spontaneous warm smile', 'Serious intense gaze', 'Surprised look', 'Quiet contemplation', 'Genuine laugh'],
+          background_style: 'Pristine seamless white cyclorama studio wall with high-key soft lighting',
+          cref_url: '',
+        },
+        subject: {
+          primary_entity: 'Elena Vance, 26 year old woman',
+          description: 'Facial expression sheet showing a 2x3 grid of headshots of the exact same woman with six distinct emotions: neutral, smiling, intense, surprised, pensive, laughing',
+          pose_or_action: 'Head-and-shoulders portraits arranged in a clean grid layout',
+          expression_or_mood: 'Diverse emotions while keeping identical facial features, eye shape, and hair styling',
+          clothing_or_materials: 'Ivory linen collar visible in each portrait',
+          placement: 'Center frame, 2x3 grid layout',
+        },
+        additional_subjects: [],
+        scene: {
+          environment: 'High-key white cyclorama photo studio',
+          background_details: 'Seamless clean white studio background',
+          time_of_day: 'Midday crisp daylight',
+          atmosphere_weather: 'Clear crisp air with razor-sharp micro-contrast',
+        },
+        camera: {
+          shot_type: 'Medium close-up portrait (MCU)',
+          angle: 'Eye-level angle (Natural human perspective)',
+          lens_focal_length: '85mm f/1.4 Prime Portrait Lens',
+          aperture_depth_of_field: 'f/4 sharp facial features and soft background falloff',
+          camera_body_or_film: 'Leica M11 Rangefinder (Full-Frame 60MP)',
+        },
+        lighting: {
+          key_light: 'Large diffused north-facing window softbox light',
+          fill_or_ambient: 'Subtle white foam-core reflector filling facial shadows cleanly',
+          color_temperature: 'Neutral daylight (5500K - 5600K)',
+          shadow_quality: 'Soft diffused wrap-around shadows',
+          color_palette: ['#f8fafc', '#e0a96d', '#64748b', '#0f172a'],
+        },
+        composition: {
+          framing_rule: 'Centered symmetrical composition',
+          focal_point: 'Consistent eye shape and facial geometry across all six emotional portraits',
+          foreground_elements: 'Clean unobstructed foreground with clear direct line of sight',
+          perspective: 'Natural 1-point linear human eye perspective',
+        },
+        style_and_rendering: {
+          medium: 'Photorealistic photography',
+          aesthetic: 'Raw Naturalistic Portraiture (Human imperfections, authentic soul)',
+          color_grading: 'Clean neutral documentary grade (True-to-life colors and white balance)',
+          quality_tags: [
+            'natural skin pores & micro-details',
+            '8k resolution',
+            'expression sheet',
+            'specular catchlights in eyes',
+          ],
+        },
+        typography: {
+          enabled: false,
+          exact_text: '',
+          font_style: 'Bold geometric sans-serif (Futura / Helvetica)',
+          placement_and_material: '',
+        },
+        technical_parameters: {
+          aspect_ratio: '16:9',
+          negative_prompt: 'inconsistent character, different people, distorted facial features, cartoon, blurry, busy background',
+          seed: 739102,
+          stylize: 80,
+          chaos: 0,
+          raw_mode: true,
+        },
+        custom_properties: [],
+      },
+    },
     {
       id: 'street-portrait-analog',
       name: 'Candid 35mm Analog Street Portrait',
@@ -356,6 +693,7 @@ export class PromptService {
           title: '35mm Candid Street Portrait in Trastevere',
           target_engine: 'universal',
         },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
         subject: {
           primary_entity: 'Elderly Italian artisan with expressive weathered face and silver hair',
           description: 'Authentic skin texture with fine laugh lines, natural pores, subtle freckles, warm kind brown eyes, silver stubble and realistic subsurface scattering',
@@ -432,6 +770,7 @@ export class PromptService {
           title: 'Snow Leopard in Himalayan Blizzard',
           target_engine: 'universal',
         },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
         subject: {
           primary_entity: 'Wild snow leopard (Panthera uncia) perched on a jagged alpine ledge',
           description: 'Dense thick winter fur with individual hairs visible, microscopic frost crystals on whiskers, intense pale green-gold predatory eyes with sharp specular catchlights',
@@ -507,6 +846,7 @@ export class PromptService {
           title: 'Minimalist Concrete & Glass Pavilion on Lake Como',
           target_engine: 'universal',
         },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
         subject: {
           primary_entity: 'Modernist cantilevered concrete and glass architectural residence',
           description: 'Tactile architectural surfaces: board-formed concrete grain, tie-holes, low-iron structural glass and warm cedar slat louvers',
@@ -582,6 +922,7 @@ export class PromptService {
           title: 'Artisanal Seared Scallop with Saffron Foam',
           target_engine: 'universal',
         },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
         subject: {
           primary_entity: 'Pan-seared jumbo sea scallop with saffron emulsion on charcoal stoneware',
           description: 'Glistening caramelized sear marks, vibrant herb oil droplets, delicate steam wisps, sea salt flakes and micro-sorrel leaves',
@@ -657,6 +998,7 @@ export class PromptService {
           title: 'Lagoon Fisherman at Dawn in Venice',
           target_engine: 'universal',
         },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
         subject: {
           primary_entity: 'Lagoon fisherman at dawn hauling a dripping hemp net from a wooden boat',
           description: 'Weathered hands with defined tendons, salt-sprayed stubble and focused sun-kissed gaze, fine laugh lines and sea spray droplets',
@@ -732,6 +1074,7 @@ export class PromptService {
           title: 'Cyberpunk Courier in Neo-Tokyo',
           target_engine: 'universal',
         },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
         subject: {
           primary_entity: 'Young female cyberpunk courier',
           description: 'Sharp features, subtle freckles, cybernetic temple interface glowing soft cyan',
@@ -807,6 +1150,7 @@ export class PromptService {
           title: 'Artisanal Botanical Perfume Bottle',
           target_engine: 'universal',
         },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
         subject: {
           primary_entity: 'Minimalist smoked-glass perfume flacon with a brushed brass cap',
           description: 'Geometric faceted crystal bottle with tiny condensation droplets on the surface',
@@ -884,6 +1228,7 @@ export class PromptService {
           title: 'Isometric Two-Story Tokyo Ramen Corner',
           target_engine: 'universal',
         },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
         subject: {
           primary_entity: 'Cutaway isometric 3D diorama of a tiny traditional two-story ramen shop',
           description: 'Wooden sliding doors, red paper lanterns, steaming ramen bowls on the counter, upstairs tatami room',
@@ -959,6 +1304,7 @@ export class PromptService {
           title: 'Cathedral of the Eclipsed Sun',
           target_engine: 'universal',
         },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
         subject: {
           primary_entity: 'Lone knight in tarnished silver armor with a tattered crimson cloak',
           description: 'Intricate filigree engravings on armor, holding a greatsword resting on the stone floor',
@@ -1023,6 +1369,7 @@ export class PromptService {
 
   private readonly customOptions = signal<CustomOptionsMap>(this.loadCustomOptions());
   readonly userPresets = signal<PromptTemplate[]>(this.loadUserPresets());
+  readonly savedCharacters = signal<SavedCharacter[]>(this.loadSavedCharacters());
   readonly aiConfig = signal<AiAssistantConfig>(this.loadAiConfig());
 
   readonly allTemplates = computed<PromptTemplate[]>(() => [...this.builtInTemplates, ...this.userPresets()]);
@@ -1030,6 +1377,7 @@ export class PromptService {
   constructor() {
     effect(() => this.persist(CUSTOM_OPTIONS_STORAGE_KEY, this.customOptions()));
     effect(() => this.persist(USER_PRESETS_STORAGE_KEY, this.userPresets()));
+    effect(() => this.persist(SAVED_CHARACTERS_STORAGE_KEY, this.savedCharacters()));
     effect(() => this.persist(AI_CONFIG_STORAGE_KEY, this.aiConfig()));
     this.tryLoadEnvConfig();
   }
@@ -1071,6 +1419,23 @@ export class PromptService {
 
   deleteUserPreset(id: string): void {
     this.userPresets.update((list) => list.filter((p) => p.id !== id));
+  }
+
+  saveCharacter(name: string, sheet: CharacterSheetBlock): SavedCharacter {
+    const summary = `${sheet.gender_and_age} · ${sheet.hair_details.split(',')[0]} · ${sheet.signature_outfit.split(',')[0]}`;
+    const char: SavedCharacter = {
+      id: 'char-' + Date.now(),
+      name: name.trim() || sheet.character_name || 'Nuovo Personaggio',
+      summary,
+      sheet: structuredClone({ ...sheet, character_name: name.trim() || sheet.character_name }),
+      createdAt: Date.now(),
+    };
+    this.savedCharacters.update((list) => [char, ...list.filter((c) => c.name !== char.name)]);
+    return char;
+  }
+
+  deleteCharacter(id: string): void {
+    this.savedCharacters.update((list) => list.filter((c) => c.id !== id));
   }
 
   /** Reactive when read inside a computed()/template: custom elements first, then built-in presets. */
@@ -1184,6 +1549,29 @@ export class PromptService {
             },
           }
         : {}),
+      ...(spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()
+        ? {
+            character_sheet: {
+              character_name: spec.character_sheet.character_name,
+              layout_mode: spec.character_sheet.layout_mode,
+              views: spec.character_sheet.views,
+              facial_dna: {
+                gender_and_age: spec.character_sheet.gender_and_age,
+                ethnicity_and_skin: spec.character_sheet.ethnicity_and_skin,
+                eye_details: spec.character_sheet.eye_details,
+                hair_details: spec.character_sheet.hair_details,
+                distinctive_marks: spec.character_sheet.distinctive_marks,
+                body_build: spec.character_sheet.body_build,
+              },
+              signature_wardrobe: {
+                outfit: spec.character_sheet.signature_outfit,
+                props: spec.character_sheet.signature_props,
+              },
+              background_style: spec.character_sheet.background_style,
+              ...(spec.character_sheet.cref_url?.trim() ? { cref_url: spec.character_sheet.cref_url.trim() } : {}),
+            },
+          }
+        : {}),
       technical_parameters: {
         aspect_ratio: spec.technical_parameters.aspect_ratio,
         ...(spec.technical_parameters.negative_prompt.trim()
@@ -1206,6 +1594,12 @@ export class PromptService {
    * Compiles the structured JSON spec into FLUX.1 / FLUX.2 hierarchical natural prompt.
    */
   compileForFlux(spec: ImagePromptSpec): string {
+    if (spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()) {
+      const cs = spec.character_sheet;
+      const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side profile view, Back view';
+      return `Character design turnaround model sheet of ${cs.character_name}. The image displays multiple simultaneous angles in a single frame: ${views}. Character Somatic DNA: ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, distinctive features: ${cs.distinctive_marks}, physique: ${cs.body_build}. Signature attire: ${cs.signature_outfit}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}. Studio setting: ${cs.background_style}, even shadowless high-key studio softbox lighting, ultra-consistent character model turnaround sheet intended for AI image reference training and consistency matching. Style: ${spec.style_and_rendering.medium} (${spec.style_and_rendering.aesthetic}), ${spec.style_and_rendering.quality_tags.join(', ')}.`;
+    }
+
     const parts: string[] = [];
     const med = spec.style_and_rendering.medium || 'Photograph';
     const shot = spec.camera.shot_type ? `${spec.camera.shot_type} of ` : '';
@@ -1257,6 +1651,38 @@ export class PromptService {
    * Compiles the structured JSON spec into Midjourney v6/v7 prompt with CLI parameters.
    */
   compileForMidjourney(spec: ImagePromptSpec): string {
+    if (spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()) {
+      const cs = spec.character_sheet;
+      const views = cs.views.length > 0 ? cs.views.join(', ') : 'front view, 3/4 view, side profile, back view';
+      const charTokens = [
+        `Character design turnaround model sheet of ${cs.character_name}`,
+        cs.gender_and_age,
+        cs.ethnicity_and_skin,
+        `eyes: ${cs.eye_details}`,
+        `hair: ${cs.hair_details}`,
+        cs.distinctive_marks,
+        cs.body_build,
+        `wearing ${cs.signature_outfit}`,
+        cs.signature_props ? `accessories: ${cs.signature_props}` : '',
+        `multiple angles in a single frame: ${views}`,
+        cs.background_style,
+        'character concept reference sheet, consistent character design across all views, even studio lighting, 8k',
+        spec.style_and_rendering.medium,
+        spec.style_and_rendering.aesthetic,
+        spec.style_and_rendering.color_grading,
+        ...spec.style_and_rendering.quality_tags,
+      ];
+      const body = charTokens.filter((t) => t && t.trim()).join(', ');
+      const flags: string[] = [`--ar ${spec.technical_parameters.aspect_ratio || '16:9'}`];
+      if (spec.technical_parameters.raw_mode) flags.push('--style raw');
+      if (spec.technical_parameters.stylize > 0) flags.push(`--s ${spec.technical_parameters.stylize}`);
+      if (spec.technical_parameters.chaos > 0) flags.push(`--c ${spec.technical_parameters.chaos}`);
+      if (spec.technical_parameters.seed !== null) flags.push(`--seed ${spec.technical_parameters.seed}`);
+      if (cs.cref_url?.trim()) flags.push(`--cref ${cs.cref_url.trim()} --cw 100`);
+      if (spec.technical_parameters.negative_prompt.trim()) flags.push(`--no ${spec.technical_parameters.negative_prompt.trim()}`);
+      return `${body} ${flags.join(' ')}`;
+    }
+
     const tokens: string[] = [
       `${spec.style_and_rendering.medium} of ${spec.subject.primary_entity}`,
       spec.subject.description,
@@ -1304,6 +1730,9 @@ export class PromptService {
     if (spec.technical_parameters.seed !== null) {
       flags.push(`--seed ${spec.technical_parameters.seed}`);
     }
+    if (spec.character_sheet?.cref_url?.trim()) {
+      flags.push(`--cref ${spec.character_sheet.cref_url.trim()} --cw 100`);
+    }
     if (spec.technical_parameters.negative_prompt.trim()) {
       flags.push(`--no ${spec.technical_parameters.negative_prompt.trim()}`);
     }
@@ -1328,6 +1757,15 @@ export class PromptService {
    * Compiles Positive + Negative prompt tags for Stable Diffusion XL (SDXL).
    */
   compileForSdxl(spec: ImagePromptSpec): { positive: string; negative: string } {
+    if (spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()) {
+      const cs = spec.character_sheet;
+      const views = cs.views.join(', ');
+      return {
+        positive: `(character model sheet, turnaround sheet:1.35), (multiple angles in one frame, ${views}:1.25), (${cs.character_name}:1.2), ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, (${cs.eye_details}:1.1), (${cs.hair_details}:1.1), ${cs.distinctive_marks}, ${cs.body_build}, ${cs.signature_outfit}, ${cs.background_style}, even studio lighting, high resolution, 8k, best quality`,
+        negative: `bad anatomy, inconsistent character, different faces, cropped, blurry, dark background, complex background, text, watermark, signature, jpeg artifacts`,
+      };
+    }
+
     const pos = [
       `(masterpiece, best quality:1.2)`,
       spec.style_and_rendering.medium,
@@ -1631,6 +2069,7 @@ Return ONLY valid JSON matching the schema. No markdown code fences, no introduc
       composition: { ...base.composition, ...(parsed.composition || {}) },
       style_and_rendering: { ...base.style_and_rendering, ...(parsed.style_and_rendering || {}) },
       typography: { ...base.typography, ...(parsed.typography || {}) },
+      character_sheet: { ...base.character_sheet, ...(parsed.character_sheet || {}) },
       technical_parameters: { ...base.technical_parameters, ...(parsed.technical_parameters || {}) },
       additional_subjects: parsed.additional_subjects || [],
       custom_properties: parsed.custom_properties || [],
@@ -1689,6 +2128,12 @@ Return ONLY valid JSON matching the schema. No markdown code fences, no introduc
       typography_placement: [],
       aspect_ratio: [],
       negative_prompt: [],
+      character_gender_age: [],
+      character_eyes: [],
+      character_hair: [],
+      character_marks: [],
+      character_build: [],
+      character_background: [],
     };
     try {
       const raw = localStorage.getItem(CUSTOM_OPTIONS_STORAGE_KEY);
@@ -1705,5 +2150,58 @@ Return ONLY valid JSON matching the schema. No markdown code fences, no introduc
       if (raw) return JSON.parse(raw);
     } catch {}
     return [];
+  }
+
+  private loadSavedCharacters(): SavedCharacter[] {
+    try {
+      const raw = localStorage.getItem(SAVED_CHARACTERS_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [
+      {
+        id: 'char-default-1',
+        name: 'Elena Vance',
+        summary: 'Donna 26 anni · Occhi nocciola · Camicia in lino ecru',
+        sheet: {
+          enabled: true,
+          character_name: 'Elena Vance',
+          gender_and_age: 'Young woman, 26 years old',
+          ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
+          eye_details: 'Almond-shaped hazel eyes with amber gold flecks and dark lash line',
+          hair_details: 'Chestnut brown wavy shoulder-length hair parted slightly off-center',
+          distinctive_marks: 'Tiny faint beauty mark under the left eye, natural skin pores and micro-texture',
+          body_build: 'Athletic, slender build, upright posture',
+          signature_outfit: 'Textured ivory linen button-up shirt and high-waisted charcoal trousers',
+          signature_props: 'Delicate vintage gold signet ring on the right ring finger',
+          layout_mode: 'turnaround_4_views',
+          views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
+          background_style: 'Neutral light-grey seamless studio backdrop with soft floor shadow',
+          cref_url: '',
+        },
+        createdAt: 1700000000000,
+      },
+      {
+        id: 'char-default-2',
+        name: 'Ren Takahashi',
+        summary: 'Uomo 31 anni · Impianto neurale tempia · Giacca techwear',
+        sheet: {
+          enabled: true,
+          character_name: 'Ren Takahashi',
+          gender_and_age: 'Man in early 30s, 31 years old',
+          ethnicity_and_skin: 'East Asian heritage, pale smooth complexion with sharp defined jawline',
+          eye_details: 'Sharp hooded dark amber eyes with intense focused gaze',
+          hair_details: 'Raven black textured undercut fade with loose strands over forehead',
+          distinctive_marks: 'Sleek subcutaneous chrome neural interface glow port at the left temple',
+          body_build: 'Lean athletic runner physique, broad shoulders',
+          signature_outfit: 'Matte black waterproof techwear bomber jacket with sealed seams and dark cargo pants',
+          signature_props: 'Titanium minimalist cuff bracelet on right wrist',
+          layout_mode: 'turnaround_4_views',
+          views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
+          background_style: 'Minimalist dark charcoal grey studio backdrop with subtle rim illumination',
+          cref_url: '',
+        },
+        createdAt: 1700000001000,
+      },
+    ];
   }
 }

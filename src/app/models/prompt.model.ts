@@ -58,6 +58,31 @@ export interface TypographyBlock {
   placement_and_material: string;
 }
 
+export interface CharacterSheetBlock {
+  enabled: boolean;
+  character_name: string;
+  gender_and_age: string;
+  ethnicity_and_skin: string;
+  eye_details: string;
+  hair_details: string;
+  distinctive_marks: string;
+  body_build: string;
+  signature_outfit: string;
+  signature_props: string;
+  layout_mode: 'turnaround_4_views' | 'turnaround_3_views' | 'expressions_grid' | 'full_body_and_portraits' | 'outfit_study';
+  views: string[];
+  background_style: string;
+  cref_url?: string;
+}
+
+export interface SavedCharacter {
+  id: string;
+  name: string;
+  summary: string;
+  sheet: CharacterSheetBlock;
+  createdAt: number;
+}
+
 export interface TechnicalParametersBlock {
   aspect_ratio: string;
   negative_prompt: string;
@@ -88,6 +113,7 @@ export interface ImagePromptSpec {
   composition: CompositionBlock;
   style_and_rendering: StyleBlock;
   typography: TypographyBlock;
+  character_sheet: CharacterSheetBlock;
   technical_parameters: TechnicalParametersBlock;
   custom_properties: CustomProperty[];
 }
@@ -133,7 +159,13 @@ export type PresetCategoryKey =
   | 'font_style'
   | 'typography_placement'
   | 'aspect_ratio'
-  | 'negative_prompt';
+  | 'negative_prompt'
+  | 'character_gender_age'
+  | 'character_eyes'
+  | 'character_hair'
+  | 'character_marks'
+  | 'character_build'
+  | 'character_background';
 
 export type CustomOptionsMap = Record<PresetCategoryKey, string[]>;
 

@@ -137,6 +137,226 @@
       </div>
     </div>
 
+    <!-- CHARACTER SHEET & CONSISTENCY -->
+    <app-section-block
+      title="Scheda Personaggio & Consistenza (Turnaround / DNA Visivo)"
+      icon="🧬"
+      accent="#ff79c6"
+      [badge]="spec().character_sheet.enabled ? 'Attivo' : 'Disattivato'"
+      [summary]="spec().character_sheet.character_name ? (spec().character_sheet.character_name + ' • ' + (spec().character_sheet.views.length || 0) + ' viste') : 'Nessun personaggio definito'"
+      [(open)]="sectionCharacterOpen"
+    >
+      <!-- Library bar of saved characters -->
+      <div class="char-library-bar">
+        <div class="char-lib-header">
+          <span class="char-lib-title">📚 Libreria Personaggi Ricorrenti:</span>
+          <button
+            type="button"
+            class="btn-sm btn-accent"
+            (click)="saveCurrentCharacter()"
+            title="Salva il personaggio corrente per riutilizzarlo in altre scene"
+          >
+            💾 Salva Personaggio Corrente
+          </button>
+        </div>
+        @if (savedCharacters().length > 0) {
+          <div class="char-pills">
+            @for (char of savedCharacters(); track char.id) {
+              <div
+                class="char-pill"
+                [class.active]="spec().character_sheet.character_name === char.name"
+                (click)="loadSavedCharacter(char)"
+              >
+                <span class="char-pill-name">👤 {{ char.name }}</span>
+                <span class="char-pill-sub">{{ char.summary }}</span>
+                <button
+                  type="button"
+                  class="char-pill-del"
+                  title="Elimina dalla libreria"
+                  (click)="deleteSavedCharacter(char.id, $event)"
+                >×</button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Character sheet toggle & injection toolbar -->
+      <div class="char-toolbar">
+        <label class="toggle-label">
+          <input
+            type="checkbox"
+            [checked]="spec().character_sheet.enabled"
+            (change)="store.set('character_sheet', 'enabled', $any($event.target).checked)"
+          />
+          <span><strong>Abilita modalità Scheda Personaggio (Model Sheet / Multi-Angle Turnaround)</strong></span>
+        </label>
+
+        <button
+          type="button"
+          class="char-apply-btn"
+          (click)="injectCharacterIntoSubject()"
+          title="Copia i dati del personaggio nel blocco Soggetto Principale sottostante per generare una scena"
+        >
+          ↳ Inietta nel Soggetto della Scena
+        </button>
+      </div>
+
+      <div class="grid-2">
+        <app-smart-field
+          class="span-2"
+          label="Nome del Personaggio"
+          placeholder="Es. Elena Vance, Ren Takahashi, Marcus Sterling…"
+          [value]="spec().character_sheet.character_name"
+          (valueChange)="store.set('character_sheet', 'character_name', $event)"
+        />
+
+        <app-smart-field
+          label="Genere & Età"
+          category="character_gender_age"
+          placeholder="Es. Young woman, 26 years old…"
+          [value]="spec().character_sheet.gender_and_age"
+          (valueChange)="store.set('character_sheet', 'gender_and_age', $event)"
+        />
+
+        <app-smart-field
+          label="Corporatura / Body Build"
+          category="character_build"
+          placeholder="Es. Athletic, slender build, upright posture…"
+          [value]="spec().character_sheet.body_build"
+          (valueChange)="store.set('character_sheet', 'body_build', $event)"
+        />
+
+        <app-smart-field
+          label="Occhi & Sguardo"
+          category="character_eyes"
+          placeholder="Es. Almond-shaped hazel eyes with amber gold flecks…"
+          [value]="spec().character_sheet.eye_details"
+          (valueChange)="store.set('character_sheet', 'eye_details', $event)"
+        />
+
+        <app-smart-field
+          label="Capelli & Taglio"
+          category="character_hair"
+          placeholder="Es. Chestnut brown wavy shoulder-length hair…"
+          [value]="spec().character_sheet.hair_details"
+          (valueChange)="store.set('character_sheet', 'hair_details', $event)"
+        />
+
+        <app-smart-field
+          class="span-2"
+          label="Etnia, Carnagione & Tratti della Pelle"
+          placeholder="Es. Warm olive skin with natural subtle freckles across the bridge of the nose…"
+          [value]="spec().character_sheet.ethnicity_and_skin"
+          (valueChange)="store.set('character_sheet', 'ethnicity_and_skin', $event)"
+        />
+
+        <app-smart-field
+          class="span-2"
+          label="Segni Particolari & Dettagli Somatici Distintivi"
+          category="character_marks"
+          placeholder="Es. Tiny faint beauty mark under the left eye, defined jawline, natural skin pores…"
+          [value]="spec().character_sheet.distinctive_marks"
+          (valueChange)="store.set('character_sheet', 'distinctive_marks', $event)"
+        />
+
+        <app-smart-field
+          label="Abbigliamento Iconico (Signature Outfit)"
+          placeholder="Es. Textured ivory linen button-up shirt and high-waisted charcoal trousers…"
+          [value]="spec().character_sheet.signature_outfit"
+          (valueChange)="store.set('character_sheet', 'signature_outfit', $event)"
+        />
+
+        <app-smart-field
+          label="Accessori / Oggetti Iconici (Props)"
+          placeholder="Es. Delicate vintage gold signet ring on right ring finger…"
+          [value]="spec().character_sheet.signature_props"
+          (valueChange)="store.set('character_sheet', 'signature_props', $event)"
+        />
+
+        <!-- Layout Mode & Views Selection -->
+        <div class="field-group span-2">
+          <label class="field-label">Formato Scheda Turnaround (Layout Mode)</label>
+          <div class="char-layout-modes">
+            <button
+              type="button"
+              class="char-mode-btn"
+              [class.active]="spec().character_sheet.layout_mode === 'turnaround_4_views'"
+              (click)="store.set('character_sheet', 'layout_mode', 'turnaround_4_views')"
+            >
+              🔄 Turnaround 4 Viste (Front, 3/4, Profilo, Back)
+            </button>
+            <button
+              type="button"
+              class="char-mode-btn"
+              [class.active]="spec().character_sheet.layout_mode === 'turnaround_3_views'"
+              (click)="store.set('character_sheet', 'layout_mode', 'turnaround_3_views')"
+            >
+              📐 Turnaround 3 Viste (Front, Profilo, Back)
+            </button>
+            <button
+              type="button"
+              class="char-mode-btn"
+              [class.active]="spec().character_sheet.layout_mode === 'expressions_grid'"
+              (click)="store.set('character_sheet', 'layout_mode', 'expressions_grid')"
+            >
+              😀 Griglia Espressioni (6 Emozioni)
+            </button>
+            <button
+              type="button"
+              class="char-mode-btn"
+              [class.active]="spec().character_sheet.layout_mode === 'full_body_and_portraits'"
+              (click)="store.set('character_sheet', 'layout_mode', 'full_body_and_portraits')"
+            >
+              🧍 Figura Intera + Ritratti Ravvicinati
+            </button>
+            <button
+              type="button"
+              class="char-mode-btn"
+              [class.active]="spec().character_sheet.layout_mode === 'outfit_study'"
+              (click)="store.set('character_sheet', 'layout_mode', 'outfit_study')"
+            >
+              👔 Studio Outfit &amp; Costumi
+            </button>
+          </div>
+        </div>
+
+        <!-- Multi-view selector chips -->
+        <div class="field-group span-2">
+          <label class="field-label">Viste Incluse nel Frame</label>
+          <div class="char-views-chips">
+            @for (v of availableViews; track v) {
+              <button
+                type="button"
+                class="char-view-chip"
+                [class.selected]="spec().character_sheet.views.includes(v)"
+                (click)="store.toggleCharacterView(v)"
+              >
+                {{ spec().character_sheet.views.includes(v) ? '✓ ' : '+ ' }}{{ v }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <app-smart-field
+          class="span-2"
+          label="Sfondo Scheda Turnaround (Backdrop isolato)"
+          category="character_background"
+          placeholder="Es. Neutral light-grey seamless studio backdrop with soft floor shadow…"
+          [value]="spec().character_sheet.background_style"
+          (valueChange)="store.set('character_sheet', 'background_style', $event)"
+        />
+
+        <app-smart-field
+          class="span-2"
+          label="Midjourney --cref URL (Consistenza Personaggio Referenziato)"
+          placeholder="https://... URL dell'immagine di riferimento generata (aggiunge --cref &lt;url&gt; --cw 100)"
+          [value]="spec().character_sheet.cref_url || ''"
+          (valueChange)="store.set('character_sheet', 'cref_url', $event)"
+        />
+      </div>
+    </app-section-block>
+
     <!-- SUBJECT -->
     <app-section-block
       title="Soggetto principale"

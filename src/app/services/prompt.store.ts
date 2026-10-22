@@ -14,6 +14,7 @@ export type SpecBlockKey =
   | 'composition'
   | 'style_and_rendering'
   | 'typography'
+  | 'character_sheet'
   | 'technical_parameters';
 
 /**
@@ -120,6 +121,38 @@ export class PromptStore {
     this.spec.update((s) => ({ ...s, custom_properties: s.custom_properties.filter((x) => x.id !== id) }));
   }
 
+  // ---------- Character Sheet ----------
+
+  updateCharacterSheet(partial: Partial<import('../models/prompt.model').CharacterSheetBlock>): void {
+    this.spec.update((s) => ({
+      ...s,
+      character_sheet: { ...s.character_sheet, ...partial },
+    }));
+  }
+
+  toggleCharacterView(view: string): void {
+    const current = this.spec().character_sheet.views || [];
+    const next = current.includes(view) ? current.filter((v) => v !== view) : [...current, view];
+    this.set('character_sheet', 'views', next);
+  }
+
+  applyCharacterToSubject(): void {
+    const cs = this.spec().character_sheet;
+    if (!cs.character_name.trim()) return;
+    this.set('subject', 'primary_entity', `${cs.character_name}, ${cs.gender_and_age}`);
+    const details = [
+      cs.ethnicity_and_skin,
+      cs.eye_details ? `eyes: ${cs.eye_details}` : '',
+      cs.hair_details ? `hair: ${cs.hair_details}` : '',
+      cs.distinctive_marks,
+      cs.body_build,
+    ].filter(Boolean).join(', ');
+    this.set('subject', 'description', details);
+    if (cs.signature_outfit) {
+      this.set('subject', 'clothing_or_materials', cs.signature_outfit + (cs.signature_props ? `, with ${cs.signature_props}` : ''));
+    }
+  }
+
   // ---------- Reset ----------
 
   reset(): void {
@@ -175,6 +208,13 @@ export class PromptStore {
     if (obj['typography']) {
       mergeBlock(out.typography, obj['typography'], null);
       if (obj['typography'].enabled === undefined) out.typography.enabled = !!obj['typography'].exact_text;
+    }
+
+    if (obj['character_sheet']) {
+      mergeBlock(out.character_sheet, obj['character_sheet'], null);
+      if (Array.isArray(obj['character_sheet'].views)) {
+        out.character_sheet.views = [...obj['character_sheet'].views];
+      }
     }
 
     const tech = obj['technical_parameters'];

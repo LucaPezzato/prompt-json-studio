@@ -12,7 +12,7 @@ import { TemplateSidebar } from './components/template-sidebar/template-sidebar'
 import { OutputPanel, OutputTab, CompiledOutputs } from './components/output-panel/output-panel';
 import { PromptStore } from './services/prompt.store';
 import { PromptService } from './services/prompt.service';
-import { CustomProperty, PromptTemplate } from './models/prompt.model';
+import { CustomProperty, PromptTemplate, SavedCharacter } from './models/prompt.model';
 
 @Component({
   selector: 'app-root',
@@ -69,6 +69,7 @@ export class App {
   readonly presetDescription = signal('');
 
   // Sections collapse state
+  readonly sectionCharacterOpen = signal(false);
   readonly sectionSubjectOpen = signal(true);
   readonly sectionSceneOpen = signal(true);
   readonly sectionCameraOpen = signal(true);
@@ -104,7 +105,18 @@ export class App {
     return [...new Set([...defaultList, ...current])];
   });
 
+  // Character Sheet signals & library
+  readonly savedCharacters = this.svc.savedCharacters;
+  readonly availableViews = [
+    'Front view',
+    '3/4 Profile view',
+    'Side profile view',
+    'Back view',
+    'Close-up face',
+  ];
+
   collapseAll(): void {
+    this.sectionCharacterOpen.set(false);
     this.sectionSubjectOpen.set(false);
     this.sectionSceneOpen.set(false);
     this.sectionCameraOpen.set(false);
@@ -117,6 +129,7 @@ export class App {
   }
 
   expandAll(): void {
+    this.sectionCharacterOpen.set(true);
     this.sectionSubjectOpen.set(true);
     this.sectionSceneOpen.set(true);
     this.sectionCameraOpen.set(true);
@@ -126,6 +139,40 @@ export class App {
     this.sectionTypographyOpen.set(true);
     this.sectionTechnicalOpen.set(true);
     this.sectionCustomOpen.set(true);
+  }
+
+  saveCurrentCharacter(): void {
+    const cs = this.spec().character_sheet;
+    if (!cs.character_name.trim()) {
+      this.showToast('Inserisci il nome del personaggio prima di salvarlo');
+      return;
+    }
+    const saved = this.svc.saveCharacter(cs.character_name, cs);
+    this.showToast(`Personaggio "${saved.name}" salvato nella libreria!`);
+  }
+
+  loadSavedCharacter(c: SavedCharacter): void {
+    this.store.updateCharacterSheet({
+      ...c.sheet,
+      enabled: true,
+    });
+    this.sectionCharacterOpen.set(true);
+    this.showToast(`Caricato personaggio: ${c.name}`);
+  }
+
+  deleteSavedCharacter(id: string, ev?: Event): void {
+    if (ev) ev.stopPropagation();
+    const c = this.savedCharacters().find((x) => x.id === id);
+    if (confirm(`Eliminare il personaggio "${c?.name || 'selezionato'}" dalla libreria?`)) {
+      this.svc.deleteCharacter(id);
+      this.showToast('Personaggio rimosso');
+    }
+  }
+
+  injectCharacterIntoSubject(): void {
+    this.store.applyCharacterToSubject();
+    this.sectionSubjectOpen.set(true);
+    this.showToast('Identità personaggio iniettata nel blocco Soggetto!');
   }
 
   // Actions
