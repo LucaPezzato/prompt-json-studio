@@ -2076,6 +2076,173 @@ Return ONLY valid JSON matching the schema. No markdown code fences, no introduc
     };
   }
 
+  /**
+   * Synthesizes 1 to 5 photos of a person into a consistent CharacterSheetBlock using multimodal AI.
+   * Cross-references multiple angles to extract invariant biometric DNA, facial features, and style.
+   */
+  async extractCharacterFromPhotos(
+    photoDataUrls: string[],
+    contextHint: string,
+    config: AiAssistantConfig
+  ): Promise<CharacterSheetBlock> {
+    if (!photoDataUrls || photoDataUrls.length === 0) {
+      throw new Error('Nessuna foto selezionata per l’analisi');
+    }
+
+    if (!config.apiKey.trim() && config.provider !== 'ollama') {
+      throw new Error('Chiave API non configurata. Apri le impostazioni ⚙ per inserire la tua chiave Google Gemini o OpenAI.');
+    }
+
+    const defaultSheet = structuredClone(DEFAULT_CHARACTER_SHEET);
+
+    const systemPrompt = `You are an elite Character Designer, Biometrics Specialist, and AI Prompt Engineer specializing in Midjourney v6/v7 (--cref), FLUX.1/FLUX.2, and photorealistic multi-angle character turnarounds.
+You are provided with ${photoDataUrls.length} reference photo(s) of an individual.
+Analyze the photo(s) in deep technical detail. Cross-reference across all angles and lighting to isolate their invariant biometric DNA, facial structure, skin micro-texture, and signature style.
+
+Output ONLY a JSON object strictly adhering to this schema:
+{
+  "character_name": "Full name (use the provided hint if given, otherwise create a fitting realistic name)",
+  "gender_and_age": "Gender and specific age/age-range (e.g. 'Woman in her late 20s, approx 28 years old')",
+  "ethnicity_and_skin": "Detailed ethnicity, skin tone, undertone, natural pores, texture, finish (e.g. 'Warm olive skin with subtle freckles across the bridge of the nose and natural skin pores')",
+  "eye_details": "Exact eye shape, iris color, flecks, lash line, eyebrow arch and thickness (e.g. 'Almond-shaped hazel eyes with amber gold flecks and well-defined natural brows')",
+  "hair_details": "Hair color with undertones, natural texture (wavy/curly/straight), haircut, length, parting (e.g. 'Chestnut brown wavy shoulder-length hair parted slightly off-center')",
+  "distinctive_marks": "Unique facial features: jawline structure, cheekbones, nose profile, beauty marks, scars, smile lines, dimples",
+  "body_build": "Estimated frame, height impression, posture, shoulder width and build (e.g. 'Slender athletic build with upright posture')",
+  "signature_outfit": "Signature cohesive clothing style synthesized from the photos (garments, fabrics, colors, textures)",
+  "signature_props": "Recurring accessories, jewelry, glasses, or items (or empty if none)",
+  "layout_mode": "turnaround_4_views",
+  "views": ["Front view", "3/4 Profile view", "Side profile view", "Back view", "Close-up face"],
+  "background_style": "Neutral light-grey seamless studio backdrop with soft floor shadow",
+  "cref_url": ""
+}
+${contextHint.trim() ? `\nUSER CONTEXT & INSTRUCTIONS: ${contextHint.trim()}` : ''}
+
+Instructions:
+1. Synthesize consistent biometric traits from the photos to create a cohesive, photorealistic character identity.
+2. Provide rich, concrete descriptive language for image generation models (avoid vague adjectives).
+3. Return ONLY valid JSON matching the schema. No markdown code fences, no extra text.`;
+
+    let rawJson = '';
+
+    if (config.provider === 'gemini') {
+      const model = config.model || 'gemini-3.8-flash';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
+        config.apiKey
+      )}`;
+
+      const parts: any[] = [];
+      for (const dataUrl of photoDataUrls) {
+        const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+_-]+);base64,(.+)$/);
+        if (match) {
+          parts.push({
+            inlineData: {
+              mimeType: match[1],
+              data: match[2],
+            },
+          });
+        }
+      }
+      parts.push({ text: systemPrompt });
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { responseMimeType: 'application/json' },
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Errore Google Gemini API (${res.status})`);
+      }
+      const data = await res.json();
+      rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } else if (config.provider === 'openai' || config.provider === 'openrouter') {
+      const endpoint =
+        config.provider === 'openai'
+          ? 'https://api.openai.com/v1/chat/completions'
+          : 'https://openrouter.ai/api/v1/chat/completions';
+
+      const content: any[] = [{ type: 'text', text: systemPrompt }];
+      for (const dataUrl of photoDataUrls) {
+        content.push({ type: 'image_url', image_url: { url: dataUrl } });
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.model || 'gpt-4o',
+          response_format: { type: 'json_object' },
+          messages: [
+            {
+              role: 'user',
+              content,
+            },
+          ],
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Errore OpenAI API (${res.status})`);
+      }
+      const data = await res.json();
+      rawJson = data?.choices?.[0]?.message?.content || '';
+    } else if (config.provider === 'ollama') {
+      const baseUrl = (config.ollamaUrl || 'http://localhost:11434').replace(/\/$/, '');
+      const images: string[] = [];
+      for (const dataUrl of photoDataUrls) {
+        const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+_-]+);base64,(.+)$/);
+        if (match) images.push(match[2]);
+      }
+
+      const res = await fetch(`${baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: config.model || 'llama3.2-vision',
+          prompt: systemPrompt,
+          images,
+          format: 'json',
+          stream: false,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Errore Ollama Vision (${res.status})`);
+      }
+      const data = await res.json();
+      rawJson = data?.response || '';
+    }
+
+    const clean = rawJson.replace(/^```(?:json)?\s*|\s*```$/gi, '').trim();
+    if (!clean) throw new Error('Nessuna risposta ricevuta dal modello per la scheda personaggio.');
+
+    const parsed = JSON.parse(clean);
+    return {
+      enabled: true,
+      character_name: parsed.character_name || 'Nuovo Personaggio',
+      gender_and_age: parsed.gender_and_age || defaultSheet.gender_and_age,
+      ethnicity_and_skin: parsed.ethnicity_and_skin || defaultSheet.ethnicity_and_skin,
+      eye_details: parsed.eye_details || defaultSheet.eye_details,
+      hair_details: parsed.hair_details || defaultSheet.hair_details,
+      distinctive_marks: parsed.distinctive_marks || defaultSheet.distinctive_marks,
+      body_build: parsed.body_build || defaultSheet.body_build,
+      signature_outfit: parsed.signature_outfit || defaultSheet.signature_outfit,
+      signature_props: parsed.signature_props || defaultSheet.signature_props,
+      layout_mode: parsed.layout_mode || 'turnaround_4_views',
+      views: Array.isArray(parsed.views) && parsed.views.length > 0 ? parsed.views : defaultSheet.views,
+      background_style: parsed.background_style || defaultSheet.background_style,
+      cref_url: parsed.cref_url || '',
+    };
+  }
+
   private loadAiConfig(): AiAssistantConfig {
     try {
       const raw = localStorage.getItem(AI_CONFIG_STORAGE_KEY);

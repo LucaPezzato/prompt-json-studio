@@ -83,6 +83,15 @@ export interface SavedCharacter {
   createdAt: number;
 }
 
+export interface CharacterPhotoItem {
+  id: string;
+  dataUrl: string;
+  name: string;
+  size: string;
+  width: number;
+  height: number;
+}
+
 export interface TechnicalParametersBlock {
   aspect_ratio: string;
   negative_prompt: string;

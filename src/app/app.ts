@@ -12,7 +12,7 @@ import { TemplateSidebar } from './components/template-sidebar/template-sidebar'
 import { OutputPanel, OutputTab, CompiledOutputs } from './components/output-panel/output-panel';
 import { PromptStore } from './services/prompt.store';
 import { PromptService } from './services/prompt.service';
-import { CustomProperty, PromptTemplate, SavedCharacter } from './models/prompt.model';
+import { CharacterPhotoItem, CustomProperty, PromptTemplate, SavedCharacter } from './models/prompt.model';
 
 @Component({
   selector: 'app-root',
@@ -58,6 +58,13 @@ export class App {
   readonly referenceImageInfo = signal<{ name: string; size: string; width: number; height: number; aspect: string } | null>(null);
   readonly showLightbox = signal(false);
   readonly isDragging = signal(false);
+
+  // Character Photos to Profile signals
+  readonly showCharPhotoModal = signal(false);
+  readonly charPhotoLoading = signal(false);
+  readonly charPhotos = signal<CharacterPhotoItem[]>([]);
+  readonly charPhotoContext = signal('');
+  readonly isCharPhotoDragging = signal(false);
 
   // Form input signals for modals / tools
   readonly magicIdea = signal('');
@@ -426,6 +433,111 @@ export class App {
       this.showToast('Errore estrazione prompt: ' + (e as Error).message);
     } finally {
       this.reverseLoading.set(false);
+    }
+  }
+
+  // Character Photos from file/drop methods
+  openCharPhotoModal(): void {
+    this.showCharPhotoModal.set(true);
+  }
+
+  closeCharPhotoModal(): void {
+    if (this.charPhotoLoading()) return;
+    this.showCharPhotoModal.set(false);
+  }
+
+  onCharPhotoDragOver(ev: DragEvent): void {
+    ev.preventDefault();
+    this.isCharPhotoDragging.set(true);
+  }
+
+  onCharPhotoDragLeave(ev: DragEvent): void {
+    ev.preventDefault();
+    this.isCharPhotoDragging.set(false);
+  }
+
+  async onCharPhotosDrop(ev: DragEvent): Promise<void> {
+    ev.preventDefault();
+    this.isCharPhotoDragging.set(false);
+    if (ev.dataTransfer?.files) {
+      await this.addCharPhotoFiles(ev.dataTransfer.files);
+    }
+  }
+
+  async onCharFilesSelected(ev: Event): Promise<void> {
+    const target = ev.target as HTMLInputElement;
+    if (target.files) {
+      await this.addCharPhotoFiles(target.files);
+      target.value = '';
+    }
+  }
+
+  async addCharPhotoFiles(files: FileList | File[]): Promise<void> {
+    const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (list.length === 0) {
+      this.showToast('Seleziona file immagine validi (PNG, JPG, WEBP)');
+      return;
+    }
+    const current = this.charPhotos();
+    const remainingSlots = Math.max(0, 5 - current.length);
+    if (remainingSlots <= 0) {
+      this.showToast('Hai già raggiunto il limite massimo di 5 foto');
+      return;
+    }
+    const toProcess = list.slice(0, remainingSlots);
+    for (const f of toProcess) {
+      try {
+        const processed = await this.processImageFile(f);
+        this.charPhotos.update((prev) => [
+          ...prev,
+          {
+            id: 'cp-' + Math.random().toString(36).substring(2, 9),
+            dataUrl: processed.dataUrl,
+            name: processed.name,
+            size: processed.size,
+            width: processed.width,
+            height: processed.height,
+          },
+        ]);
+      } catch (err) {
+        console.error('Error processing photo:', err);
+      }
+    }
+    if (list.length > remainingSlots) {
+      this.showToast(`Caricate ${remainingSlots} foto (massimo 5 per personaggio)`);
+    }
+  }
+
+  removeCharPhoto(id: string): void {
+    this.charPhotos.update((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  clearCharPhotos(): void {
+    this.charPhotos.set([]);
+  }
+
+  async runExtractCharacterFromPhotos(): Promise<void> {
+    const photos = this.charPhotos();
+    if (photos.length === 0 || this.charPhotoLoading()) return;
+    this.charPhotoLoading.set(true);
+    try {
+      const cfg = this.svc.aiConfig();
+      const extracted = await this.svc.extractCharacterFromPhotos(
+        photos.map((p) => p.dataUrl),
+        this.charPhotoContext(),
+        cfg
+      );
+      this.store.updateCharacterSheet({ ...extracted, enabled: true });
+      const saved = this.svc.saveCharacter(extracted.character_name, extracted);
+      this.sectionCharacterOpen.set(true);
+      this.showCharPhotoModal.set(false);
+      this.charPhotos.set([]);
+      this.charPhotoContext.set('');
+      this.showToast(`✨ Scheda di "${saved.name}" estratta da ${photos.length} foto e salvata!`);
+    } catch (e) {
+      this.showToast('Errore analisi foto: ' + (e as Error).message);
+    } finally {
+      this.charPhotoLoading.set(false);
     }
   }
 

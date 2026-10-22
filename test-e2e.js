@@ -273,10 +273,74 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-character-sheet.png'), fullPage: false });
   console.log('📸 Captured e2e-character-sheet.png');
 
+  // 11. Test Character Profile Creation from Photos (AI Vision Multi-Image)
+  console.log('👉 Testing Character Profile Creation from Photos modal...');
+  const charExtractBtn = charBlock.locator('button.char-extract-btn');
+  await charExtractBtn.waitFor({ state: 'visible', timeout: 5000 });
+  await charExtractBtn.click();
+  await page.waitForTimeout(300);
+
+  const charPhotoModal = page.locator('.modal-backdrop .modal h3:has-text("Crea Profilo Personaggio da Foto")');
+  await charPhotoModal.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Character Photo Upload modal opened');
+
+  // Create two temporary test images
+  const testImg1 = '/tmp/test-char-1.png';
+  const testImg2 = '/tmp/test-char-2.png';
+  const testCharPng = 'iVBORw0KGgoAAAANSUhEUgAAAlgAAAGQCAYAAAByNR6YAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAA1zSURBVHic7d1BDQAwDMCw50+92uADUjK7mQWw4/gDAODfFgAAAA==';
+  fs.writeFileSync(testImg1, Buffer.from(testCharPng, 'base64'));
+  fs.writeFileSync(testImg2, Buffer.from(testCharPng, 'base64'));
+
+  const charFileInput = page.locator('.char-dropzone input[type="file"]').first();
+  await charFileInput.setInputFiles([testImg1, testImg2]);
+  await page.waitForTimeout(400);
+
+  // Check thumbnails
+  const thumbCards = await page.locator('.char-thumb-card').all();
+  console.log(`  Uploaded ${thumbCards.length} photo thumbnails in modal`);
+  if (thumbCards.length !== 2) {
+    throw new Error(`Expected 2 thumbnail cards, found ${thumbCards.length}`);
+  }
+
+  // Set character context hint
+  const charHintInput = page.locator('.char-photo-modal-body input[type="text"]');
+  await charHintInput.fill('Maya Lin, 28 years old, modernist architect');
+  await page.waitForTimeout(200);
+
+  // Click Analizza & Genera Scheda Personaggio
+  const runCharExtractBtn = page.locator('.modal-actions button.btn.primary:has-text("Analizza")');
+  await runCharExtractBtn.click();
+
+  // Wait for modal to complete and close
+  await page.waitForFunction(() => {
+    return !document.querySelector('.char-photo-modal-body');
+  }, { timeout: 30000 });
+  console.log('✔ Multimodal photo analysis completed and modal closed');
+
+  // Verify Character Sheet updated with the extracted character
+  const newCharName = await charNameInput.inputValue();
+  console.log(`  Character sheet updated to: "${newCharName}"`);
+  if (!newCharName.toLowerCase().includes('maya')) {
+    throw new Error(`Expected Character name to contain Maya, got: ${newCharName}`);
+  }
+
+  // Verify saved in library pills
+  const newPill = page.locator('.char-pill:has-text("Maya")');
+  await newPill.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ New character auto-saved to library pills bar!');
+
+  // Cleanup test images
+  fs.unlinkSync(testImg1);
+  fs.unlinkSync(testImg2);
+
+  // Capture final screenshot
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-character-from-photos.png'), fullPage: false });
+  console.log('📸 Captured e2e-character-from-photos.png');
+
   if (errors.length > 0) {
     throw new Error(`Browser encountered ${errors.length} errors: ${errors.join('; ')}`);
   }
 
-  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS (INCLUDING CHARACTER SHEET) PASSED PERFECTLY!');
+  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS (INCLUDING MULTI-PHOTO CHARACTER SHEET) PASSED PERFECTLY!');
   await browser.close();
 })();

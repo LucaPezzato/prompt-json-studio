@@ -150,14 +150,24 @@
       <div class="char-library-bar">
         <div class="char-lib-header">
           <span class="char-lib-title">📚 Libreria Personaggi Ricorrenti:</span>
-          <button
-            type="button"
-            class="btn-sm btn-accent"
-            (click)="saveCurrentCharacter()"
-            title="Salva il personaggio corrente per riutilizzarlo in altre scene"
-          >
-            💾 Salva Personaggio Corrente
-          </button>
+          <div class="char-lib-actions">
+            <button
+              type="button"
+              class="btn-sm btn-cyan char-extract-btn"
+              (click)="openCharPhotoModal()"
+              title="Carica da 1 a 5 foto per generare automaticamente il profilo biometrico"
+            >
+              📸 Crea Profilo da Foto (1-5 Foto)
+            </button>
+            <button
+              type="button"
+              class="btn-sm btn-accent"
+              (click)="saveCurrentCharacter()"
+              title="Salva il personaggio corrente per riutilizzarlo in altre scene"
+            >
+              💾 Salva Personaggio Corrente
+            </button>
+          </div>
         </div>
         @if (savedCharacters().length > 0) {
           <div class="char-pills">
@@ -1059,6 +1069,91 @@
     >
       {{ reverseLoading() ? 'Analisi dell\'immagine con IA in corso…' : '✨ Estrai & Ricrea Prompt' }}
     </button>
+  </div>
+</app-modal>
+
+<!-- Modal: Create Character Profile from Photos (Multimodal Biometrics) -->
+<app-modal title="🧬 Crea Profilo Personaggio da Foto (AI Vision Biometrica)" [wide]="true" [(open)]="showCharPhotoModal">
+  <div class="char-photo-modal-body">
+    <p class="muted">
+      Carica da 1 a 5 foto della stessa persona (primo piano, mezzo busto, 3/4 o profilo). L'IA multimodale analizzerà tutte le foto in sinergia per identificare i tratti somatici invarianti e generare la scheda personaggio per Midjourney, FLUX e SDXL.
+    </p>
+
+    <!-- Multi-photo upload dropzone -->
+    <div
+      class="upload-dropzone char-dropzone"
+      [class.dragging]="isCharPhotoDragging()"
+      (dragover)="onCharPhotoDragOver($event)"
+      (dragleave)="onCharPhotoDragLeave($event)"
+      (drop)="onCharPhotosDrop($event)"
+    >
+      <div class="drop-empty" (click)="charFileInput.click()">
+        <span class="drop-icon">👥</span>
+        <div class="drop-texts">
+          <b>Trascina qui da 1 a 5 foto, oppure clicca per selezionarle</b>
+          <span class="muted">PNG, JPG, WebP fino a 5 foto contemporaneamente</span>
+        </div>
+        <button type="button" class="btn ghost file-btn-inner">Scegli file da analizzare…</button>
+        <input #charFileInput type="file" multiple accept="image/*" (change)="onCharFilesSelected($event)" hidden />
+      </div>
+    </div>
+
+    <!-- Thumbnail gallery of uploaded photos -->
+    @if (charPhotos().length > 0) {
+      <div class="char-thumbs-section">
+        <div class="char-thumbs-header">
+          <span class="char-thumbs-title">📸 Foto selezionate ({{ charPhotos().length }} / 5):</span>
+          <button type="button" class="btn-sm btn-ghost" (click)="clearCharPhotos()">Svuota tutte</button>
+        </div>
+        <div class="char-thumbs-grid">
+          @for (photo of charPhotos(); track photo.id; let idx = $index) {
+            <div class="char-thumb-card">
+              <img [src]="photo.dataUrl" [alt]="photo.name" class="char-thumb-img" />
+              <div class="char-thumb-badge">#{{ idx + 1 }}</div>
+              <button
+                type="button"
+                class="char-thumb-del"
+                title="Rimuovi questa foto"
+                (click)="removeCharPhoto(photo.id); $event.stopPropagation()"
+              >×</button>
+              <div class="char-thumb-meta">{{ photo.name }} ({{ photo.size }})</div>
+            </div>
+          }
+          @if (charPhotos().length < 5) {
+            <div class="char-thumb-add" (click)="charFileInput.click()">
+              <span class="add-icon">＋</span>
+              <span class="add-text">Aggiungi foto</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Optional Context Hint -->
+    <div class="reverse-options">
+      <label>
+        <span>👤 Nome o dettagli aggiuntivi sulla persona (Opzionale)</span>
+        <span class="muted">Puoi specificare il nome del personaggio o chiarimenti particolari da combinare all'analisi visiva delle foto.</span>
+      </label>
+      <input
+        type="text"
+        placeholder="Es. 'Elena Vance, 26 anni, fotografa' oppure 'Ren, operatore techwear'…"
+        [value]="charPhotoContext()"
+        (input)="charPhotoContext.set($any($event.target).value)"
+      />
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" [disabled]="charPhotoLoading()" (click)="closeCharPhotoModal()">Annulla</button>
+      <button
+        type="button"
+        class="btn primary"
+        [disabled]="charPhotos().length === 0 || charPhotoLoading()"
+        (click)="runExtractCharacterFromPhotos()"
+      >
+        {{ charPhotoLoading() ? 'Analisi biometrica e sintesi DNA visivo in corso…' : '✨ Analizza & Genera Scheda Personaggio' }}
+      </button>
+    </div>
   </div>
 </app-modal>
 
