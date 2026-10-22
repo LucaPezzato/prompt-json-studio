@@ -165,10 +165,45 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-realistic-preset.png'), fullPage: false });
   console.log('📸 Captured e2e-realistic-preset.png');
 
+  // 9. Test Reverse Image to Prompt
+  console.log('👉 Testing Reverse Image to Prompt feature...');
+  const reverseBtn = page.locator('button.reverse-btn');
+  await reverseBtn.click();
+  await page.waitForTimeout(300);
+
+  const modal = page.locator('.modal-backdrop .modal h3:has-text("Reverse")');
+  await modal.waitFor({ state: 'visible', timeout: 5000 });
+
+  // Create temporary test image
+  const testImgPath = '/tmp/test-photo-e2e.png';
+  const base64Png = 'iVBORw0KGgoAAAANSUhEUgAAAlgAAAGQCAYAAAByNR6YAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAA1zSURBVHic7d1BDQAwDMCw50+92uADUjK7mQWw4/gDAODfFgAAAA==';
+  const fs = require('fs');
+  fs.writeFileSync(testImgPath, Buffer.from(base64Png, 'base64'));
+
+  const fileInput = page.locator('.upload-dropzone input[type="file"]').first();
+  await fileInput.setInputFiles(testImgPath);
+  await page.waitForTimeout(300);
+
+  const previewImg = page.locator('.preview-img');
+  await previewImg.waitFor({ state: 'visible', timeout: 3000 });
+
+  const extractBtn = page.locator('button:has-text("Estrai & Ricrea Prompt")');
+  await extractBtn.click();
+
+  await page.waitForFunction(() => {
+    return !document.querySelector('.modal-backdrop');
+  }, { timeout: 25000 });
+
+  const refBanner = page.locator('.ref-banner');
+  await refBanner.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Reference Banner active on canvas after reverse extraction!');
+
+  fs.unlinkSync(testImgPath);
+
   if (errors.length > 0) {
     throw new Error(`Browser encountered ${errors.length} errors: ${errors.join('; ')}`);
   }
 
-  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS PASSED PERFECTLY!');
+  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS (INCLUDING REVERSE PHOTO) PASSED PERFECTLY!');
   await browser.close();
 })();

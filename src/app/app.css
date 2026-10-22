@@ -419,6 +419,272 @@
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
+/* =========================================================
+   REVERSE PROMPT FROM PHOTO & REFERENCE BANNER STYLES
+   ========================================================= */
+
+.reverse-btn {
+  background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 100%) !important;
+  color: #1e1f29 !important;
+  font-weight: 700 !important;
+  border: none !important;
+  box-shadow: 0 2px 10px rgba(189, 147, 249, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+}
+.reverse-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(189, 147, 249, 0.5);
+}
+
+/* Reference image banner pinned above title card */
+.ref-banner {
+  background: var(--bg-2);
+  border: 1px solid var(--purple);
+  border-left: 4px solid var(--purple);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+  animation: pop 0.2s ease-out;
+}
+.ref-thumb-box {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+.ref-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.15s ease;
+}
+.ref-thumb-box:hover .ref-thumb-img {
+  transform: scale(1.08);
+}
+.ref-zoom-hint {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.ref-thumb-box:hover .ref-zoom-hint {
+  opacity: 1;
+}
+.ref-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ref-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ref-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: var(--purple);
+  color: #1e1f29;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.ref-meta-text {
+  font-size: 11.5px;
+  color: var(--comment);
+  font-family: var(--mono);
+}
+.ref-hint-text {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--fg);
+  line-height: 1.4;
+}
+.ref-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ref-btns .danger {
+  color: var(--red);
+}
+
+/* Upload dropzone in modal */
+.upload-dropzone {
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  padding: 16px;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+.upload-dropzone.dragging, .upload-dropzone:hover {
+  border-color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 5%, var(--bg));
+}
+.drop-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 28px 16px;
+  cursor: pointer;
+  gap: 10px;
+}
+.drop-icon {
+  font-size: 38px;
+}
+.drop-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.file-btn-inner {
+  margin-top: 4px;
+}
+
+/* Preview of loaded image */
+.drop-preview {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.preview-img {
+  width: 140px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.preview-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.preview-title {
+  font-size: 14px;
+  color: var(--fg);
+  word-break: break-all;
+}
+.preview-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.preview-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Reverse modification options */
+.reverse-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.reverse-options label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.instruction-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.pill-label {
+  font-size: 11px;
+  color: var(--comment);
+  font-weight: 600;
+}
+.pill-btn {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-family: inherit;
+}
+.pill-btn:hover {
+  color: var(--fg);
+  border-color: var(--purple);
+  background: var(--bg-3);
+}
+
+/* Lightbox overlay */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.lightbox-card {
+  max-width: 90vw;
+  max-height: 90vh;
+  background: var(--bg-2);
+  border: 1px solid var(--purple);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+}
+.lightbox-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fg);
+}
+.lightbox-img {
+  max-width: 85vw;
+  max-height: 80vh;
+  object-fit: contain;
+  display: block;
+}
+
 /* Responsive */
 @media (max-width: 1280px) {
   .layout { grid-template-columns: 240px 1fr 1fr; }

@@ -48,6 +48,17 @@ export class App {
   readonly showSavePreset = signal(false);
   readonly showImport = signal(false);
 
+  // Reverse Image to Prompt signals
+  readonly showReverseModal = signal(false);
+  readonly reverseLoading = signal(false);
+  readonly reverseImageDataUrl = signal<string | null>(null);
+  readonly reverseImageInfo = signal<{ name: string; size: string; width: number; height: number; aspect: string } | null>(null);
+  readonly reverseInstructions = signal('');
+  readonly referenceImage = signal<string | null>(null);
+  readonly referenceImageInfo = signal<{ name: string; size: string; width: number; height: number; aspect: string } | null>(null);
+  readonly showLightbox = signal(false);
+  readonly isDragging = signal(false);
+
   // Form input signals for modals / tools
   readonly magicIdea = signal('');
   readonly magicLoading = signal(false);
@@ -257,6 +268,197 @@ export class App {
     setTimeout(() => {
       if (this.toastMessage() === msg) this.toastMessage.set('');
     }, 2800);
+  }
+
+  // ============ REVERSE IMAGE TO PROMPT METHODS ============
+
+  openReverseModal(): void {
+    this.showReverseModal.set(true);
+  }
+
+  clearReferenceImage(): void {
+    this.referenceImage.set(null);
+    this.referenceImageInfo.set(null);
+    this.showToast('Miniatura foto di riferimento rimossa');
+  }
+
+  async handleImageFile(file: File): Promise<void> {
+    if (!file.type.startsWith('image/')) {
+      this.showToast('Il file selezionato non è un\'immagine valida.');
+      return;
+    }
+    try {
+      const processed = await this.processImageFile(file);
+      this.reverseImageDataUrl.set(processed.dataUrl);
+      this.reverseImageInfo.set({
+        name: processed.name,
+        size: processed.size,
+        width: processed.width,
+        height: processed.height,
+        aspect: processed.aspect,
+      });
+    } catch (e) {
+      this.showToast('Errore elaborazione immagine: ' + (e as Error).message);
+    }
+  }
+
+  onReverseFileSelect(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      this.handleImageFile(file);
+      input.value = '';
+    }
+  }
+
+  onDragOver(ev: DragEvent): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.isDragging.set(true);
+  }
+
+  onDragLeave(ev: DragEvent): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.isDragging.set(false);
+  }
+
+  onDrop(ev: DragEvent): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.isDragging.set(false);
+    const file = ev.dataTransfer?.files?.[0];
+    if (file) {
+      this.handleImageFile(file);
+    }
+  }
+
+  onPasteImage(ev: ClipboardEvent): void {
+    const items = ev.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          this.handleImageFile(file);
+          break;
+        }
+      }
+    }
+  }
+
+  setReversePresetInstruction(text: string): void {
+    this.reverseInstructions.set(text);
+  }
+
+  async runReverseEngineer(): Promise<void> {
+    const dataUrl = this.reverseImageDataUrl();
+    if (!dataUrl || this.reverseLoading()) return;
+    this.reverseLoading.set(true);
+    try {
+      const cfg = this.svc.aiConfig();
+      const info = this.reverseImageInfo();
+      const detectedAspect = info?.aspect || '16:9';
+      const instructions = this.reverseInstructions();
+
+      const extractedSpec = await this.svc.reverseEngineerImage(
+        dataUrl,
+        instructions,
+        this.spec(),
+        cfg,
+        detectedAspect
+      );
+
+      this.store.replace(extractedSpec);
+      this.referenceImage.set(dataUrl);
+      this.referenceImageInfo.set(info);
+      this.showReverseModal.set(false);
+      this.showToast('✨ Foto analizzata: prompt estratto e pronto per le modifiche!');
+      this.expandAll();
+    } catch (e) {
+      this.showToast('Errore estrazione prompt: ' + (e as Error).message);
+    } finally {
+      this.reverseLoading.set(false);
+    }
+  }
+
+  private async processImageFile(file: File): Promise<{
+    dataUrl: string;
+    name: string;
+    size: string;
+    width: number;
+    height: number;
+    aspect: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Impossibile leggere il file'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Immagine non valida'));
+        img.onload = () => {
+          const origW = img.width;
+          const origH = img.height;
+          const maxDim = 1600;
+          let w = origW;
+          let h = origH;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve({
+              dataUrl: reader.result as string,
+              name: file.name,
+              size: this.formatBytes(file.size),
+              width: origW,
+              height: origH,
+              aspect: this.inferAspectRatio(origW, origH),
+            });
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+          resolve({
+            dataUrl,
+            name: file.name,
+            size: this.formatBytes(file.size),
+            width: origW,
+            height: origH,
+            aspect: this.inferAspectRatio(origW, origH),
+          });
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private inferAspectRatio(w: number, h: number): string {
+    const r = w / h;
+    if (Math.abs(r - 1) < 0.08) return '1:1';
+    if (Math.abs(r - 16 / 9) < 0.12) return '16:9';
+    if (Math.abs(r - 9 / 16) < 0.12) return '9:16';
+    if (Math.abs(r - 4 / 5) < 0.1) return '4:5';
+    if (Math.abs(r - 3 / 2) < 0.1) return '3:2';
+    if (Math.abs(r - 2 / 3) < 0.1) return '2:3';
+    if (Math.abs(r - 21 / 9) < 0.15) return '21:9';
+    return r > 1 ? '16:9' : '4:5';
+  }
+
+  private formatBytes(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
   onKeydown(ev: KeyboardEvent): void {

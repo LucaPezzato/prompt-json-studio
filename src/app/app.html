@@ -33,6 +33,14 @@
   </div>
 
   <div class="top-actions">
+    <button
+      type="button"
+      class="btn primary reverse-btn"
+      (click)="openReverseModal()"
+      title="Carica una foto per estrarre il prompt completo e modificarlo"
+    >
+      📷 Reverse da Foto
+    </button>
     <button type="button" class="btn ghost" (click)="resetPrompt()" title="Nuovo prompt vuoto">＋ Nuovo</button>
     <button type="button" class="btn ghost" (click)="showImport.set(true)" title="Importa JSON">📥 Importa</button>
     <button type="button" class="btn ghost" (click)="exportJsonFile()" title="Esporta JSON (Ctrl+S)">💾 Esporta</button>
@@ -63,6 +71,33 @@
 
   <!-- ============ BUILDER CANVAS ============ -->
   <section class="builder" [class.hidden-mobile]="mobileView() !== 'builder'">
+    <!-- REFERENCE IMAGE BANNER (IF ACTIVE) -->
+    @if (referenceImage()) {
+      <div class="ref-banner">
+        <div class="ref-thumb-box" (click)="showLightbox.set(true)" title="Clicca per ingrandire la foto originale">
+          <img [src]="referenceImage()" alt="Foto di riferimento" class="ref-thumb-img" />
+          <span class="ref-zoom-hint">🔍 Ingrandisci</span>
+        </div>
+        <div class="ref-details">
+          <div class="ref-badge-row">
+            <span class="ref-badge">📸 FOTO ORIGINALE DI RIFERIMENTO</span>
+            <span class="ref-meta-text">{{ referenceImageInfo()?.name }} · {{ referenceImageInfo()?.width }}×{{ referenceImageInfo()?.height }} ({{ referenceImageInfo()?.aspect }})</span>
+          </div>
+          <p class="ref-hint-text">
+            Prompt estratto con successo! Modifica i parametri sottostanti (soggetto, luce, abiti, ottica) per personalizzarla e generare la tua nuova versione.
+          </p>
+        </div>
+        <div class="ref-btns">
+          <button type="button" class="btn small ghost" (click)="openReverseModal()" title="Carica o analizza un'altra foto">
+            🔄 Cambia
+          </button>
+          <button type="button" class="btn small ghost danger" (click)="clearReferenceImage()" title="Rimuovi miniatura di riferimento">
+            ✕ Rimuovi
+          </button>
+        </div>
+      </div>
+    }
+
     <!-- TITLE & CONTROLS CARD -->
     <div class="title-card">
       <div class="title-card-top">
@@ -723,6 +758,102 @@
     >Importa</button>
   </div>
 </app-modal>
+
+<!-- Reverse Engineering from Photo Modal -->
+<app-modal title="📷 Reverse Engineering Prompt da Foto" [wide]="true" [(open)]="showReverseModal">
+  <p class="muted">
+    Carica o trascina una foto: l'IA multimodale (Gemini Vision) estrarrà la specifica completa del prompt
+    (soggetto, fotocamera, schema luci, palette colori e stile). Potrai poi modificarne i dettagli a piacere!
+  </p>
+
+  <!-- DROP ZONE -->
+  <div
+    class="upload-dropzone"
+    [class.dragging]="isDragging()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    (paste)="onPasteImage($event)"
+  >
+    @if (!reverseImageDataUrl()) {
+      <div class="drop-empty" (click)="fileInput.click()">
+        <span class="drop-icon">🖼️</span>
+        <div class="drop-texts">
+          <b>Trascina qui la tua foto, oppure clicca per selezionarla</b>
+          <span class="muted">Supporta JPG, PNG, WebP (funziona anche incollando con Ctrl+V)</span>
+        </div>
+        <button type="button" class="btn ghost file-btn-inner">Scegli file…</button>
+        <input #fileInput type="file" accept="image/*" (change)="onReverseFileSelect($event)" hidden />
+      </div>
+    } @else {
+      <div class="drop-preview">
+        <img [src]="reverseImageDataUrl()" alt="Anteprima foto" class="preview-img" />
+        <div class="preview-meta">
+          <div class="preview-title"><b>{{ reverseImageInfo()?.name }}</b></div>
+          <div class="preview-stats">
+            <span>📐 Risoluzione: {{ reverseImageInfo()?.width }}×{{ reverseImageInfo()?.height }}</span>
+            <span>🖼️ Proporzione: <b>{{ reverseImageInfo()?.aspect }}</b></span>
+            <span>💾 Dimensioni: {{ reverseImageInfo()?.size }}</span>
+          </div>
+          <div class="preview-actions">
+            <button type="button" class="btn small ghost" (click)="fileInput.click()">Sostituisci foto</button>
+            <button type="button" class="btn small ghost danger" (click)="reverseImageDataUrl.set(null); reverseImageInfo.set(null)">Rimuovi</button>
+            <input #fileInput type="file" accept="image/*" (change)="onReverseFileSelect($event)" hidden />
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- MODIFICATION INSTRUCTIONS -->
+  <div class="reverse-options">
+    <label>
+      <span>🎯 Modifiche o variazioni desiderate (Opzionale)</span>
+      <span class="muted">Lascia vuoto per ricreare fedelmente la foto originale 1:1, oppure indica cosa cambiare.</span>
+    </label>
+    <input
+      type="text"
+      placeholder="Es. 'Cambia il soggetto in un uomo con barba', 'Sposta lo sfondo su una spiaggia al tramonto'…"
+      [value]="reverseInstructions()"
+      (input)="reverseInstructions.set($any($event.target).value)"
+    />
+
+    <div class="instruction-pills">
+      <span class="pill-label">Suggerimenti rapidi:</span>
+      <button type="button" class="pill-btn" (click)="setReversePresetInstruction('')">🎯 Fedele 1:1</button>
+      <button type="button" class="pill-btn" (click)="setReversePresetInstruction('Cambia il soggetto in una giovane donna con capelli castani e sorriso naturale')">👤 Cambia soggetto</button>
+      <button type="button" class="pill-btn" (click)="setReversePresetInstruction('Trasforma lo sfondo in un vicolo storico illuminato da lanterne calde')">🌆 Cambia sfondo</button>
+      <button type="button" class="pill-btn" (click)="setReversePresetInstruction('Applica uno stile Cyberpunk Neon con luci ciano/magenta e pioggia')">⚡ Cyberpunk Neon</button>
+      <button type="button" class="pill-btn" (click)="setReversePresetInstruction('Imposta l\'illuminazione con calda luce radente dorata da tramonto Golden Hour')">🌅 Golden Hour</button>
+      <button type="button" class="pill-btn" (click)="setReversePresetInstruction('Converti in fotografia analogica 35mm in bianco e nero fine-art su Leica')">🎞️ B&W 35mm</button>
+    </div>
+  </div>
+
+  <div class="modal-actions">
+    <button type="button" class="btn ghost" [disabled]="reverseLoading()" (click)="showReverseModal.set(false)">Annulla</button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!reverseImageDataUrl() || reverseLoading()"
+      (click)="runReverseEngineer()"
+    >
+      {{ reverseLoading() ? 'Analisi dell\'immagine con IA in corso…' : '✨ Estrai & Ricrea Prompt' }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- Lightbox Modal for Full View -->
+@if (showLightbox() && referenceImage()) {
+  <div class="lightbox-overlay" (click)="showLightbox.set(false)">
+    <div class="lightbox-card" (click)="$event.stopPropagation()">
+      <div class="lightbox-header">
+        <span>📸 Foto di riferimento originale</span>
+        <button type="button" class="btn icon ghost" (click)="showLightbox.set(false)">✕</button>
+      </div>
+      <img [src]="referenceImage()" alt="Foto a grandezza naturale" class="lightbox-img" />
+    </div>
+  </div>
+}
 
 <!-- Toast notification -->
 @if (toastMessage()) {

@@ -1488,8 +1488,153 @@ export class PromptService {
       rawJson = data?.response || '';
     }
 
-    const parsed = JSON.parse(rawJson.replace(/^```json\s*|\s*```$/g, ''));
+    const clean = rawJson.replace(/^```(?:json)?\s*|\s*```$/gi, '').trim();
+    const parsed = JSON.parse(clean);
     return { ...structuredClone(base), ...parsed };
+  }
+
+  /**
+   * Reverse-engineers an uploaded photo into a full ImagePromptSpec using multimodal vision AI.
+   * If custom instructions are provided, the AI applies requested variations.
+   */
+  async reverseEngineerImage(
+    imageDataUrl: string,
+    customInstructions: string,
+    currentSpec: ImagePromptSpec,
+    config: AiAssistantConfig,
+    detectedAspect = '16:9'
+  ): Promise<ImagePromptSpec> {
+    if (!config.apiKey.trim() && config.provider !== 'ollama') {
+      throw new Error('Chiave API non configurata. Apri le impostazioni ⚙ per inserire la tua chiave Google Gemini o OpenAI.');
+    }
+
+    const match = imageDataUrl.match(/^data:(image\/[a-zA-Z0-9.+_-]+);base64,(.+)$/);
+    if (!match) {
+      throw new Error('Formato immagine non valido o non riconosciuto');
+    }
+    const mimeType = match[1];
+    const base64Data = match[2];
+
+    const base = this.createEmptySpec();
+    base.technical_parameters.aspect_ratio = detectedAspect;
+
+    const instructionsText = customInstructions.trim()
+      ? `\n\nUSER MODIFICATION INSTRUCTIONS: ${customInstructions.trim()}.\nApply these requested changes and variations to the extracted prompt while keeping the overall technical style and composition consistent.`
+      : '\n\nGoal: Reverse-engineer this photo into a technical prompt specification to recreate it with 100% photographic fidelity.';
+
+    const systemPrompt = `You are an elite Computer Vision Director and AI Prompt Engineer specializing in Midjourney v6/v7, FLUX.1/FLUX.2, and Stable Diffusion XL.
+Analyze this image in rigorous technical detail and output a structured JSON prompt matching this schema:
+${JSON.stringify(base, null, 2)}
+
+Instructions:
+1. "meta": set "title" to a descriptive 4-6 word title (e.g. "Recreated: [Entity Name]").
+2. "subject": analyze the primary subject in depth (primary_entity, detailed somatic/texture description, pose_or_action, expression_or_mood, clothing_or_materials, placement).
+3. "scene": environment, background_details, time_of_day, atmosphere_weather.
+4. "camera": infer exact optical parameters: shot_type, angle, lens_focal_length (e.g. "50mm Standard Prime Lens", "85mm f/1.4", "35mm Street Lens"), aperture_depth_of_field, camera_body_or_film (e.g. "Leica M11 Rangefinder", "Hasselblad H6D-100c", "Kodak Portra 400").
+5. "lighting": key_light, fill_or_ambient, color_temperature, shadow_quality, and extract exactly 4 hex color strings in color_palette matching dominant tones in the photo.
+6. "composition": framing_rule, focal_point, foreground_elements, perspective.
+7. "style_and_rendering": medium (e.g. "Photorealistic photography", "35mm Analog Film Photography"), aesthetic, color_grading, and quality_tags.
+8. "typography": if text or typography is visible, set enabled: true and extract exact_text, font_style, and placement_and_material. Otherwise enabled: false.
+9. "technical_parameters": aspect_ratio should be "${detectedAspect}", provide a specific negative_prompt, and set raw_mode: true.${instructionsText}
+
+Return ONLY valid JSON matching the schema. No markdown code fences, no introductory or concluding text.`;
+
+    let rawJson = '';
+    if (config.provider === 'gemini') {
+      const model = config.model || 'gemini-3.8-flash';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
+        config.apiKey
+      )}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { inlineData: { mimeType, data: base64Data } },
+                { text: systemPrompt },
+              ],
+            },
+          ],
+          generationConfig: { responseMimeType: 'application/json' },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Errore Google Gemini API (${res.status})`);
+      }
+      const data = await res.json();
+      rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } else if (config.provider === 'openai' || config.provider === 'openrouter') {
+      const endpoint =
+        config.provider === 'openai'
+          ? 'https://api.openai.com/v1/chat/completions'
+          : 'https://openrouter.ai/api/v1/chat/completions';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.model || 'gpt-4o',
+          response_format: { type: 'json_object' },
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: systemPrompt },
+                { type: 'image_url', image_url: { url: imageDataUrl } },
+              ],
+            },
+          ],
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Errore OpenAI API (${res.status})`);
+      }
+      const data = await res.json();
+      rawJson = data?.choices?.[0]?.message?.content || '';
+    } else if (config.provider === 'ollama') {
+      const baseUrl = (config.ollamaUrl || 'http://localhost:11434').replace(/\/$/, '');
+      const res = await fetch(`${baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: config.model || 'llama3.2-vision',
+          prompt: systemPrompt,
+          images: [base64Data],
+          format: 'json',
+          stream: false,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(`Errore Ollama Vision (${res.status})`);
+      }
+      const data = await res.json();
+      rawJson = data?.response || '';
+    }
+
+    const clean = rawJson.replace(/^```(?:json)?\s*|\s*```$/gi, '').trim();
+    if (!clean) throw new Error('Nessuna risposta valida ricevuta dal modello di visione.');
+
+    const parsed = JSON.parse(clean);
+    return {
+      ...structuredClone(base),
+      ...parsed,
+      subject: { ...base.subject, ...(parsed.subject || {}) },
+      scene: { ...base.scene, ...(parsed.scene || {}) },
+      camera: { ...base.camera, ...(parsed.camera || {}) },
+      lighting: { ...base.lighting, ...(parsed.lighting || {}) },
+      composition: { ...base.composition, ...(parsed.composition || {}) },
+      style_and_rendering: { ...base.style_and_rendering, ...(parsed.style_and_rendering || {}) },
+      typography: { ...base.typography, ...(parsed.typography || {}) },
+      technical_parameters: { ...base.technical_parameters, ...(parsed.technical_parameters || {}) },
+      additional_subjects: parsed.additional_subjects || [],
+      custom_properties: parsed.custom_properties || [],
+    };
   }
 
   private loadAiConfig(): AiAssistantConfig {
