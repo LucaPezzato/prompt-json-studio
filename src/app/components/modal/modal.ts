@@ -14,7 +14,7 @@ import { ChangeDetectionStrategy, Component, input, model } from '@angular/core'
   template: `
     @if (open()) {
       <div class="modal-backdrop" (click)="open.set(false)">
-        <div class="modal" [class.wide]="wide()" role="dialog" [attr.aria-label]="title()" (click)="$event.stopPropagation()">
+        <div class="modal" [class.wide]="wide()" [class.extra-wide]="extraWide()" role="dialog" [attr.aria-label]="title()" (click)="$event.stopPropagation()">
           <h3>{{ title() }}</h3>
           <ng-content />
         </div>
@@ -25,5 +25,6 @@ import { ChangeDetectionStrategy, Component, input, model } from '@angular/core'
 export class Modal {
   readonly title = input.required<string>();
   readonly wide = input(false);
+  readonly extraWide = input(false);
   readonly open = model(false);
 }

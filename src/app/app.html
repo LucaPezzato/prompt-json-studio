@@ -35,6 +35,14 @@
   <div class="top-actions">
     <button
       type="button"
+      class="btn ghost template-modal-btn"
+      (click)="showTemplatesModal.set(true)"
+      title="Esplora la libreria dei template e stili predefiniti"
+    >
+      📚 Template
+    </button>
+    <button
+      type="button"
       class="btn primary reverse-btn"
       (click)="openReverseModal()"
       title="Carica una foto per estrarre il prompt completo e modificarlo"
@@ -62,13 +70,6 @@
 </nav>
 
 <main class="layout">
-  <!-- ============ SIDEBAR TEMPLATES ============ -->
-  <app-template-sidebar
-    [templates]="templates()"
-    (selected)="onTemplateSelected($event)"
-    (deleted)="onTemplateDeleted($event)"
-  />
-
   <!-- ============ BUILDER CANVAS ============ -->
   <section class="builder" [class.hidden-mobile]="mobileView() !== 'builder'">
     <!-- REFERENCE IMAGE BANNER (IF ACTIVE) -->
@@ -1327,6 +1328,21 @@
     </div>
   </div>
 }
+
+<!-- TEMPLATE LIBRARY MODAL -->
+<app-modal
+  title="📚 Libreria Template & Stili Predefiniti"
+  [extraWide]="true"
+  [(open)]="showTemplatesModal"
+>
+  <div class="template-modal-body">
+    <app-template-sidebar
+      [templates]="templates()"
+      (selected)="onTemplateSelected($event)"
+      (deleted)="onTemplateDeleted($event)"
+    />
+  </div>
+</app-modal>
 
 <!-- Toast notification -->
 @if (toastMessage()) {

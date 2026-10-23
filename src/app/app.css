@@ -58,7 +58,7 @@
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: 270px minmax(420px, 1fr) minmax(380px, 0.9fr);
+  grid-template-columns: minmax(520px, 1.15fr) minmax(440px, 1fr);
   min-height: 0;
 }
 
@@ -245,15 +245,29 @@
 
 /* Sidebar & Output host classes */
 :host ::ng-deep .sidebar {
-  background: var(--bg-2);
-  border-right: 1px solid var(--line);
-  padding: 16px 14px;
-  overflow-y: auto;
-  min-height: 0;
+  background: transparent;
+  border-right: none;
+  padding: 0;
   display: block;
 }
-:host ::ng-deep .sidebar h2 { font-size: 13px; margin: 0 0 12px; color: var(--fg); }
-:host ::ng-deep .cat-filter { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+:host ::ng-deep .sidebar h2 { display: none; }
+:host ::ng-deep .tpl-search {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color 0.15s ease;
+}
+:host ::ng-deep .tpl-search:focus {
+  border-color: var(--purple, #bd93f9);
+}
+:host ::ng-deep .cat-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
 :host ::ng-deep .pill {
   border: 1px solid var(--line);
   background: transparent;
@@ -266,7 +280,14 @@
 }
 :host ::ng-deep .pill.active,
 :host ::ng-deep .pill:hover { color: var(--bg); background: var(--cyan); border-color: var(--cyan); }
-:host ::ng-deep .template-list { display: flex; flex-direction: column; gap: 10px; }
+:host ::ng-deep .template-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
 :host ::ng-deep .template-card {
   background: var(--bg);
   border: 1px solid var(--line);
@@ -388,6 +409,7 @@
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 :host ::ng-deep .modal.wide { max-width: 740px; }
+:host ::ng-deep .modal.extra-wide { max-width: 900px; width: 92vw; }
 :host ::ng-deep .modal h3 { margin: 0 0 4px; }
 :host ::ng-deep .modal label { margin-top: 6px; }
 :host ::ng-deep .modal-actions {
@@ -1431,16 +1453,13 @@
 }
 
 /* Responsive */
-@media (max-width: 1280px) {
-  .layout { grid-template-columns: 240px 1fr 1fr; }
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 980px) {
   :host { height: auto; overflow: visible; }
   .layout { display: block; }
-  :host ::ng-deep .sidebar { border-right: none; border-bottom: 1px solid var(--line); }
-  :host ::ng-deep .template-list { flex-direction: row; overflow-x: auto; padding-bottom: 6px; }
-  :host ::ng-deep .template-card { min-width: 230px; }
   :host ::ng-deep .output { min-height: 70vh; border-left: none; }
   .mobile-switch {
     display: flex;

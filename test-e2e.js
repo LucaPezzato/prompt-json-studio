@@ -120,8 +120,13 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   }
   console.log('✔ Title editing reactively updated JSON output preview!');
 
-  // 7. Test Realistic Templates in Sidebar
-  console.log('👉 Testing realistic photography templates in sidebar...');
+  // 7. Test Realistic Templates in Modal
+  console.log('👉 Testing realistic photography templates in modal...');
+  const openTemplatesBtn = page.locator('button.template-modal-btn');
+  if (await openTemplatesBtn.isVisible()) {
+    await openTemplatesBtn.click();
+    await page.waitForTimeout(300);
+  }
   const realisticTemplateCard = page.locator('.template-card:has-text("Candid 35mm Analog Street Portrait")');
   await realisticTemplateCard.waitFor({ state: 'visible', timeout: 5000 });
   await realisticTemplateCard.click();

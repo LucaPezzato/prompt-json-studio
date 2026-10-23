@@ -47,6 +47,7 @@ export class App {
   readonly showSettings = signal(false);
   readonly showSavePreset = signal(false);
   readonly showImport = signal(false);
+  readonly showTemplatesModal = signal(false);
 
   // Reverse Image to Prompt signals
   readonly showReverseModal = signal(false);
@@ -209,6 +210,7 @@ export class App {
   // Actions
   onTemplateSelected(t: PromptTemplate): void {
     this.store.replace(t.spec);
+    this.showTemplatesModal.set(false);
     this.showToast(`Template "${t.name}" caricato`);
   }
 
