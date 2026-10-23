@@ -124,8 +124,11 @@ export const LAYOUT_MODE_VIEWS: Record<
   },
 };
 
+export type CharacterWorkflowMode = 'sheet_generation' | 'scene_with_character';
+
 export interface CharacterSheetBlock {
   enabled: boolean;
+  mode: CharacterWorkflowMode;
   character_name: string;
   gender_and_age: string;
   ethnicity_and_skin: string;
@@ -139,6 +142,7 @@ export interface CharacterSheetBlock {
   views: string[];
   background_style: string;
   cref_url?: string;
+  cref_weight?: number;
 }
 
 export interface SavedCharacter {

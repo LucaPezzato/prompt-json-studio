@@ -16,6 +16,7 @@ const SAVED_CHARACTERS_STORAGE_KEY = 'prompt_json_studio_saved_characters_v1';
 
 export const DEFAULT_CHARACTER_SHEET: CharacterSheetBlock = {
   enabled: false,
+  mode: 'sheet_generation',
   character_name: '',
   gender_and_age: 'Young woman, 26 years old',
   ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
@@ -29,6 +30,7 @@ export const DEFAULT_CHARACTER_SHEET: CharacterSheetBlock = {
   views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
   background_style: 'Neutral light-grey seamless studio backdrop with soft floor shadow',
   cref_url: '',
+  cref_weight: 100,
 };
 
 export interface ColorPalettePreset {
@@ -422,6 +424,7 @@ export class PromptService {
         },
         character_sheet: {
           enabled: true,
+          mode: 'sheet_generation',
           character_name: 'Elena Vance',
           gender_and_age: 'Young woman, 26 years old',
           ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
@@ -513,6 +516,7 @@ export class PromptService {
         },
         character_sheet: {
           enabled: true,
+          mode: 'sheet_generation',
           character_name: 'Ren Takahashi',
           gender_and_age: 'Man in early 30s, 31 years old',
           ethnicity_and_skin: 'East Asian heritage, pale smooth complexion with sharp defined jawline',
@@ -604,6 +608,7 @@ export class PromptService {
         },
         character_sheet: {
           enabled: true,
+          mode: 'sheet_generation',
           character_name: 'Elena Vance',
           gender_and_age: 'Young woman, 26 years old',
           ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
@@ -1553,32 +1558,42 @@ export class PromptService {
         ? {
             character_sheet: {
               character_name: spec.character_sheet.character_name,
-              layout_mode: spec.character_sheet.layout_mode,
-              layout_summary:
-                spec.character_sheet.layout_mode === 'expressions_grid'
-                  ? 'Facial expression sheet showing a 2x3 headshot grid of distinct emotions'
-                  : spec.character_sheet.layout_mode === 'outfit_study'
-                  ? 'Character wardrobe and costume variations study sheet'
-                  : spec.character_sheet.layout_mode === 'full_body_and_portraits'
-                  ? 'Full-body character lineup alongside portrait studies'
-                  : spec.character_sheet.layout_mode === 'turnaround_3_views'
-                  ? '3-view character model turnaround sheet'
-                  : '4-view character model turnaround sheet (Front, 3/4, Profile, Back)',
-              views: spec.character_sheet.views,
-              facial_dna: {
-                gender_and_age: spec.character_sheet.gender_and_age,
-                ethnicity_and_skin: spec.character_sheet.ethnicity_and_skin,
-                eye_details: spec.character_sheet.eye_details,
-                hair_details: spec.character_sheet.hair_details,
-                distinctive_marks: spec.character_sheet.distinctive_marks,
-                body_build: spec.character_sheet.body_build,
-              },
-              signature_wardrobe: {
-                outfit: spec.character_sheet.signature_outfit,
-                props: spec.character_sheet.signature_props,
-              },
-              background_style: spec.character_sheet.background_style,
-              ...(spec.character_sheet.cref_url?.trim() ? { cref_url: spec.character_sheet.cref_url.trim() } : {}),
+              workflow_mode: spec.character_sheet.mode || 'sheet_generation',
+              ...(spec.character_sheet.mode === 'scene_with_character'
+                ? {
+                    status: 'BOUND_TO_SCENE',
+                    character_biometrics: {
+                      gender_and_age: spec.character_sheet.gender_and_age,
+                      ethnicity_and_skin: spec.character_sheet.ethnicity_and_skin,
+                      eye_details: spec.character_sheet.eye_details,
+                      hair_details: spec.character_sheet.hair_details,
+                      distinctive_marks: spec.character_sheet.distinctive_marks,
+                      body_build: spec.character_sheet.body_build,
+                      signature_outfit: spec.character_sheet.signature_outfit,
+                    },
+                    scene_custom_attire: spec.subject.clothing_or_materials || spec.character_sheet.signature_outfit,
+                    ...(spec.character_sheet.cref_url?.trim()
+                      ? {
+                          midjourney_cref: spec.character_sheet.cref_url.trim(),
+                          cref_weight: spec.character_sheet.cref_weight ?? 100,
+                        }
+                      : {}),
+                  }
+                : {
+                    layout_mode: spec.character_sheet.layout_mode,
+                    layout_summary:
+                      spec.character_sheet.layout_mode === 'expressions_grid'
+                        ? 'Facial expression sheet showing a 2x3 headshot grid of distinct emotions'
+                        : spec.character_sheet.layout_mode === 'outfit_study'
+                        ? 'Character wardrobe and costume variations study sheet'
+                        : spec.character_sheet.layout_mode === 'full_body_and_portraits'
+                        ? 'Full-body character lineup alongside portrait studies'
+                        : spec.character_sheet.layout_mode === 'turnaround_3_views'
+                        ? '3-view character model turnaround sheet'
+                        : '4-view character model turnaround sheet (Front, 3/4, Profile, Back)',
+                    views: spec.character_sheet.views,
+                    background_style: spec.character_sheet.background_style,
+                  }),
             },
           }
         : {}),
@@ -1606,6 +1621,55 @@ export class PromptService {
   compileForFlux(spec: ImagePromptSpec): string {
     if (spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()) {
       const cs = spec.character_sheet;
+
+      // MODE: SCENE WITH BOUND CHARACTER
+      if (cs.mode === 'scene_with_character') {
+        const attire = spec.subject.clothing_or_materials.trim() || cs.signature_outfit;
+        const parts: string[] = [];
+        const med = spec.style_and_rendering.medium || 'Photograph';
+        const shot = spec.camera.shot_type ? `${spec.camera.shot_type} of ` : '';
+        parts.push(
+          `${med} (${spec.style_and_rendering.aesthetic}). ${shot}${cs.character_name}, a ${cs.gender_and_age} with ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, ${cs.distinctive_marks}, physique: ${cs.body_build}.`
+        );
+        parts.push(`Attire & clothing: ${attire}.`);
+        if (spec.subject.pose_or_action || spec.subject.expression_or_mood) {
+          parts.push(
+            `Action & mood: ${spec.subject.pose_or_action} (${spec.subject.expression_or_mood}), positioned at ${spec.subject.placement}.`
+          );
+        }
+        for (const sec of spec.additional_subjects) {
+          if (sec.entity.trim()) {
+            parts.push(`Secondary element: ${sec.entity} (${sec.details}) at ${sec.placement}.`);
+          }
+        }
+        parts.push(
+          `Environment: ${spec.scene.environment} during ${spec.scene.time_of_day}, ${spec.scene.atmosphere_weather}. Background features ${spec.scene.background_details}.`
+        );
+        parts.push(
+          `Camera & Optics: ${spec.camera.angle}, shot on ${spec.camera.camera_body_or_film} with ${spec.camera.lens_focal_length}, ${spec.camera.aperture_depth_of_field}.`
+        );
+        const palette =
+          spec.lighting.color_palette.length > 0 ? ` Color palette: ${spec.lighting.color_palette.join(', ')}.` : '';
+        parts.push(
+          `Lighting: ${spec.lighting.key_light}, ${spec.lighting.fill_or_ambient}, ${spec.lighting.color_temperature}, ${spec.lighting.shadow_quality}.${palette}`
+        );
+        parts.push(
+          `Composition: ${spec.composition.framing_rule}, ${spec.composition.perspective}. Focal point on ${spec.composition.focal_point}. Foreground: ${spec.composition.foreground_elements}.`
+        );
+        if (spec.typography.enabled && spec.typography.exact_text.trim()) {
+          parts.push(
+            `Text rendering: The exact text "${spec.typography.exact_text}" written in ${spec.typography.font_style}, ${spec.typography.placement_and_material}.`
+          );
+        }
+        if (spec.style_and_rendering.quality_tags.length > 0) {
+          parts.push(
+            `Color grade: ${spec.style_and_rendering.color_grading}. ${spec.style_and_rendering.quality_tags.join(', ')}.`
+          );
+        }
+        return parts.join(' ');
+      }
+
+      // MODE: CHARACTER SHEET GENERATION
       const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side profile view, Back view';
       let layoutIntro = '';
       if (cs.layout_mode === 'expressions_grid') {
@@ -1676,6 +1740,67 @@ export class PromptService {
   compileForMidjourney(spec: ImagePromptSpec): string {
     if (spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()) {
       const cs = spec.character_sheet;
+
+      // MODE: SCENE WITH BOUND CHARACTER
+      if (cs.mode === 'scene_with_character') {
+        const attire = spec.subject.clothing_or_materials.trim() || cs.signature_outfit;
+        const tokens: string[] = [
+          `${spec.style_and_rendering.medium} of ${cs.character_name}`,
+          `a ${cs.gender_and_age}`,
+          cs.ethnicity_and_skin,
+          `eyes: ${cs.eye_details}`,
+          `hair: ${cs.hair_details}`,
+          cs.distinctive_marks,
+          cs.body_build,
+          `wearing ${attire}`,
+          spec.subject.pose_or_action,
+          spec.subject.expression_or_mood ? `${spec.subject.expression_or_mood} expression` : '',
+          spec.subject.placement ? `positioned at ${spec.subject.placement}` : '',
+          ...spec.additional_subjects.filter((s) => s.entity.trim()).map((s) => `${s.entity} (${s.details})`),
+          spec.scene.environment,
+          spec.scene.background_details,
+          spec.scene.time_of_day,
+          spec.scene.atmosphere_weather,
+          spec.camera.shot_type,
+          spec.camera.angle,
+          spec.camera.lens_focal_length,
+          spec.camera.aperture_depth_of_field,
+          spec.camera.camera_body_or_film,
+          spec.lighting.key_light,
+          spec.lighting.fill_or_ambient,
+          spec.lighting.shadow_quality,
+          spec.composition.framing_rule,
+          spec.style_and_rendering.aesthetic,
+          spec.style_and_rendering.color_grading,
+          ...spec.style_and_rendering.quality_tags,
+        ];
+
+        if (spec.typography.enabled && spec.typography.exact_text.trim()) {
+          tokens.push(`text "${spec.typography.exact_text}" in ${spec.typography.font_style}`);
+        }
+
+        const body = tokens
+          .map((t) => t.trim())
+          .filter((t) => t.length > 0)
+          .join(', ');
+
+        const flags: string[] = [`--ar ${spec.technical_parameters.aspect_ratio || '16:9'}`];
+        if (spec.technical_parameters.raw_mode) flags.push('--style raw');
+        if (spec.technical_parameters.stylize > 0) flags.push(`--s ${spec.technical_parameters.stylize}`);
+        if (spec.technical_parameters.chaos > 0) flags.push(`--c ${spec.technical_parameters.chaos}`);
+        if (spec.technical_parameters.seed !== null) flags.push(`--seed ${spec.technical_parameters.seed}`);
+        if (cs.cref_url?.trim()) {
+          const cw = cs.cref_weight !== undefined ? cs.cref_weight : 100;
+          flags.push(`--cref ${cs.cref_url.trim()} --cw ${cw}`);
+        }
+        if (spec.technical_parameters.negative_prompt.trim()) {
+          flags.push(`--no ${spec.technical_parameters.negative_prompt.trim()}`);
+        }
+
+        return `${body} ${flags.join(' ')}`;
+      }
+
+      // MODE: CHARACTER SHEET GENERATION
       const views = cs.views.length > 0 ? cs.views.join(', ') : 'front view, 3/4 view, side profile, back view';
 
       let titleToken = '';
@@ -1721,7 +1846,10 @@ export class PromptService {
       if (spec.technical_parameters.stylize > 0) flags.push(`--s ${spec.technical_parameters.stylize}`);
       if (spec.technical_parameters.chaos > 0) flags.push(`--c ${spec.technical_parameters.chaos}`);
       if (spec.technical_parameters.seed !== null) flags.push(`--seed ${spec.technical_parameters.seed}`);
-      if (cs.cref_url?.trim()) flags.push(`--cref ${cs.cref_url.trim()} --cw 100`);
+      if (cs.cref_url?.trim()) {
+        const cw = cs.cref_weight !== undefined ? cs.cref_weight : 100;
+        flags.push(`--cref ${cs.cref_url.trim()} --cw ${cw}`);
+      }
       if (spec.technical_parameters.negative_prompt.trim()) flags.push(`--no ${spec.technical_parameters.negative_prompt.trim()}`);
       return `${body} ${flags.join(' ')}`;
     }
@@ -1802,6 +1930,49 @@ export class PromptService {
   compileForSdxl(spec: ImagePromptSpec): { positive: string; negative: string } {
     if (spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()) {
       const cs = spec.character_sheet;
+
+      if (cs.mode === 'scene_with_character') {
+        const attire = spec.subject.clothing_or_materials.trim() || cs.signature_outfit;
+        const pos = [
+          `(masterpiece, best quality:1.2)`,
+          spec.style_and_rendering.medium,
+          spec.style_and_rendering.aesthetic,
+          `(${cs.character_name}:1.25)`,
+          cs.gender_and_age,
+          cs.ethnicity_and_skin,
+          `(${cs.eye_details}:1.1)`,
+          `(${cs.hair_details}:1.1)`,
+          cs.distinctive_marks,
+          cs.body_build,
+          `wearing ${attire}`,
+          spec.subject.pose_or_action,
+          spec.subject.expression_or_mood ? `${spec.subject.expression_or_mood} expression` : '',
+          ...spec.additional_subjects.filter((s) => s.entity.trim()).map((s) => `${s.entity}`),
+          spec.scene.environment,
+          spec.scene.background_details,
+          spec.scene.time_of_day,
+          spec.scene.atmosphere_weather,
+          spec.camera.shot_type,
+          spec.camera.angle,
+          spec.camera.lens_focal_length,
+          spec.camera.aperture_depth_of_field,
+          spec.lighting.key_light,
+          spec.lighting.shadow_quality,
+          spec.style_and_rendering.color_grading,
+          ...spec.style_and_rendering.quality_tags,
+        ]
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join(', ');
+
+        return {
+          positive: pos,
+          negative:
+            spec.technical_parameters.negative_prompt ||
+            'lowres, bad anatomy, bad hands, distorted face, inconsistent character, cropped, text, watermark, signature, blurry, low quality',
+        };
+      }
+
       const views = cs.views.join(', ');
       let modeTag = '(character model sheet, turnaround sheet:1.35), (multiple angles in one frame:1.25)';
       if (cs.layout_mode === 'expressions_grid') {
@@ -2278,6 +2449,7 @@ Instructions:
     const parsed = JSON.parse(clean);
     return {
       enabled: true,
+      mode: 'sheet_generation',
       character_name: parsed.character_name || 'Nuovo Personaggio',
       gender_and_age: parsed.gender_and_age || defaultSheet.gender_and_age,
       ethnicity_and_skin: parsed.ethnicity_and_skin || defaultSheet.ethnicity_and_skin,
@@ -2291,6 +2463,7 @@ Instructions:
       views: Array.isArray(parsed.views) && parsed.views.length > 0 ? parsed.views : defaultSheet.views,
       background_style: parsed.background_style || defaultSheet.background_style,
       cref_url: parsed.cref_url || '',
+      cref_weight: 100,
     };
   }
 
@@ -2382,6 +2555,7 @@ Instructions:
         summary: 'Donna 26 anni · Occhi nocciola · Camicia in lino ecru',
         sheet: {
           enabled: true,
+          mode: 'sheet_generation',
           character_name: 'Elena Vance',
           gender_and_age: 'Young woman, 26 years old',
           ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
@@ -2404,6 +2578,7 @@ Instructions:
         summary: 'Uomo 31 anni · Impianto neurale tempia · Giacca techwear',
         sheet: {
           enabled: true,
+          mode: 'sheet_generation',
           character_name: 'Ren Takahashi',
           gender_and_age: 'Man in early 30s, 31 years old',
           ethnicity_and_skin: 'East Asian heritage, pale smooth complexion with sharp defined jawline',

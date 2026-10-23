@@ -357,10 +357,94 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-character-from-photos.png'), fullPage: false });
   console.log('📸 Captured e2e-character-from-photos.png');
 
+  // 12. Test Dual-Mode Workflow: Switching to 'Scena con Personaggio Vincolato'
+  console.log('👉 Testing Dual-Mode Workflow (Switching to "Scena con Personaggio Vincolato")...');
+  
+  // Make sure Character section is open so we can see the workflow switch
+  const charBlockHeader = page.locator('app-section-block:has-text("Scheda Personaggio") .head-btn');
+  const isCharOpenAgain = await charBlockHeader.getAttribute('aria-expanded');
+  if (isCharOpenAgain !== 'true') {
+    await charBlockHeader.click();
+    await page.waitForTimeout(300);
+  }
+
+  // Click Modalità Scena button
+  const sceneModeBtn = page.locator('.workflow-mode-switch .wf-btn:has-text("Modalità Scena")');
+  await sceneModeBtn.waitFor({ state: 'visible', timeout: 5000 });
+  await sceneModeBtn.click();
+  await page.waitForTimeout(400);
+
+  // Verify that the Subject block shows the locked banner
+  const boundBanner = page.locator('.char-bound-banner');
+  await boundBanner.waitFor({ state: 'visible', timeout: 5000 });
+  const bannerText = await boundBanner.innerText();
+  console.log(`  Locked Character Banner text:\n  ${bannerText.replace(/\n+/g, ' ')}`);
+  if (!bannerText.includes('PERSONAGGIO VINCOLATO')) {
+    throw new Error('Expected PERSONAGGIO VINCOLATO badge in Subject section!');
+  }
+  console.log('✔ Subject section displays the locked character banner with biometric DNA summary!');
+
+  // Fill scene-specific pose and clothing in the Subject section
+  const poseInput = page.locator('app-section-block:has-text("Soggetto principale") app-smart-field[label="Posa / Azione"] input');
+  await poseInput.fill('Sitting candidly on a wooden pier dangling feet over azure water');
+  await page.waitForTimeout(200);
+
+  const attireInput = page.locator('app-section-block:has-text("Soggetto principale") app-smart-field[label="Abbigliamento / Materiali"] input');
+  await attireInput.fill('Oversized navy wool knit sweater and rolled-up denim jeans');
+  await page.waitForTimeout(200);
+
+  // Provide cref URL directly in the locked character banner
+  const crefInputScene = page.locator('.bound-cref-input').first();
+  await crefInputScene.fill('https://cdn.example.com/maya-model-sheet.jpg');
+  await page.waitForTimeout(200);
+
+  // Check Midjourney compiled prompt
+  const sceneMjTab = page.locator('button.tab:has-text("Midjourney")');
+  await sceneMjTab.click();
+  await page.waitForTimeout(300);
+
+  const sceneMjText = await page.locator('pre.code').innerText();
+  console.log('  Scene Midjourney output:', sceneMjText.slice(0, 180));
+  if (!sceneMjText.includes('Oversized navy wool knit sweater') || !sceneMjText.includes('Sitting candidly on a wooden pier')) {
+    throw new Error('Midjourney output does not contain the scene-specific attire or pose!');
+  }
+  if (!sceneMjText.includes('--cref https://cdn.example.com/maya-model-sheet.jpg') || !sceneMjText.includes('--cw 100')) {
+    throw new Error('Midjourney output in scene mode does not contain --cref or --cw!');
+  }
+  console.log('✔ Midjourney compiled output correctly placed the locked character into the scene with custom attire!');
+
+  // Test altering the --cw slider directly in the banner
+  console.log('👉 Testing --cw weight slider (e.g. Setting weight to 20 for face-only consistency)...');
+  const cwSlider = page.locator('.bound-cw-box .cw-slider').first();
+  await cwSlider.fill('20');
+  await cwSlider.dispatchEvent('input');
+  await page.waitForTimeout(300);
+
+  const cwUpdatedMjText = await page.locator('pre.code').innerText();
+  if (!cwUpdatedMjText.includes('--cw 20')) {
+    throw new Error(`Expected --cw 20 in Midjourney output, but got: ${cwUpdatedMjText}`);
+  }
+  console.log('✔ --cw weight slider reactively updated Midjourney output to --cw 20!');
+
+  // Check FLUX compiled prompt
+  const fluxTab = page.locator('button.tab:has-text("FLUX")');
+  await fluxTab.click();
+  await page.waitForTimeout(300);
+  const fluxSceneText = await page.locator('pre.code').innerText();
+  console.log('  FLUX Scene output:', fluxSceneText.slice(0, 180));
+  if (!fluxSceneText.includes('Attire & clothing: Oversized navy wool knit sweater')) {
+    throw new Error('FLUX output in scene mode does not include custom attire!');
+  }
+  console.log('✔ FLUX compiler correctly produced narrative scene prompt with locked character biometrics and scene attire!');
+
+  // Capture dual-mode scene screenshot
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-scene-with-character.png'), fullPage: false });
+  console.log('📸 Captured e2e-scene-with-character.png');
+
   if (errors.length > 0) {
     throw new Error(`Browser encountered ${errors.length} errors: ${errors.join('; ')}`);
   }
 
-  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS (INCLUDING MULTI-PHOTO CHARACTER SHEET) PASSED PERFECTLY!');
+  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS (INCLUDING DUAL-MODE WORKFLOW) PASSED PERFECTLY!');
   await browser.close();
 })();

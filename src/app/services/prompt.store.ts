@@ -1,5 +1,5 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { CustomProperty, ImagePromptSpec, SecondarySubject, CharacterLayoutMode, LAYOUT_MODE_VIEWS } from '../models/prompt.model';
+import { CustomProperty, ImagePromptSpec, SecondarySubject, CharacterLayoutMode, CharacterWorkflowMode, LAYOUT_MODE_VIEWS } from '../models/prompt.model';
 import { PromptService } from './prompt.service';
 
 const DRAFT_STORAGE_KEY = 'prompt_json_studio_draft_v1';
@@ -122,6 +122,52 @@ export class PromptStore {
   }
 
   // ---------- Character Sheet ----------
+
+  setWorkflowMode(mode: CharacterWorkflowMode): void {
+    this.spec.update((s) => {
+      const cs = s.character_sheet;
+      const charName = cs.character_name.trim() || 'Elena Vance';
+
+      if (mode === 'scene_with_character') {
+        const details = [
+          cs.ethnicity_and_skin,
+          cs.eye_details ? `eyes: ${cs.eye_details}` : '',
+          cs.hair_details ? `hair: ${cs.hair_details}` : '',
+          cs.distinctive_marks,
+          cs.body_build,
+        ].filter(Boolean).join(', ');
+
+        return {
+          ...s,
+          meta: {
+            ...s.meta,
+            title: s.meta.title.includes('Turnaround') || s.meta.title.includes('Expression')
+              ? `Scene with ${charName}`
+              : s.meta.title,
+          },
+          character_sheet: {
+            ...cs,
+            enabled: true,
+            mode: 'scene_with_character',
+          },
+          subject: {
+            ...s.subject,
+            primary_entity: `${charName}, ${cs.gender_and_age}`,
+            description: details,
+            clothing_or_materials: s.subject.clothing_or_materials || cs.signature_outfit,
+          },
+        };
+      } else {
+        return {
+          ...s,
+          character_sheet: {
+            ...cs,
+            mode: 'sheet_generation',
+          },
+        };
+      }
+    });
+  }
 
   setLayoutMode(mode: CharacterLayoutMode): void {
     const layout = LAYOUT_MODE_VIEWS[mode];
@@ -312,6 +358,12 @@ export class PromptStore {
       mergeBlock(out.character_sheet, obj['character_sheet'], null);
       if (Array.isArray(obj['character_sheet'].views)) {
         out.character_sheet.views = [...obj['character_sheet'].views];
+      }
+      if (!out.character_sheet.mode) {
+        out.character_sheet.mode = 'sheet_generation';
+      }
+      if (out.character_sheet.cref_weight === undefined) {
+        out.character_sheet.cref_weight = 100;
       }
     }
 

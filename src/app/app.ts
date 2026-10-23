@@ -12,7 +12,7 @@ import { TemplateSidebar } from './components/template-sidebar/template-sidebar'
 import { OutputPanel, OutputTab, CompiledOutputs } from './components/output-panel/output-panel';
 import { PromptStore } from './services/prompt.store';
 import { PromptService } from './services/prompt.service';
-import { CharacterLayoutMode, CharacterPhotoItem, CustomProperty, LAYOUT_MODE_VIEWS, PromptTemplate, SavedCharacter } from './models/prompt.model';
+import { CharacterLayoutMode, CharacterPhotoItem, CharacterWorkflowMode, CustomProperty, LAYOUT_MODE_VIEWS, PromptTemplate, SavedCharacter } from './models/prompt.model';
 
 @Component({
   selector: 'app-root',
@@ -131,6 +131,19 @@ export class App {
     this.store.setLayoutMode(mode);
     const label = LAYOUT_MODE_VIEWS[mode]?.label || mode;
     this.showToast(`Layout impostato: ${label}`);
+  }
+
+  setWorkflowMode(mode: CharacterWorkflowMode): void {
+    this.store.setWorkflowMode(mode);
+    if (mode === 'scene_with_character') {
+      this.sectionCharacterOpen.set(false);
+      this.sectionSubjectOpen.set(true);
+      this.sectionSceneOpen.set(true);
+      this.showToast('🎬 Modalità Scena Attiva: Personaggio vincolato al prompt!');
+    } else {
+      this.sectionCharacterOpen.set(true);
+      this.showToast('📐 Modalità Scheda Attiva: Generazione foglio modello / turnaround.');
+    }
   }
 
   collapseAll(): void {

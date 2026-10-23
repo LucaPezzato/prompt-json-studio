@@ -199,7 +199,7 @@
             [checked]="spec().character_sheet.enabled"
             (change)="store.set('character_sheet', 'enabled', $any($event.target).checked)"
           />
-          <span><strong>Abilita modalità Scheda Personaggio (Model Sheet / Multi-Angle Turnaround)</strong></span>
+          <span><strong>Abilita modulo Personaggio &amp; Consistenza</strong></span>
         </label>
 
         <button
@@ -209,6 +209,34 @@
           title="Copia i dati del personaggio nel blocco Soggetto Principale sottostante per generare una scena"
         >
           ↳ Inietta nel Soggetto della Scena
+        </button>
+      </div>
+
+      <!-- WORKFLOW MODE SWITCHER -->
+      <div class="workflow-mode-switch">
+        <button
+          type="button"
+          class="wf-btn"
+          [class.active]="spec().character_sheet.mode !== 'scene_with_character'"
+          (click)="setWorkflowMode('sheet_generation')"
+        >
+          <span class="wf-icon">📐</span>
+          <div class="wf-content">
+            <span class="wf-title">Modalità Creazione Scheda (Turnaround)</span>
+            <span class="wf-sub">Genera il foglio modello multi-angolo / espressioni su fondo neutro</span>
+          </div>
+        </button>
+        <button
+          type="button"
+          class="wf-btn"
+          [class.active]="spec().character_sheet.mode === 'scene_with_character'"
+          (click)="setWorkflowMode('scene_with_character')"
+        >
+          <span class="wf-icon">🎬</span>
+          <div class="wf-content">
+            <span class="wf-title">Modalità Scena con Personaggio Vincolato</span>
+            <span class="wf-sub">Soggetto bloccato sul personaggio; tu gestisci la scena, abiti, luci e camera</span>
+          </div>
         </button>
       </div>
 
@@ -284,86 +312,118 @@
           (valueChange)="store.set('character_sheet', 'signature_props', $event)"
         />
 
-        <!-- Layout Mode & Views Selection -->
-        <div class="field-group span-2">
-          <label class="field-label">Formato Scheda Turnaround (Layout Mode)</label>
-          <div class="char-layout-modes">
-            <button
-              type="button"
-              class="char-mode-btn"
-              [class.active]="spec().character_sheet.layout_mode === 'turnaround_4_views'"
-              (click)="setCharacterLayoutMode('turnaround_4_views')"
-            >
-              🔄 Turnaround 4 Viste (Front, 3/4, Profilo, Back)
-            </button>
-            <button
-              type="button"
-              class="char-mode-btn"
-              [class.active]="spec().character_sheet.layout_mode === 'turnaround_3_views'"
-              (click)="setCharacterLayoutMode('turnaround_3_views')"
-            >
-              📐 Turnaround 3 Viste (Front, Profilo, Back)
-            </button>
-            <button
-              type="button"
-              class="char-mode-btn"
-              [class.active]="spec().character_sheet.layout_mode === 'expressions_grid'"
-              (click)="setCharacterLayoutMode('expressions_grid')"
-            >
-              😀 Griglia Espressioni (6 Emozioni)
-            </button>
-            <button
-              type="button"
-              class="char-mode-btn"
-              [class.active]="spec().character_sheet.layout_mode === 'full_body_and_portraits'"
-              (click)="setCharacterLayoutMode('full_body_and_portraits')"
-            >
-              🧍 Figura Intera + Ritratti Ravvicinati
-            </button>
-            <button
-              type="button"
-              class="char-mode-btn"
-              [class.active]="spec().character_sheet.layout_mode === 'outfit_study'"
-              (click)="setCharacterLayoutMode('outfit_study')"
-            >
-              👔 Studio Outfit &amp; Costumi
-            </button>
-          </div>
-        </div>
-
-        <!-- Multi-view selector chips -->
-        <div class="field-group span-2">
-          <label class="field-label">Viste / Espressioni Incluse nel Frame</label>
-          <div class="char-views-chips">
-            @for (v of availableViews(); track v) {
+        @if (spec().character_sheet.mode !== 'scene_with_character') {
+          <!-- Layout Mode & Views Selection -->
+          <div class="field-group span-2">
+            <label class="field-label">Formato Scheda Turnaround (Layout Mode)</label>
+            <div class="char-layout-modes">
               <button
                 type="button"
-                class="char-view-chip"
-                [class.selected]="spec().character_sheet.views.includes(v)"
-                (click)="store.toggleCharacterView(v)"
+                class="char-mode-btn"
+                [class.active]="spec().character_sheet.layout_mode === 'turnaround_4_views'"
+                (click)="setCharacterLayoutMode('turnaround_4_views')"
               >
-                {{ spec().character_sheet.views.includes(v) ? '✓ ' : '+ ' }}{{ v }}
+                🔄 Turnaround 4 Viste (Front, 3/4, Profilo, Back)
               </button>
-            }
+              <button
+                type="button"
+                class="char-mode-btn"
+                [class.active]="spec().character_sheet.layout_mode === 'turnaround_3_views'"
+                (click)="setCharacterLayoutMode('turnaround_3_views')"
+              >
+                📐 Turnaround 3 Viste (Front, Profilo, Back)
+              </button>
+              <button
+                type="button"
+                class="char-mode-btn"
+                [class.active]="spec().character_sheet.layout_mode === 'expressions_grid'"
+                (click)="setCharacterLayoutMode('expressions_grid')"
+              >
+                😀 Griglia Espressioni (6 Emozioni)
+              </button>
+              <button
+                type="button"
+                class="char-mode-btn"
+                [class.active]="spec().character_sheet.layout_mode === 'full_body_and_portraits'"
+                (click)="setCharacterLayoutMode('full_body_and_portraits')"
+              >
+                🧍 Figura Intera + Ritratti Ravvicinati
+              </button>
+              <button
+                type="button"
+                class="char-mode-btn"
+                [class.active]="spec().character_sheet.layout_mode === 'outfit_study'"
+                (click)="setCharacterLayoutMode('outfit_study')"
+              >
+                👔 Studio Outfit &amp; Costumi
+              </button>
+            </div>
+          </div>
+
+          <!-- Multi-view selector chips -->
+          <div class="field-group span-2">
+            <label class="field-label">Viste / Espressioni Incluse nel Frame</label>
+            <div class="char-views-chips">
+              @for (v of availableViews(); track v) {
+                <button
+                  type="button"
+                  class="char-view-chip"
+                  [class.selected]="spec().character_sheet.views.includes(v)"
+                  (click)="store.toggleCharacterView(v)"
+                >
+                  {{ spec().character_sheet.views.includes(v) ? '✓ ' : '+ ' }}{{ v }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <app-smart-field
+            class="span-2"
+            label="Sfondo Scheda Turnaround (Backdrop isolato)"
+            category="character_background"
+            placeholder="Es. Neutral light-grey seamless studio backdrop with soft floor shadow…"
+            [value]="spec().character_sheet.background_style"
+            (valueChange)="store.set('character_sheet', 'background_style', $event)"
+          />
+        } @else {
+          <div class="scene-mode-active-card span-2">
+            <div class="scene-card-icon">🎬</div>
+            <div class="scene-card-info">
+              <strong>Modalità Scena Attiva con Personaggio Vincolato</strong>
+              <p>Il soggetto principale è bloccato su <strong>{{ spec().character_sheet.character_name || 'Elena Vance' }}</strong> con il suo DNA visivo fisso. Nel blocco <em>"Soggetto principale"</em> sottostante personalizzi posa, azione e abito di questa specifica scena, mentre nei blocchi successivi imposti la location, le luci, l'inquadratura e la composizione.</p>
+            </div>
+          </div>
+        }
+
+        <!-- Midjourney --cref URL & --cw Weight Group -->
+        <div class="cref-config-group span-2">
+          <div class="cref-url-box">
+            <app-smart-field
+              label="Midjourney --cref URL (Immagine Scheda / Referenza Personaggio)"
+              placeholder="https://... Incolla qui l'URL dell'immagine generata del personaggio"
+              [value]="spec().character_sheet.cref_url || ''"
+              (valueChange)="store.set('character_sheet', 'cref_url', $event)"
+            />
+          </div>
+          <div class="cref-weight-box">
+            <div class="cw-header">
+              <label class="field-label">Peso Referenza (--cw: 0-100)</label>
+              <span class="cw-badge">{{ spec().character_sheet.cref_weight ?? 100 }}</span>
+            </div>
+            <input
+              type="range"
+              class="cw-slider"
+              min="0"
+              max="100"
+              step="5"
+              [value]="spec().character_sheet.cref_weight ?? 100"
+              (input)="store.set('character_sheet', 'cref_weight', +$any($event.target).value)"
+            />
+            <span class="cw-hint">
+              {{ (spec().character_sheet.cref_weight ?? 100) === 100 ? '100 = Viso, capelli & abiti fedeli' : (spec().character_sheet.cref_weight ?? 100) <= 20 ? (spec().character_sheet.cref_weight ?? 100) + ' = Solo viso/DNA (abiti liberi)' : (spec().character_sheet.cref_weight ?? 100) + ' = Ibrido' }}
+            </span>
           </div>
         </div>
-
-        <app-smart-field
-          class="span-2"
-          label="Sfondo Scheda Turnaround (Backdrop isolato)"
-          category="character_background"
-          placeholder="Es. Neutral light-grey seamless studio backdrop with soft floor shadow…"
-          [value]="spec().character_sheet.background_style"
-          (valueChange)="store.set('character_sheet', 'background_style', $event)"
-        />
-
-        <app-smart-field
-          class="span-2"
-          label="Midjourney --cref URL (Consistenza Personaggio Referenziato)"
-          placeholder="https://... URL dell'immagine di riferimento generata (aggiunge --cref &lt;url&gt; --cw 100)"
-          [value]="spec().character_sheet.cref_url || ''"
-          (valueChange)="store.set('character_sheet', 'cref_url', $event)"
-        />
       </div>
     </app-section-block>
 
@@ -375,6 +435,56 @@
       [summary]="spec().subject.primary_entity || 'Nessun soggetto specificato'"
       [(open)]="sectionSubjectOpen"
     >
+      @if (spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character') {
+        <div class="char-bound-banner">
+          <div class="bound-header">
+            <div class="bound-badge-wrap">
+              <span class="bound-icon">🔒</span>
+              <span class="bound-badge">PERSONAGGIO VINCOLATO</span>
+              <strong class="bound-name">{{ spec().character_sheet.character_name || 'Elena Vance' }}</strong>
+            </div>
+            <button type="button" class="btn-micro" (click)="setWorkflowMode('sheet_generation')" title="Torna alla modalità creazione scheda">
+              📐 Modalità Scheda
+            </button>
+          </div>
+          <p class="bound-desc">
+            Il DNA biometrico è fissato dalla scheda. Modifica qui sotto la <strong>posa/azione</strong>, l'<strong>espressione</strong> e l'<strong>abbigliamento specifico</strong> per questa scena (lascia vuoto per usare l'outfit iconico).
+          </p>
+          <div class="bound-dna-summary">
+            <span>🧬 <strong>Tratti Fissi:</strong> {{ spec().character_sheet.gender_and_age }} · {{ spec().character_sheet.ethnicity_and_skin }} · {{ spec().character_sheet.hair_details }} · {{ spec().character_sheet.eye_details }} · {{ spec().character_sheet.body_build }}</span>
+          </div>
+
+          <!-- Quick cref URL & --cw weight input directly in scene mode -->
+          <div class="bound-cref-row">
+            <div class="bound-cref-url-box">
+              <label class="field-label mini">Midjourney --cref URL (Immagine Scheda per Consistenza Visiva)</label>
+              <input
+                type="text"
+                class="bound-cref-input"
+                placeholder="https://... Incolla URL immagine di riferimento del personaggio"
+                [value]="spec().character_sheet.cref_url || ''"
+                (input)="store.set('character_sheet', 'cref_url', $any($event.target).value)"
+              />
+            </div>
+            <div class="bound-cw-box">
+              <div class="bound-cw-header">
+                <span class="field-label mini">Peso Referenza Midjourney (--cw)</span>
+                <span class="cw-badge">{{ spec().character_sheet.cref_weight ?? 100 }}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                class="cw-slider"
+                [value]="spec().character_sheet.cref_weight ?? 100"
+                (input)="store.set('character_sheet', 'cref_weight', +$any($event.target).value)"
+              />
+              <span class="cw-hint mini">{{ (spec().character_sheet.cref_weight ?? 100) <= 20 ? '0-20: Solo viso (abiti liberi per la scena)' : '100: Viso & abiti originali fedeli' }}</span>
+            </div>
+          </div>
+        </div>
+      }
       <div class="grid-2">
         <app-smart-field
           class="span-2"
