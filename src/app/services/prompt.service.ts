@@ -1525,7 +1525,10 @@ export class PromptService {
         description: spec.subject.description,
         pose_or_action: spec.subject.pose_or_action,
         expression_or_mood: spec.subject.expression_or_mood,
-        clothing_or_materials: spec.subject.clothing_or_materials,
+        clothing_or_materials:
+          spec.character_sheet?.enabled && spec.character_sheet.signature_outfit
+            ? spec.character_sheet.signature_outfit
+            : spec.subject.clothing_or_materials,
         placement: spec.subject.placement,
         ...customBySection('subject'),
       },
@@ -1629,6 +1632,8 @@ export class PromptService {
                         ? '3-view character model turnaround sheet'
                         : '4-view character model turnaround sheet (Front, 3/4, Profile, Back)',
                     views: spec.character_sheet.views,
+                    attire_or_outfit: spec.character_sheet.signature_outfit,
+                    ...(spec.character_sheet.signature_props ? { props: spec.character_sheet.signature_props } : {}),
                     background_style: spec.character_sheet.background_style,
                   }),
             },
@@ -2002,7 +2007,8 @@ export class PromptService {
         `CRITICAL REQUIREMENTS FOR CONSISTENCY ANCHOR:\n` +
         `1. BACKDROP: Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor contact shadow, high-key even studio lighting, zero scene clutter, 100% visual isolation.\n` +
         `2. SOMATIC CONTINUITY: Identical facial bone structure, eyes (${cs.eye_details || 'as specified in brief'}), hair (${cs.hair_details || 'as specified in brief'}), skin tone (${cs.ethnicity_and_skin || 'as specified in brief'}), and physique across all angles.\n` +
-        `3. FRAME LAYOUT: ${views} displayed simultaneously in a single composite frame.\n\n` +
+        `3. ATTIRE & WARDROBE: ${cs.signature_outfit || 'Neutral minimalist athletic basics'}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}.\n` +
+        `4. FRAME LAYOUT: ${views} displayed simultaneously in a single composite frame.\n\n` +
         `[PRODUCTION SPECIFICATION JSON]\n` +
         '```json\n' +
         jsonStr +

@@ -515,6 +515,19 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   }
   console.log('✔ Gemini output in sheet mode strictly enforces pure white studio cyclorama backdrop!');
 
+  // Test clicking the quick neutral attire suggestion chip
+  console.log('👉 Testing quick neutral studio attire chip...');
+  const cropTopChip = page.locator('.qas-chip:has-text("Top Sportivo")');
+  await cropTopChip.click();
+  await page.waitForTimeout(300);
+
+  // Verify that the prompt output in the sidebar reactively updated with the new attire!
+  const updatedPromptText = await page.locator('pre.code').innerText();
+  if (!updatedPromptText.includes('athletic sports crop top and high-waisted biker shorts')) {
+    throw new Error('Quick neutral studio attire chip did not update the prompt in the sidebar!');
+  }
+  console.log('✔ Quick neutral studio attire chip reactively updated the prompt in the sidebar!');
+
   // Capture screenshot of Dedicated Character Studio
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-dedicated-character-studio.png'), fullPage: false });
   console.log('📸 Captured e2e-dedicated-character-studio.png');

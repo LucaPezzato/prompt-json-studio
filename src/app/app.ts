@@ -175,6 +175,16 @@ export class App {
     this.setWorkflowMode('sheet_generation');
   }
 
+  setSignatureOutfit(outfit: string): void {
+    this.store.updateCharacterSheet({ signature_outfit: outfit });
+    this.store.set('subject', 'clothing_or_materials', outfit);
+    const current = this.currentSavedCharacter();
+    if (current) {
+      this.svc.updateCharacter(current.id, { ...this.spec().character_sheet, signature_outfit: outfit }, current.name);
+    }
+    this.showToast(`Abito aggiornato: ${outfit.split(',')[0]}…`);
+  }
+
   collapseAll(): void {
     this.sectionCharacterOpen.set(false);
     this.sectionSubjectOpen.set(false);

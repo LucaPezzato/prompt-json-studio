@@ -402,7 +402,7 @@
           category="character_outfit"
           placeholder="Es. Neutral heather-grey seamless athletic sports crop top and biker shorts…"
           [value]="spec().character_sheet.signature_outfit"
-          (valueChange)="store.set('character_sheet', 'signature_outfit', $event)"
+          (valueChange)="setSignatureOutfit($event)"
         />
 
         <app-smart-field
@@ -417,7 +417,7 @@
           <button
             type="button"
             class="qas-chip"
-            (click)="store.set('character_sheet', 'signature_outfit', 'Neutral heather-grey seamless athletic sports crop top and high-waisted biker shorts')"
+            (click)="setSignatureOutfit('Neutral heather-grey seamless athletic sports crop top and high-waisted biker shorts')"
             title="Mostra proporzioni corporee, braccia e gambe senza rischiare filtri di sicurezza NSFW"
           >
             🩱 Top Sportivo &amp; Biker Shorts (Consigliato)
@@ -425,7 +425,7 @@
           <button
             type="button"
             class="qas-chip"
-            (click)="store.set('character_sheet', 'signature_outfit', 'Form-fitting neutral off-white ribbed racerback tank top and dark-grey compression athletic shorts')"
+            (click)="setSignatureOutfit('Form-fitting neutral off-white ribbed racerback tank top and dark-grey compression athletic shorts')"
             title="Canotta neutra aderente e pantaloncini da palestra"
           >
             🎽 Canotta Aderente &amp; Shorts
@@ -433,7 +433,7 @@
           <button
             type="button"
             class="qas-chip"
-            (click)="store.set('character_sheet', 'signature_outfit', 'Fitted minimalist white cotton crewneck t-shirt and neutral slate-grey tailored shorts')"
+            (click)="setSignatureOutfit('Fitted minimalist white cotton crewneck t-shirt and neutral slate-grey tailored shorts')"
             title="T-shirt classica e pantaloncini neutri"
           >
             👕 T-Shirt &amp; Shorts
