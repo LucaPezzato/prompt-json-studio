@@ -269,6 +269,26 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   }
   console.log('✔ Character Sheet --cref correctly compiled into Midjourney prompt!');
 
+  // Test clicking "Griglia Espressioni" layout mode button
+  console.log('👉 Testing "Griglia Espressioni" mode toggle...');
+  const exprBtn = charBlock.locator('button.char-mode-btn:has-text("Griglia Espressioni")');
+  await exprBtn.click();
+  await page.waitForTimeout(300);
+
+  // Verify view chips updated to expressions
+  const exprChips = await charBlock.locator('.char-views-chips .char-view-chip.selected').allInnerTexts();
+  console.log(`  Selected expression chips: ${exprChips.join(', ')}`);
+  if (!exprChips.some(c => c.includes('Neutral') || c.includes('smile') || c.includes('expression'))) {
+    throw new Error('Expression chips did not populate when clicking Griglia Espressioni!');
+  }
+
+  // Verify Midjourney prompt updated to facial expression model sheet
+  const updatedMjText = await page.locator('pre.code').innerText();
+  if (!updatedMjText.includes('Facial expression model sheet') || !updatedMjText.includes('2x3 grid')) {
+    throw new Error('Midjourney prompt did not update to Facial expression model sheet!');
+  }
+  console.log('✔ Griglia Espressioni button reactively updated layout mode, view chips, and compiled prompts!');
+
   // Capture character sheet screenshot
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-character-sheet.png'), fullPage: false });
   console.log('📸 Captured e2e-character-sheet.png');

@@ -58,6 +58,72 @@ export interface TypographyBlock {
   placement_and_material: string;
 }
 
+export type CharacterLayoutMode =
+  | 'turnaround_4_views'
+  | 'turnaround_3_views'
+  | 'expressions_grid'
+  | 'full_body_and_portraits'
+  | 'outfit_study';
+
+export const LAYOUT_MODE_VIEWS: Record<
+  CharacterLayoutMode,
+  { label: string; defaultViews: string[]; availableViews: string[] }
+> = {
+  turnaround_4_views: {
+    label: 'Turnaround 4 Viste',
+    defaultViews: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
+    availableViews: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view', 'Close-up face'],
+  },
+  turnaround_3_views: {
+    label: 'Turnaround 3 Viste',
+    defaultViews: ['Front view', 'Side profile view', 'Back view'],
+    availableViews: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view', 'Close-up face'],
+  },
+  expressions_grid: {
+    label: 'Griglia Espressioni (6 Emozioni)',
+    defaultViews: [
+      'Neutral expression',
+      'Spontaneous warm smile',
+      'Serious intense gaze',
+      'Surprised look',
+      'Quiet contemplation',
+      'Genuine laugh',
+    ],
+    availableViews: [
+      'Neutral expression',
+      'Spontaneous warm smile',
+      'Serious intense gaze',
+      'Surprised look',
+      'Quiet contemplation',
+      'Genuine laugh',
+      'Subtle confident smirk',
+      'Determined fierce look',
+    ],
+  },
+  full_body_and_portraits: {
+    label: 'Figura Intera + Ritratti',
+    defaultViews: ['Full body front standing', 'Waist-up portrait', 'Close-up face profile', 'Tight macro expression'],
+    availableViews: [
+      'Full body front standing',
+      'Full body 3/4 walking',
+      'Waist-up portrait',
+      'Close-up face profile',
+      'Tight macro expression',
+    ],
+  },
+  outfit_study: {
+    label: 'Studio Outfit & Costumi',
+    defaultViews: ['Signature iconic outfit', 'Casual everyday wear', 'Formal evening attire', 'Action / outerwear jacket'],
+    availableViews: [
+      'Signature iconic outfit',
+      'Casual everyday wear',
+      'Formal evening attire',
+      'Action / outerwear jacket',
+      'Minimalist studio basics',
+    ],
+  },
+};
+
 export interface CharacterSheetBlock {
   enabled: boolean;
   character_name: string;
@@ -69,7 +135,7 @@ export interface CharacterSheetBlock {
   body_build: string;
   signature_outfit: string;
   signature_props: string;
-  layout_mode: 'turnaround_4_views' | 'turnaround_3_views' | 'expressions_grid' | 'full_body_and_portraits' | 'outfit_study';
+  layout_mode: CharacterLayoutMode;
   views: string[];
   background_style: string;
   cref_url?: string;

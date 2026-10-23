@@ -1,5 +1,5 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { CustomProperty, ImagePromptSpec, SecondarySubject } from '../models/prompt.model';
+import { CustomProperty, ImagePromptSpec, SecondarySubject, CharacterLayoutMode, LAYOUT_MODE_VIEWS } from '../models/prompt.model';
 import { PromptService } from './prompt.service';
 
 const DRAFT_STORAGE_KEY = 'prompt_json_studio_draft_v1';
@@ -122,6 +122,18 @@ export class PromptStore {
   }
 
   // ---------- Character Sheet ----------
+
+  setLayoutMode(mode: CharacterLayoutMode): void {
+    const layout = LAYOUT_MODE_VIEWS[mode];
+    this.spec.update((s) => ({
+      ...s,
+      character_sheet: {
+        ...s.character_sheet,
+        layout_mode: mode,
+        views: layout ? [...layout.defaultViews] : s.character_sheet.views,
+      },
+    }));
+  }
 
   updateCharacterSheet(partial: Partial<import('../models/prompt.model').CharacterSheetBlock>): void {
     this.spec.update((s) => ({

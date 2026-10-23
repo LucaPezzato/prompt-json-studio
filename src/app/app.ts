@@ -12,7 +12,7 @@ import { TemplateSidebar } from './components/template-sidebar/template-sidebar'
 import { OutputPanel, OutputTab, CompiledOutputs } from './components/output-panel/output-panel';
 import { PromptStore } from './services/prompt.store';
 import { PromptService } from './services/prompt.service';
-import { CharacterPhotoItem, CustomProperty, PromptTemplate, SavedCharacter } from './models/prompt.model';
+import { CharacterLayoutMode, CharacterPhotoItem, CustomProperty, LAYOUT_MODE_VIEWS, PromptTemplate, SavedCharacter } from './models/prompt.model';
 
 @Component({
   selector: 'app-root',
@@ -114,13 +114,24 @@ export class App {
 
   // Character Sheet signals & library
   readonly savedCharacters = this.svc.savedCharacters;
-  readonly availableViews = [
-    'Front view',
-    '3/4 Profile view',
-    'Side profile view',
-    'Back view',
-    'Close-up face',
-  ];
+  readonly availableViews = computed(() => {
+    const mode = this.spec().character_sheet.layout_mode;
+    return (
+      LAYOUT_MODE_VIEWS[mode]?.availableViews ?? [
+        'Front view',
+        '3/4 Profile view',
+        'Side profile view',
+        'Back view',
+        'Close-up face',
+      ]
+    );
+  });
+
+  setCharacterLayoutMode(mode: CharacterLayoutMode): void {
+    this.store.setLayoutMode(mode);
+    const label = LAYOUT_MODE_VIEWS[mode]?.label || mode;
+    this.showToast(`Layout impostato: ${label}`);
+  }
 
   collapseAll(): void {
     this.sectionCharacterOpen.set(false);

@@ -1597,7 +1597,20 @@ export class PromptService {
     if (spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()) {
       const cs = spec.character_sheet;
       const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side profile view, Back view';
-      return `Character design turnaround model sheet of ${cs.character_name}. The image displays multiple simultaneous angles in a single frame: ${views}. Character Somatic DNA: ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, distinctive features: ${cs.distinctive_marks}, physique: ${cs.body_build}. Signature attire: ${cs.signature_outfit}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}. Studio setting: ${cs.background_style}, even shadowless high-key studio softbox lighting, ultra-consistent character model turnaround sheet intended for AI image reference training and consistency matching. Style: ${spec.style_and_rendering.medium} (${spec.style_and_rendering.aesthetic}), ${spec.style_and_rendering.quality_tags.join(', ')}.`;
+      let layoutIntro = '';
+      if (cs.layout_mode === 'expressions_grid') {
+        layoutIntro = `Facial expression model sheet of ${cs.character_name}. The image is a multi-panel headshot grid displaying distinct emotional expressions of the exact same character in a single frame: ${views}. Facial features, eye color, bone structure, and hairstyle remain 100% consistent across all panels.`;
+      } else if (cs.layout_mode === 'outfit_study') {
+        layoutIntro = `Character costume and wardrobe study sheet of ${cs.character_name}. The image displays the same character in multiple simultaneous outfits in a single frame: ${views}.`;
+      } else if (cs.layout_mode === 'full_body_and_portraits') {
+        layoutIntro = `Character model reference sheet of ${cs.character_name} combining full-body lineup and high-resolution facial close-ups: ${views}.`;
+      } else if (cs.layout_mode === 'turnaround_3_views') {
+        layoutIntro = `Character design 3-view turnaround model sheet of ${cs.character_name}. The image displays three simultaneous angles in a single frame: ${views}.`;
+      } else {
+        layoutIntro = `Character design turnaround model sheet of ${cs.character_name}. The image displays multiple simultaneous angles in a single frame: ${views}.`;
+      }
+
+      return `${layoutIntro} Character Somatic DNA: ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, distinctive features: ${cs.distinctive_marks}, physique: ${cs.body_build}. Signature attire: ${cs.signature_outfit}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}. Studio setting: ${cs.background_style}, even shadowless high-key studio softbox lighting, ultra-consistent character reference sheet intended for AI image reference training and consistency matching. Style: ${spec.style_and_rendering.medium} (${spec.style_and_rendering.aesthetic}), ${spec.style_and_rendering.quality_tags.join(', ')}.`;
     }
 
     const parts: string[] = [];
@@ -1654,8 +1667,28 @@ export class PromptService {
     if (spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()) {
       const cs = spec.character_sheet;
       const views = cs.views.length > 0 ? cs.views.join(', ') : 'front view, 3/4 view, side profile, back view';
+
+      let titleToken = '';
+      let layoutToken = '';
+      if (cs.layout_mode === 'expressions_grid') {
+        titleToken = `Facial expression model sheet of ${cs.character_name}`;
+        layoutToken = `2x3 grid of headshots showing distinct emotional expressions: ${views}, consistent face and hair across all portraits`;
+      } else if (cs.layout_mode === 'outfit_study') {
+        titleToken = `Character outfit and wardrobe study sheet of ${cs.character_name}`;
+        layoutToken = `multiple simultaneous outfits in a single frame: ${views}`;
+      } else if (cs.layout_mode === 'full_body_and_portraits') {
+        titleToken = `Character model sheet of ${cs.character_name}`;
+        layoutToken = `full-body lineup and facial close-up studies in a single frame: ${views}`;
+      } else if (cs.layout_mode === 'turnaround_3_views') {
+        titleToken = `Character 3-view turnaround model sheet of ${cs.character_name}`;
+        layoutToken = `3 simultaneous angles in a single frame: ${views}`;
+      } else {
+        titleToken = `Character design turnaround model sheet of ${cs.character_name}`;
+        layoutToken = `multiple angles in a single frame: ${views}`;
+      }
+
       const charTokens = [
-        `Character design turnaround model sheet of ${cs.character_name}`,
+        titleToken,
         cs.gender_and_age,
         cs.ethnicity_and_skin,
         `eyes: ${cs.eye_details}`,
@@ -1664,9 +1697,9 @@ export class PromptService {
         cs.body_build,
         `wearing ${cs.signature_outfit}`,
         cs.signature_props ? `accessories: ${cs.signature_props}` : '',
-        `multiple angles in a single frame: ${views}`,
+        layoutToken,
         cs.background_style,
-        'character concept reference sheet, consistent character design across all views, even studio lighting, 8k',
+        'character concept reference sheet, consistent character design, even studio lighting, 8k',
         spec.style_and_rendering.medium,
         spec.style_and_rendering.aesthetic,
         spec.style_and_rendering.color_grading,
@@ -1760,8 +1793,16 @@ export class PromptService {
     if (spec.character_sheet?.enabled && spec.character_sheet.character_name.trim()) {
       const cs = spec.character_sheet;
       const views = cs.views.join(', ');
+      let modeTag = '(character model sheet, turnaround sheet:1.35), (multiple angles in one frame:1.25)';
+      if (cs.layout_mode === 'expressions_grid') {
+        modeTag = '(facial expression sheet, emotion grid:1.35), (multiple facial expressions in one frame:1.25)';
+      } else if (cs.layout_mode === 'outfit_study') {
+        modeTag = '(character wardrobe study sheet, outfit variations:1.35), (multiple outfits in one frame:1.25)';
+      } else if (cs.layout_mode === 'full_body_and_portraits') {
+        modeTag = '(character model sheet, full body and close-up portraits:1.35)';
+      }
       return {
-        positive: `(character model sheet, turnaround sheet:1.35), (multiple angles in one frame, ${views}:1.25), (${cs.character_name}:1.2), ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, (${cs.eye_details}:1.1), (${cs.hair_details}:1.1), ${cs.distinctive_marks}, ${cs.body_build}, ${cs.signature_outfit}, ${cs.background_style}, even studio lighting, high resolution, 8k, best quality`,
+        positive: `${modeTag}, (${views}:1.2), (${cs.character_name}:1.2), ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, (${cs.eye_details}:1.1), (${cs.hair_details}:1.1), ${cs.distinctive_marks}, ${cs.body_build}, ${cs.signature_outfit}, ${cs.background_style}, even studio lighting, high resolution, 8k, best quality`,
         negative: `bad anatomy, inconsistent character, different faces, cropped, blurry, dark background, complex background, text, watermark, signature, jpeg artifacts`,
       };
     }

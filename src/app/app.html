@@ -292,7 +292,7 @@
               type="button"
               class="char-mode-btn"
               [class.active]="spec().character_sheet.layout_mode === 'turnaround_4_views'"
-              (click)="store.set('character_sheet', 'layout_mode', 'turnaround_4_views')"
+              (click)="setCharacterLayoutMode('turnaround_4_views')"
             >
               🔄 Turnaround 4 Viste (Front, 3/4, Profilo, Back)
             </button>
@@ -300,7 +300,7 @@
               type="button"
               class="char-mode-btn"
               [class.active]="spec().character_sheet.layout_mode === 'turnaround_3_views'"
-              (click)="store.set('character_sheet', 'layout_mode', 'turnaround_3_views')"
+              (click)="setCharacterLayoutMode('turnaround_3_views')"
             >
               📐 Turnaround 3 Viste (Front, Profilo, Back)
             </button>
@@ -308,7 +308,7 @@
               type="button"
               class="char-mode-btn"
               [class.active]="spec().character_sheet.layout_mode === 'expressions_grid'"
-              (click)="store.set('character_sheet', 'layout_mode', 'expressions_grid')"
+              (click)="setCharacterLayoutMode('expressions_grid')"
             >
               😀 Griglia Espressioni (6 Emozioni)
             </button>
@@ -316,7 +316,7 @@
               type="button"
               class="char-mode-btn"
               [class.active]="spec().character_sheet.layout_mode === 'full_body_and_portraits'"
-              (click)="store.set('character_sheet', 'layout_mode', 'full_body_and_portraits')"
+              (click)="setCharacterLayoutMode('full_body_and_portraits')"
             >
               🧍 Figura Intera + Ritratti Ravvicinati
             </button>
@@ -324,7 +324,7 @@
               type="button"
               class="char-mode-btn"
               [class.active]="spec().character_sheet.layout_mode === 'outfit_study'"
-              (click)="store.set('character_sheet', 'layout_mode', 'outfit_study')"
+              (click)="setCharacterLayoutMode('outfit_study')"
             >
               👔 Studio Outfit &amp; Costumi
             </button>
@@ -333,9 +333,9 @@
 
         <!-- Multi-view selector chips -->
         <div class="field-group span-2">
-          <label class="field-label">Viste Incluse nel Frame</label>
+          <label class="field-label">Viste / Espressioni Incluse nel Frame</label>
           <div class="char-views-chips">
-            @for (v of availableViews; track v) {
+            @for (v of availableViews(); track v) {
               <button
                 type="button"
                 class="char-view-chip"
