@@ -1334,6 +1334,42 @@
   font-weight: 600;
 }
 
+.quick-attire-suggestions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(139, 233, 253, 0.05);
+  border: 1px dashed rgba(139, 233, 253, 0.25);
+  border-radius: 6px;
+  margin-top: 2px;
+}
+
+.qas-label {
+  font-size: 11px;
+  color: var(--cyan, #8be9fd);
+  font-weight: 600;
+}
+
+.qas-chip {
+  background: var(--bg, #282a36);
+  border: 1px solid var(--line, #44475a);
+  color: var(--fg, #f8f8f2);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.qas-chip:hover {
+  border-color: var(--cyan, #8be9fd);
+  color: var(--cyan, #8be9fd);
+  background: rgba(139, 233, 253, 0.1);
+}
+
 .char-views-chips {
   display: flex;
   flex-wrap: wrap;

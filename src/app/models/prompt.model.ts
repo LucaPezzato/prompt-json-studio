@@ -246,6 +246,7 @@ export type PresetCategoryKey =
   | 'character_hair'
   | 'character_marks'
   | 'character_build'
+  | 'character_outfit'
   | 'character_background';
 
 export type CustomOptionsMap = Record<PresetCategoryKey, string[]>;

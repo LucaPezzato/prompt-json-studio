@@ -402,6 +402,14 @@ export class PromptService {
       'Compact, agile gymnast build with defined musculature',
       'Stocky, rugged, sturdy physique with broad chest',
     ],
+    character_outfit: [
+      'Neutral heather-grey seamless athletic sports crop top and high-waisted biker shorts',
+      'Form-fitting neutral off-white ribbed racerback tank top and dark-grey compression athletic shorts',
+      'Minimalist form-fitting neutral grey sleeveless athletic bodysuit / studio leotard',
+      'Fitted minimalist white cotton crewneck t-shirt and neutral slate-grey tailored shorts',
+      'Textured ivory linen button-up shirt and high-waisted charcoal trousers',
+      'Matte black waterproof techwear bomber jacket with sealed seams and dark cargo pants',
+    ],
     character_background: [
       'Neutral light-grey seamless studio void with soft natural floor shadow',
       'Pristine seamless white cyclorama studio wall with high-key soft lighting',
@@ -2610,6 +2618,7 @@ Instructions:
       character_hair: [],
       character_marks: [],
       character_build: [],
+      character_outfit: [],
       character_background: [],
     };
     try {
