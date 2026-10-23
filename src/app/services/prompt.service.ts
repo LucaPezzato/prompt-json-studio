@@ -17,6 +17,7 @@ const SAVED_CHARACTERS_STORAGE_KEY = 'prompt_json_studio_saved_characters_v1';
 export const DEFAULT_CHARACTER_SHEET: CharacterSheetBlock = {
   enabled: false,
   mode: 'sheet_generation',
+  consistency_method: 'multimodal_attached_sheet',
   character_name: '',
   gender_and_age: 'Young woman, 26 years old',
   ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
@@ -1561,7 +1562,15 @@ export class PromptService {
               workflow_mode: spec.character_sheet.mode || 'sheet_generation',
               ...(spec.character_sheet.mode === 'scene_with_character'
                 ? {
-                    consistency: 'self_contained_character_dna',
+                    consistency_method: spec.character_sheet.consistency_method || 'multimodal_attached_sheet',
+                    visual_reference_anchor:
+                      spec.character_sheet.consistency_method === 'text_biometrics_only'
+                        ? 'textual_biometrics_dna'
+                        : 'attached_character_sheet_image',
+                    grounding_instruction:
+                      spec.character_sheet.consistency_method === 'text_biometrics_only'
+                        ? 'Generate character strictly adhering to somatic biometrics described in this brief.'
+                        : 'Anchor facial bone structure, eye shape, skin tone, and hair strictly to the attached character sheet image.',
                     biometrics: {
                       gender_and_age: spec.character_sheet.gender_and_age,
                       ethnicity_and_skin: spec.character_sheet.ethnicity_and_skin,
@@ -1911,10 +1920,46 @@ export class PromptService {
   }
 
   /**
-   * Compiles a hybrid instruction + JSON prompt ideal for GPT-4o, Gemini Imagen 3 / Nano Banana.
+   * Compiles a hybrid instruction + JSON prompt ideal for Google Gemini (Imagen 3 / Nano Banana) and ChatGPT / GPT-4o.
    */
   compileForGpt4oAndGemini(spec: ImagePromptSpec): string {
     const jsonStr = JSON.stringify(this.buildCleanJsonObject(spec), null, 2);
+
+    if (
+      spec.character_sheet?.enabled &&
+      spec.character_sheet.character_name.trim() &&
+      spec.character_sheet.mode === 'scene_with_character'
+    ) {
+      const cs = spec.character_sheet;
+      const charName = cs.character_name.trim();
+      const isAttachedSheet = (cs.consistency_method || 'multimodal_attached_sheet') === 'multimodal_attached_sheet';
+
+      if (isAttachedSheet) {
+        return (
+          `[CRITICAL VISUAL GROUNDING INSTRUCTION FOR GEMINI / MULTIMODAL LLM]\n` +
+          `The attached image is the definitive multi-angle character model sheet for the primary subject "${charName}".\n` +
+          `You MUST strictly preserve ${charName}'s facial bone structure, facial identity, eye shape/color (${cs.eye_details || 'as shown in sheet'}), ` +
+          `skin tone/texture (${cs.ethnicity_and_skin || 'as shown in sheet'}), hairstyle (${cs.hair_details || 'as shown in sheet'}), ` +
+          `distinctive features (${cs.distinctive_marks || 'as shown in sheet'}), and build (${cs.body_build || 'as shown in sheet'}).\n` +
+          `Do not invent a new face or alter ${charName}'s somatic identity. Only alter the scene setting, pose, expression, and attire as specified below.\n\n` +
+          `[SCENE PRODUCTION SPECIFICATION]\n` +
+          `Render ${charName} in a new scene strictly executing every camera, lighting, environmental, and compositional parameter defined in this structured JSON brief:\n\n` +
+          '```json\n' +
+          jsonStr +
+          '\n```'
+        );
+      } else {
+        return (
+          `[CHARACTER CONSISTENCY DIRECTIVE - TEXTUAL BIOMETRICS]\n` +
+          `Render the character "${charName}" strictly adhering to the deterministic biometric DNA defined in the brief:\n` +
+          `Execute every visual, camera, lighting, and composition parameter specified in this structured JSON production brief:\n\n` +
+          '```json\n' +
+          jsonStr +
+          '\n```'
+        );
+      }
+    }
+
     return (
       `Generate an image strictly following every visual, camera, lighting, and composition parameter specified in this structured JSON production brief:\n\n` +
       '```json\n' +

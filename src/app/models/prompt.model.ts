@@ -125,10 +125,12 @@ export const LAYOUT_MODE_VIEWS: Record<
 };
 
 export type CharacterWorkflowMode = 'sheet_generation' | 'scene_with_character';
+export type CharacterConsistencyMethod = 'multimodal_attached_sheet' | 'text_biometrics_only';
 
 export interface CharacterSheetBlock {
   enabled: boolean;
   mode: CharacterWorkflowMode;
+  consistency_method?: CharacterConsistencyMethod;
   character_name: string;
   gender_and_age: string;
   ethnicity_and_skin: string;

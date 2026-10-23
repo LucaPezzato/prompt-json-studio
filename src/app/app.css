@@ -990,6 +990,53 @@
   color: #fff;
 }
 
+.bound-consistency-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 2px 0 4px;
+}
+
+.cs-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted, #6272a4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cs-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid rgba(189, 147, 249, 0.25);
+}
+
+.cs-tab {
+  background: transparent;
+  border: none;
+  color: var(--muted, #6272a4);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.cs-tab:hover {
+  color: #fff;
+}
+
+.cs-tab.active {
+  background: var(--purple, #bd93f9);
+  color: #1e1f29;
+}
+
 .bound-desc {
   margin: 0;
   font-size: 12px;

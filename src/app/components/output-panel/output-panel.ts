@@ -8,7 +8,7 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
   { key: 'json', label: '{ } JSON', hint: 'JSON strutturato puro — incollalo in GPT-4o, Gemini, FLUX.2 o in pipeline ComfyUI.' },
   { key: 'flux', label: 'FLUX', hint: 'Prompt narrativo gerarchico ottimizzato per l’encoder T5 di FLUX.1 / FLUX.2.' },
   { key: 'midjourney', label: 'Midjourney', hint: 'Sintassi a token + parametri nativi (--ar, --s, --c, --seed, --no, --style raw).' },
-  { key: 'gpt', label: 'GPT-4o / Gemini', hint: 'Istruzione + brief JSON: ideale per ChatGPT, Gemini (Imagen / Nano Banana) e Claude.' },
+  { key: 'gpt', label: 'Gemini / GPT-4o', hint: 'Istruzione in inglese con grounding su sheet allegato + brief JSON: ottimizzato per Google Gemini e ChatGPT.' },
   { key: 'sdxl', label: 'SDXL', hint: 'Prompt positivo con pesi + prompt negativo per Stable Diffusion XL / Automatic1111 / ComfyUI.' },
 ];
 

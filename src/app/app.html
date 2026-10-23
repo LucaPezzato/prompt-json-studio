@@ -425,7 +425,13 @@
             <div class="scene-card-icon">🎬</div>
             <div class="scene-card-info">
               <strong>Modalità Scena Attiva con Personaggio Vincolato</strong>
-              <p>Il soggetto principale è bloccato su <strong>{{ spec().character_sheet.character_name || 'Elena Vance' }}</strong> con il suo DNA visivo fisso. Nel blocco <em>"Soggetto principale"</em> sottostante personalizzi posa, azione e abito di questa specifica scena, mentre nei blocchi successivi imposti la location, le luci, l'inquadratura e la composizione.</p>
+              <p>Il soggetto principale è bloccato su <strong>{{ spec().character_sheet.character_name || 'Elena Vance' }}</strong>.
+                @if ((spec().character_sheet.consistency_method || 'multimodal_attached_sheet') === 'multimodal_attached_sheet') {
+                  <span>Nel tab <em>Gemini / GPT-4o</em> trovi l'istruzione in lingua inglese di visual grounding pronta da inviare a Gemini insieme all'immagine dello sheet del personaggio allegata.</span>
+                } @else {
+                  <span>Il DNA biometrico viene descritto in modo autonomo nel testo.</span>
+                }
+              </p>
             </div>
           </div>
         }
@@ -488,8 +494,35 @@
               📐 Modalità Scheda
             </button>
           </div>
+          <div class="bound-consistency-bar">
+            <span class="cs-label">Metodo Consistenza:</span>
+            <div class="cs-tabs">
+              <button
+                type="button"
+                class="cs-tab"
+                [class.active]="(spec().character_sheet.consistency_method || 'multimodal_attached_sheet') === 'multimodal_attached_sheet'"
+                (click)="store.updateCharacterSheet({ consistency_method: 'multimodal_attached_sheet' })"
+                title="Genera il prompt in inglese con istruzioni di ancoraggio visivo per Gemini con l'immagine dello sheet allegata"
+              >
+                📎 Gemini / LLM (Sheet allegato)
+              </button>
+              <button
+                type="button"
+                class="cs-tab"
+                [class.active]="spec().character_sheet.consistency_method === 'text_biometrics_only'"
+                (click)="store.updateCharacterSheet({ consistency_method: 'text_biometrics_only' })"
+                title="Genera prompt basato unicamente sul DNA descritto in testo, senza foglio allegato"
+              >
+                📝 Solo Testo
+              </button>
+            </div>
+          </div>
           <p class="bound-desc">
-            Il DNA biometrico è incorporato direttamente nel prompt narrativo (100% autosufficiente, nessun allegato richiesto). Configura qui sotto <strong>posa</strong>, <strong>espressione</strong> e l'<strong>abito specifico</strong> per questa scena.
+            @if ((spec().character_sheet.consistency_method || 'multimodal_attached_sheet') === 'multimodal_attached_sheet') {
+              <span>📎 <strong>Workflow Gemini con Sheet allegato:</strong> Il prompt generato in lingua inglese istruisce espressamente Gemini a considerare l'immagine dello sheet allegata come visual anchor assoluto per lineamenti e volto. Configura qui sotto posa, espressione e abito per la nuova scena.</span>
+            } @else {
+              <span>📝 <strong>Descrizione Testuale Pura:</strong> Il prompt descrive dettagliatamente il DNA biometrico in testo senza foto allegata. Configura qui sotto posa, espressione e abito per la scena.</span>
+            }
           </p>
           <div class="bound-dna-summary">
             <span>🧬 <strong>Tratti Fissi:</strong> {{ spec().character_sheet.gender_and_age }} · {{ spec().character_sheet.ethnicity_and_skin }} · {{ spec().character_sheet.hair_details }} · {{ spec().character_sheet.eye_details }} · {{ spec().character_sheet.body_build }}</span>

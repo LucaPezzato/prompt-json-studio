@@ -447,6 +447,17 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   }
   console.log('✔ FLUX compiler correctly produced narrative scene prompt with locked character biometrics and scene attire!');
 
+  // Check Gemini / GPT-4o compiled prompt
+  const geminiTab = page.locator('button.tab:has-text("Gemini")');
+  await geminiTab.click();
+  await page.waitForTimeout(300);
+  const geminiSceneText = await page.locator('pre.code').innerText();
+  console.log('  Gemini Scene output sample:', geminiSceneText.slice(0, 140));
+  if (!geminiSceneText.includes('[CRITICAL VISUAL GROUNDING INSTRUCTION FOR GEMINI') || !geminiSceneText.includes('The attached image is the definitive multi-angle character model sheet')) {
+    throw new Error('Gemini output in scene mode does not include multimodal sheet grounding instructions!');
+  }
+  console.log('✔ Gemini / GPT-4o compiler correctly produced multimodal sheet grounding prompt in English!');
+
   // Capture dual-mode scene screenshot
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-scene-with-character.png'), fullPage: false });
   console.log('📸 Captured e2e-scene-with-character.png');
