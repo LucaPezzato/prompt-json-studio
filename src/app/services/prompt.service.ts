@@ -1554,6 +1554,16 @@ export class PromptService {
             character_sheet: {
               character_name: spec.character_sheet.character_name,
               layout_mode: spec.character_sheet.layout_mode,
+              layout_summary:
+                spec.character_sheet.layout_mode === 'expressions_grid'
+                  ? 'Facial expression sheet showing a 2x3 headshot grid of distinct emotions'
+                  : spec.character_sheet.layout_mode === 'outfit_study'
+                  ? 'Character wardrobe and costume variations study sheet'
+                  : spec.character_sheet.layout_mode === 'full_body_and_portraits'
+                  ? 'Full-body character lineup alongside portrait studies'
+                  : spec.character_sheet.layout_mode === 'turnaround_3_views'
+                  ? '3-view character model turnaround sheet'
+                  : '4-view character model turnaround sheet (Front, 3/4, Profile, Back)',
               views: spec.character_sheet.views,
               facial_dna: {
                 gender_and_age: spec.character_sheet.gender_and_age,

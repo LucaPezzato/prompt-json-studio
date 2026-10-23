@@ -125,14 +125,78 @@ export class PromptStore {
 
   setLayoutMode(mode: CharacterLayoutMode): void {
     const layout = LAYOUT_MODE_VIEWS[mode];
-    this.spec.update((s) => ({
-      ...s,
-      character_sheet: {
-        ...s.character_sheet,
-        layout_mode: mode,
-        views: layout ? [...layout.defaultViews] : s.character_sheet.views,
-      },
-    }));
+    const defaultViews = layout ? [...layout.defaultViews] : [];
+
+    this.spec.update((s) => {
+      const charName = s.character_sheet.character_name.trim() || 'Character';
+      let subjectDesc = s.subject.description;
+      let subjectPose = s.subject.pose_or_action;
+      let subjectMood = s.subject.expression_or_mood;
+      let subjectPlacement = s.subject.placement;
+      let cameraShot = s.camera.shot_type;
+      let title = s.meta.title;
+
+      if (mode === 'expressions_grid') {
+        subjectDesc = `Facial expression sheet showing a 2x3 grid of headshots of the exact same character with distinct emotions: ${defaultViews.join(', ')}`;
+        subjectPose = `Head-and-shoulders portraits arranged in a clean 2x3 grid layout`;
+        subjectMood = `Six distinct emotional expressions (${defaultViews.join(', ')}) with 100% consistent facial features, eye shape, and hair styling`;
+        subjectPlacement = `Center frame, 2x3 grid layout`;
+        cameraShot = `Medium close-up portrait (MCU)`;
+        title = `Expression Sheet: ${charName} (6 Espressioni)`;
+      } else if (mode === 'turnaround_4_views') {
+        subjectDesc = `Turnaround character model sheet showing the same character from four simultaneous angles in a single frame: front view, three-quarter view, side profile view, and back view`;
+        subjectPose = `Standing in relaxed model sheet poses: front view, three-quarter view, side profile view, and back view`;
+        subjectMood = `Calm, neutral, consistent facial expression across all views`;
+        subjectPlacement = `Center frame, horizontal lineup`;
+        cameraShot = `Full-body shot (Head to toe)`;
+        title = `Character Turnaround: ${charName} (4 Viste)`;
+      } else if (mode === 'turnaround_3_views') {
+        subjectDesc = `Turnaround character model sheet showing the same character from three simultaneous angles in a single frame: front view, side profile view, and back view`;
+        subjectPose = `Standing in relaxed model sheet poses: front view, side profile view, and back view`;
+        subjectMood = `Calm, neutral, consistent facial expression across all views`;
+        subjectPlacement = `Center frame, horizontal lineup`;
+        cameraShot = `Full-body shot (Head to toe)`;
+        title = `Character Turnaround: ${charName} (3 Viste)`;
+      } else if (mode === 'full_body_and_portraits') {
+        subjectDesc = `Character model reference sheet combining full-body lineup alongside close-up facial portrait studies: ${defaultViews.join(', ')}`;
+        subjectPose = `Full-body standing pose on the left alongside detailed head-and-shoulders portrait studies on the right`;
+        subjectMood = `Consistent character identity across both full-body and close-up views`;
+        subjectPlacement = `Full body on left, multi-angle portraits on right`;
+        cameraShot = `Wide establishing shot with inset portrait close-ups`;
+        title = `Character Reference Sheet: ${charName} (Full Body + Portraits)`;
+      } else if (mode === 'outfit_study') {
+        subjectDesc = `Character costume and wardrobe study sheet showing the same character in multiple outfits in a single frame: ${defaultViews.join(', ')}`;
+        subjectPose = `Multiple full-body poses wearing distinct outfits and attire variations`;
+        subjectMood = `Consistent character identity across all wardrobe variations`;
+        subjectPlacement = `Center frame, horizontal lineup`;
+        cameraShot = `Full-body shot (Head to toe)`;
+        title = `Outfit Study: ${charName} (Wardrobe Variations)`;
+      }
+
+      return {
+        ...s,
+        meta: {
+          ...s.meta,
+          title,
+        },
+        character_sheet: {
+          ...s.character_sheet,
+          layout_mode: mode,
+          views: defaultViews.length > 0 ? defaultViews : s.character_sheet.views,
+        },
+        subject: {
+          ...s.subject,
+          description: subjectDesc,
+          pose_or_action: subjectPose,
+          expression_or_mood: subjectMood,
+          placement: subjectPlacement,
+        },
+        camera: {
+          ...s.camera,
+          shot_type: cameraShot,
+        },
+      };
+    });
   }
 
   updateCharacterSheet(partial: Partial<import('../models/prompt.model').CharacterSheetBlock>): void {
@@ -145,7 +209,29 @@ export class PromptStore {
   toggleCharacterView(view: string): void {
     const current = this.spec().character_sheet.views || [];
     const next = current.includes(view) ? current.filter((v) => v !== view) : [...current, view];
-    this.set('character_sheet', 'views', next);
+    this.spec.update((s) => {
+      let subjectDesc = s.subject.description;
+      if (s.character_sheet.layout_mode === 'expressions_grid') {
+        subjectDesc = `Facial expression sheet showing a grid of headshots of the exact same character with distinct emotions: ${next.join(', ')}`;
+      } else if (s.character_sheet.layout_mode.startsWith('turnaround')) {
+        subjectDesc = `Turnaround character model sheet showing the same character from simultaneous angles in a single frame: ${next.join(', ')}`;
+      } else if (s.character_sheet.layout_mode === 'outfit_study') {
+        subjectDesc = `Character costume and wardrobe study sheet showing the same character in multiple outfits in a single frame: ${next.join(', ')}`;
+      } else if (s.character_sheet.layout_mode === 'full_body_and_portraits') {
+        subjectDesc = `Character model reference sheet combining full-body lineup alongside close-up facial portrait studies: ${next.join(', ')}`;
+      }
+      return {
+        ...s,
+        character_sheet: {
+          ...s.character_sheet,
+          views: next,
+        },
+        subject: {
+          ...s.subject,
+          description: subjectDesc,
+        },
+      };
+    });
   }
 
   applyCharacterToSubject(): void {
