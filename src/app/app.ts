@@ -12,7 +12,7 @@ import { TemplateSidebar } from './components/template-sidebar/template-sidebar'
 import { OutputPanel, OutputTab, CompiledOutputs } from './components/output-panel/output-panel';
 import { PromptStore } from './services/prompt.store';
 import { PromptService } from './services/prompt.service';
-import { CharacterLayoutMode, CharacterPhotoItem, CharacterWorkflowMode, CustomProperty, LAYOUT_MODE_VIEWS, PromptTemplate, SavedCharacter } from './models/prompt.model';
+import { CharacterLayoutMode, CharacterPhotoItem, CharacterSheetBlock, CharacterWorkflowMode, CustomProperty, LAYOUT_MODE_VIEWS, PromptTemplate, SavedCharacter } from './models/prompt.model';
 
 @Component({
   selector: 'app-root',
@@ -147,6 +147,34 @@ export class App {
     }
   }
 
+  readonly isSheetMode = computed<boolean>(() => {
+    return this.spec().character_sheet.enabled && this.spec().character_sheet.mode !== 'scene_with_character';
+  });
+
+  readonly studioMode = computed<'scene' | 'character'>(() => {
+    return this.isSheetMode() ? 'character' : 'scene';
+  });
+
+  setStudio(mode: 'scene' | 'character'): void {
+    if (mode === 'character') {
+      this.setWorkflowMode('sheet_generation');
+    } else {
+      if (this.spec().character_sheet.character_name.trim()) {
+        this.setWorkflowMode('scene_with_character');
+      } else {
+        this.store.setPromptKind('free');
+      }
+    }
+  }
+
+  switchToSceneStudio(): void {
+    this.setWorkflowMode('scene_with_character');
+  }
+
+  switchToCharacterStudio(): void {
+    this.setWorkflowMode('sheet_generation');
+  }
+
   collapseAll(): void {
     this.sectionCharacterOpen.set(false);
     this.sectionSubjectOpen.set(false);
@@ -173,17 +201,141 @@ export class App {
     this.sectionCustomOpen.set(true);
   }
 
+  // Active character tracking
+  readonly activeCharacterId = signal<string | null>('char-default-1');
+
+  readonly currentSavedCharacter = computed(() => {
+    const id = this.activeCharacterId();
+    const name = this.spec().character_sheet.character_name.trim();
+    if (id) {
+      const match = this.savedCharacters().find((c) => c.id === id);
+      if (match) return match;
+    }
+    if (name) {
+      const matchName = this.savedCharacters().find((c) => c.name.toLowerCase() === name.toLowerCase());
+      if (matchName) return matchName;
+    }
+    return null;
+  });
+
+  // Edit Character Modal state
+  readonly showEditCharacterModal = signal(false);
+  readonly editCharId = signal<string | null>(null);
+  readonly editCharName = signal('');
+  readonly editCharGenderAge = signal('');
+  readonly editCharBuild = signal('');
+  readonly editCharEyes = signal('');
+  readonly editCharHair = signal('');
+  readonly editCharSkin = signal('');
+  readonly editCharMarks = signal('');
+  readonly editCharOutfit = signal('');
+  readonly editCharProps = signal('');
+
+  openEditCharacterModal(char: SavedCharacter, ev?: Event): void {
+    if (ev) ev.stopPropagation();
+    this.editCharId.set(char.id);
+    this.editCharName.set(char.name);
+    this.editCharGenderAge.set(char.sheet.gender_and_age || '');
+    this.editCharBuild.set(char.sheet.body_build || '');
+    this.editCharEyes.set(char.sheet.eye_details || '');
+    this.editCharHair.set(char.sheet.hair_details || '');
+    this.editCharSkin.set(char.sheet.ethnicity_and_skin || '');
+    this.editCharMarks.set(char.sheet.distinctive_marks || '');
+    this.editCharOutfit.set(char.sheet.signature_outfit || '');
+    this.editCharProps.set(char.sheet.signature_props || '');
+    this.showEditCharacterModal.set(true);
+  }
+
+  openEditCurrentCharacter(): void {
+    const active = this.currentSavedCharacter();
+    if (active) {
+      this.openEditCharacterModal(active);
+    } else {
+      const cs = this.spec().character_sheet;
+      const temp: SavedCharacter = {
+        id: 'char-current',
+        name: cs.character_name || 'Personaggio Corrente',
+        summary: '',
+        sheet: cs,
+        createdAt: Date.now(),
+      };
+      this.openEditCharacterModal(temp);
+    }
+  }
+
+  saveEditedCharacterModal(): void {
+    const id = this.editCharId();
+    const name = this.editCharName().trim();
+    if (!name) {
+      this.showToast('Il nome del personaggio non può essere vuoto');
+      return;
+    }
+
+    const partialSheet: Partial<CharacterSheetBlock> = {
+      character_name: name,
+      gender_and_age: this.editCharGenderAge(),
+      body_build: this.editCharBuild(),
+      eye_details: this.editCharEyes(),
+      hair_details: this.editCharHair(),
+      ethnicity_and_skin: this.editCharSkin(),
+      distinctive_marks: this.editCharMarks(),
+      signature_outfit: this.editCharOutfit(),
+      signature_props: this.editCharProps(),
+    };
+
+    if (id && id !== 'char-current') {
+      const existing = this.savedCharacters().find((c) => c.id === id);
+      if (existing) {
+        const updated = this.svc.updateCharacter(id, { ...existing.sheet, ...partialSheet }, name);
+        if (updated) {
+          if (this.spec().character_sheet.character_name === existing.name || this.activeCharacterId() === id) {
+            this.store.updateCharacterSheet(partialSheet);
+          }
+          this.showToast(`Personaggio "${updated.name}" aggiornato nella libreria!`);
+        }
+      }
+    } else {
+      const cs = this.spec().character_sheet;
+      const saved = this.svc.saveCharacter(name, { ...cs, ...partialSheet });
+      this.activeCharacterId.set(saved.id);
+      this.store.updateCharacterSheet(partialSheet);
+      this.showToast(`Personaggio "${saved.name}" salvato nella libreria!`);
+    }
+
+    this.showEditCharacterModal.set(false);
+  }
+
   saveCurrentCharacter(): void {
     const cs = this.spec().character_sheet;
     if (!cs.character_name.trim()) {
       this.showToast('Inserisci il nome del personaggio prima di salvarlo');
       return;
     }
-    const saved = this.svc.saveCharacter(cs.character_name, cs);
-    this.showToast(`Personaggio "${saved.name}" salvato nella libreria!`);
+    const current = this.currentSavedCharacter();
+    if (current) {
+      this.svc.updateCharacter(current.id, cs, cs.character_name);
+      this.showToast(`Personaggio "${cs.character_name}" aggiornato nella libreria!`);
+    } else {
+      const saved = this.svc.saveCharacter(cs.character_name, cs);
+      this.activeCharacterId.set(saved.id);
+      this.showToast(`Personaggio "${saved.name}" salvato nella libreria!`);
+    }
+  }
+
+  saveAsNewCharacter(): void {
+    const cs = this.spec().character_sheet;
+    const baseName = cs.character_name.trim() || 'Personaggio';
+    const newName = prompt('Nome per la nuova copia del personaggio:', `${baseName} (Nuovo)`);
+    if (!newName || !newName.trim()) return;
+
+    const saved = this.svc.saveCharacter(newName.trim(), { ...cs, character_name: newName.trim() });
+    this.activeCharacterId.set(saved.id);
+    this.store.updateCharacterSheet({ character_name: newName.trim() });
+    this.showToast(`Nuovo personaggio "${saved.name}" salvato nella libreria!`);
   }
 
   loadSavedCharacter(c: SavedCharacter): void {
+    this.activeCharacterId.set(c.id);
     this.store.updateCharacterSheet({
       ...c.sheet,
       enabled: true,
@@ -197,6 +349,9 @@ export class App {
     const c = this.savedCharacters().find((x) => x.id === id);
     if (confirm(`Eliminare il personaggio "${c?.name || 'selezionato'}" dalla libreria?`)) {
       this.svc.deleteCharacter(id);
+      if (this.activeCharacterId() === id) {
+        this.activeCharacterId.set(null);
+      }
       this.showToast('Personaggio rimosso');
     }
   }
@@ -555,6 +710,7 @@ export class App {
       );
       this.store.updateCharacterSheet({ ...extracted, enabled: true });
       const saved = this.svc.saveCharacter(extracted.character_name, extracted);
+      this.activeCharacterId.set(saved.id);
       this.sectionCharacterOpen.set(true);
       this.showCharPhotoModal.set(false);
       this.charPhotos.set([]);

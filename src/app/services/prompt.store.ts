@@ -213,6 +213,7 @@ export class PromptStore {
             ...cs,
             enabled: true,
             mode: 'sheet_generation',
+            background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
           },
         };
       }
@@ -282,6 +283,7 @@ export class PromptStore {
           ...s.character_sheet,
           layout_mode: mode,
           views: defaultViews.length > 0 ? defaultViews : s.character_sheet.views,
+          background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
         },
         subject: {
           ...s.subject,

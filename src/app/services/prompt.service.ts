@@ -29,7 +29,7 @@ export const DEFAULT_CHARACTER_SHEET: CharacterSheetBlock = {
   signature_props: 'Delicate vintage gold signet ring on the right ring finger',
   layout_mode: 'turnaround_4_views',
   views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
-  background_style: 'Neutral light-grey seamless studio backdrop with soft floor shadow',
+  background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
   cref_url: '',
   cref_weight: 100,
 };
@@ -437,7 +437,7 @@ export class PromptService {
           signature_props: 'Delicate vintage gold signet ring on the right ring finger',
           layout_mode: 'turnaround_4_views',
           views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
-          background_style: 'Neutral light-grey seamless studio backdrop with soft floor shadow',
+          background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
           cref_url: '',
         },
         subject: {
@@ -529,7 +529,7 @@ export class PromptService {
           signature_props: 'Titanium minimalist cuff bracelet on right wrist',
           layout_mode: 'turnaround_4_views',
           views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
-          background_style: 'Minimalist dark charcoal grey studio backdrop with subtle rim illumination',
+          background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
           cref_url: '',
         },
         subject: {
@@ -621,7 +621,7 @@ export class PromptService {
           signature_props: 'Small gold hoop earrings',
           layout_mode: 'expressions_grid',
           views: ['Neutral expression', 'Spontaneous warm smile', 'Serious intense gaze', 'Surprised look', 'Quiet contemplation', 'Genuine laugh'],
-          background_style: 'Pristine seamless white cyclorama studio wall with high-key soft lighting',
+          background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
           cref_url: '',
         },
         subject: {
@@ -1440,6 +1440,27 @@ export class PromptService {
     return char;
   }
 
+  updateCharacter(id: string, sheet: CharacterSheetBlock, newName?: string): SavedCharacter | null {
+    let updatedChar: SavedCharacter | null = null;
+    const name = (newName || sheet.character_name).trim() || 'Personaggio';
+    const summary = `${sheet.gender_and_age} · ${sheet.hair_details.split(',')[0]} · ${sheet.signature_outfit.split(',')[0]}`;
+    this.savedCharacters.update((list) =>
+      list.map((c) => {
+        if (c.id === id) {
+          updatedChar = {
+            ...c,
+            name,
+            summary,
+            sheet: structuredClone({ ...sheet, character_name: name }),
+          };
+          return updatedChar;
+        }
+        return c;
+      })
+    );
+    return updatedChar;
+  }
+
   deleteCharacter(id: string): void {
     this.savedCharacters.update((list) => list.filter((c) => c.id !== id));
   }
@@ -1958,6 +1979,27 @@ export class PromptService {
           '\n```'
         );
       }
+    }
+
+    if (
+      spec.character_sheet?.enabled &&
+      spec.character_sheet.character_name.trim() &&
+      spec.character_sheet.mode === 'sheet_generation'
+    ) {
+      const cs = spec.character_sheet;
+      const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side profile view, Back view';
+      return (
+        `[CHARACTER MODEL SHEET PRODUCTION DIRECTIVE FOR GEMINI / MULTIMODAL LLM]\n` +
+        `Generate a professional ${cs.layout_mode === 'expressions_grid' ? 'facial expression grid sheet' : 'multi-angle character design turnaround model sheet'} for "${cs.character_name}".\n\n` +
+        `CRITICAL REQUIREMENTS FOR CONSISTENCY ANCHOR:\n` +
+        `1. BACKDROP: Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor contact shadow, high-key even studio lighting, zero scene clutter, 100% visual isolation.\n` +
+        `2. SOMATIC CONTINUITY: Identical facial bone structure, eyes (${cs.eye_details || 'as specified in brief'}), hair (${cs.hair_details || 'as specified in brief'}), skin tone (${cs.ethnicity_and_skin || 'as specified in brief'}), and physique across all angles.\n` +
+        `3. FRAME LAYOUT: ${views} displayed simultaneously in a single composite frame.\n\n` +
+        `[PRODUCTION SPECIFICATION JSON]\n` +
+        '```json\n' +
+        jsonStr +
+        '\n```'
+      );
     }
 
     return (
@@ -2611,7 +2653,7 @@ Instructions:
           signature_props: 'Delicate vintage gold signet ring on the right ring finger',
           layout_mode: 'turnaround_4_views',
           views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
-          background_style: 'Neutral light-grey seamless studio backdrop with soft floor shadow',
+          background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
           cref_url: '',
         },
         createdAt: 1700000000000,
@@ -2634,7 +2676,7 @@ Instructions:
           signature_props: 'Titanium minimalist cuff bracelet on right wrist',
           layout_mode: 'turnaround_4_views',
           views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
-          background_style: 'Minimalist dark charcoal grey studio backdrop with subtle rim illumination',
+          background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
           cref_url: '',
         },
         createdAt: 1700000001000,

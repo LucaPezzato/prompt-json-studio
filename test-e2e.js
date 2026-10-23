@@ -462,6 +462,73 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-scene-with-character.png'), fullPage: false });
   console.log('📸 Captured e2e-scene-with-character.png');
 
+  // 13. Test Character Edit Modal
+  console.log('👉 Testing Character Edit Modal...');
+  const charBlockHeader3 = page.locator('app-section-block:has-text("Scheda Personaggio") .head-btn');
+  if (await charBlockHeader3.getAttribute('aria-expanded') !== 'true') {
+    await charBlockHeader3.click();
+    await page.waitForTimeout(300);
+  }
+
+  // Click edit button on the first character pill
+  const pillEditBtn = page.locator('.char-pill-edit').first();
+  await pillEditBtn.click();
+  await page.waitForTimeout(300);
+
+  const editModal = page.locator('.modal-backdrop .modal:has-text("Modifica Personaggio")');
+  await editModal.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Edit Character modal opened successfully!');
+
+  // Update hair details in modal
+  const hairField = editModal.locator('input[placeholder*="Chestnut brown"], input[placeholder*="hair"]').first();
+  await hairField.fill('Platinum blonde asymmetrical bob with lavender highlights');
+  await page.waitForTimeout(200);
+
+  // Click Save Changes in modal
+  const saveModalBtn = editModal.locator('button:has-text("Salva Modifiche")');
+  await saveModalBtn.click();
+  await page.waitForTimeout(400);
+
+  await page.waitForFunction(() => !document.querySelector('.char-edit-modal-body'), { timeout: 5000 });
+  console.log('✔ Character biometrics updated and saved via edit modal!');
+
+  // 14. Test Dedicated Character Studio with Fixed White Studio Backdrop
+  console.log('👉 Testing Dedicated Character Studio with Fixed White Studio Backdrop...');
+  const charStudioBtn = page.locator('.studio-workspace-bar .sw-btn:has-text("Studio Schede Personaggio")');
+  await charStudioBtn.click();
+  await page.waitForTimeout(300);
+
+  // Verify fixed white studio backdrop card is visible
+  const fixedBackdropCard = page.locator('.fixed-studio-backdrop-card');
+  await fixedBackdropCard.waitFor({ state: 'visible', timeout: 5000 });
+  const backdropText = await fixedBackdropCard.innerText();
+  console.log(`  Fixed Backdrop Card text: "${backdropText.split('\n')[0]}"`);
+  if (!backdropText.includes('Studio Fotografico Bianco Seamless')) {
+    throw new Error('Expected fixed white studio cyclorama backdrop card in Character Studio!');
+  }
+  console.log('✔ Fixed White Studio Backdrop card confirmed in Character Studio!');
+
+  // Verify Gemini prompt in Character Studio mode has the directive and white studio backdrop
+  const charGeminiText = await page.locator('pre.code').innerText();
+  if (!charGeminiText.includes('[CHARACTER MODEL SHEET PRODUCTION DIRECTIVE FOR GEMINI') || !charGeminiText.includes('Solid clean white seamless photo studio cyclorama backdrop')) {
+    throw new Error('Gemini prompt in sheet mode does not include the white studio backdrop directive!');
+  }
+  console.log('✔ Gemini output in sheet mode strictly enforces pure white studio cyclorama backdrop!');
+
+  // Capture screenshot of Dedicated Character Studio
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-dedicated-character-studio.png'), fullPage: false });
+  console.log('📸 Captured e2e-dedicated-character-studio.png');
+
+  // Test the Hero CTA: "Usa questo personaggio in una Scena"
+  console.log('👉 Testing Hero CTA to switch from Character Studio to Scene Studio...');
+  const heroSceneBtn = page.locator('.btn-hero-scene').first();
+  await heroSceneBtn.click();
+  await page.waitForTimeout(300);
+
+  const boundBannerAfterCta = page.locator('.char-bound-banner');
+  await boundBannerAfterCta.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Hero CTA transitioned smoothly into Scene Studio with locked character banner!');
+
   if (errors.length > 0) {
     throw new Error(`Browser encountered ${errors.length} errors: ${errors.join('; ')}`);
   }

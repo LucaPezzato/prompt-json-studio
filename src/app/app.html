@@ -99,6 +99,45 @@
       </div>
     }
 
+    <!-- STUDIO WORKSPACE SWITCHER (SCENE VS CHARACTER SHEET) -->
+    <div class="studio-workspace-bar">
+      <button
+        type="button"
+        class="sw-btn"
+        [class.active]="!isSheetMode()"
+        (click)="switchToSceneStudio()"
+        title="Studio Scene: per comporre scene con o senza personaggi ricorrenti (ambiente, camera, luci, stile)"
+      >
+        <span class="sw-icon">🎬</span>
+        <div class="sw-info">
+          <div class="sw-title-row">
+            <span class="sw-title">Studio Scene</span>
+            @if (spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character') {
+              <span class="sw-pill active">🔒 {{ spec().character_sheet.character_name || 'Personaggio' }} vincolato</span>
+            }
+          </div>
+          <span class="sw-sub">Composizione scene, camera, luci e ambiente</span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="sw-btn"
+        [class.active]="isSheetMode()"
+        (click)="switchToCharacterStudio()"
+        title="Studio Schede Personaggio: per generare turnaround multi-angolo o griglie espressioni su sfondo bianco puro"
+      >
+        <span class="sw-icon">📐</span>
+        <div class="sw-info">
+          <div class="sw-title-row">
+            <span class="sw-title">Studio Schede Personaggio</span>
+            <span class="sw-pill white">⚪ Sfondo Bianco Fisso</span>
+          </div>
+          <span class="sw-sub">Turnaround 360° & Espressioni · Meno opzioni · Isolamento visivo</span>
+        </div>
+      </button>
+    </div>
+
     <!-- TITLE & CONTROLS CARD -->
     <div class="title-card">
       <div class="title-card-top">
@@ -194,14 +233,33 @@
             >
               📸 Crea Profilo da Foto (1-5 Foto)
             </button>
-            <button
-              type="button"
-              class="btn-sm btn-accent"
-              (click)="saveCurrentCharacter()"
-              title="Salva il personaggio corrente per riutilizzarlo in altre scene"
-            >
-              💾 Salva Personaggio Corrente
-            </button>
+            @if (currentSavedCharacter()) {
+              <button
+                type="button"
+                class="btn-sm btn-accent"
+                (click)="saveCurrentCharacter()"
+                title="Salva le modifiche apportate sul personaggio '{{ currentSavedCharacter()?.name }}' nella libreria"
+              >
+                💾 Salva Modifiche ({{ currentSavedCharacter()?.name }})
+              </button>
+              <button
+                type="button"
+                class="btn-sm btn-ghost"
+                (click)="saveAsNewCharacter()"
+                title="Salva una nuova copia del personaggio nella libreria"
+              >
+                ＋ Salva come Nuovo
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="btn-sm btn-accent"
+                (click)="saveCurrentCharacter()"
+                title="Salva il personaggio corrente per riutilizzarlo in altre scene"
+              >
+                💾 Salva Personaggio Corrente
+              </button>
+            }
           </div>
         </div>
         @if (savedCharacters().length > 0) {
@@ -214,6 +272,12 @@
               >
                 <span class="char-pill-name">👤 {{ char.name }}</span>
                 <span class="char-pill-sub">{{ char.summary }}</span>
+                <button
+                  type="button"
+                  class="char-pill-edit"
+                  title="Modifica lineamenti e dati di {{ char.name }}"
+                  (click)="openEditCharacterModal(char, $event)"
+                >✏️</button>
                 <button
                   type="button"
                   class="char-pill-del"
@@ -412,14 +476,38 @@
             </div>
           </div>
 
-          <app-smart-field
-            class="span-2"
-            label="Sfondo Scheda Turnaround (Backdrop isolato)"
-            category="character_background"
-            placeholder="Es. Neutral light-grey seamless studio backdrop with soft floor shadow…"
-            [value]="spec().character_sheet.background_style"
-            (valueChange)="store.set('character_sheet', 'background_style', $event)"
-          />
+          <!-- FIXED WHITE STUDIO BACKDROP (LOCKED PER USER SPEC) -->
+          <div class="fixed-studio-backdrop-card span-2">
+            <div class="fsb-header">
+              <div class="fsb-title-row">
+                <span class="fsb-icon">⚪</span>
+                <strong>Sfondo Fisso: Studio Fotografico Bianco Seamless</strong>
+              </div>
+              <span class="fsb-badge">🔒 Bloccato per Coerenza Visiva</span>
+            </div>
+            <p class="fsb-desc">
+              Per la generazione degli sheet lo sfondo è <strong>fisso su un cyclorama da studio fotografico bianco puro seamless</strong> con morbide ombre di contatto e luce neutra diffusa ad alta luminosità. Questo garantisce l'isolamento totale del soggetto e la massima efficacia come <em>visual anchor</em> per Gemini e i modelli multimodali.
+            </p>
+            <div class="fsb-chips">
+              <span class="fsb-chip">✓ Seamless Solid White Studio Cyclorama</span>
+              <span class="fsb-chip">✓ Soft Diffuse Floor Contact Shadow</span>
+              <span class="fsb-chip">✓ High-Key Even Softbox Lighting</span>
+              <span class="fsb-chip">✓ Zero Scene Clutter (100% Visual Isolation)</span>
+            </div>
+          </div>
+
+          <!-- HERO ACTION: Passa a Studio Scene -->
+          <div class="char-sheet-hero-action span-2">
+            <button
+              type="button"
+              class="btn-hero-scene"
+              (click)="switchToSceneStudio()"
+              title="Passa a Studio Scene per ambientare {{ spec().character_sheet.character_name || 'questo personaggio' }} in una scena completa"
+            >
+              🎬 Usa "{{ spec().character_sheet.character_name || 'questo personaggio' }}" in una Scena ➔
+            </button>
+            <span class="hero-scene-subtext">Passa alla composizione scena per definire posa, espressione, abbigliamento, ambiente, camera e luci mantenendo la continuità dei tratti somatici.</span>
+          </div>
         } @else {
           <div class="scene-mode-active-card span-2">
             <div class="scene-card-icon">🎬</div>
@@ -490,9 +578,24 @@
               <span class="bound-badge">PERSONAGGIO VINCOLATO</span>
               <strong class="bound-name">{{ spec().character_sheet.character_name || 'Elena Vance' }}</strong>
             </div>
-            <button type="button" class="btn-micro" (click)="setWorkflowMode('sheet_generation')" title="Passa alla modalità creazione scheda turnaround">
-              📐 Modalità Scheda
-            </button>
+            <div class="bound-actions">
+              <button
+                type="button"
+                class="btn-micro accent"
+                (click)="openEditCurrentCharacter()"
+                title="Modifica lineamenti, tratti somatici o abito iconico di questo personaggio"
+              >
+                ✏️ Modifica Personaggio
+              </button>
+              <button
+                type="button"
+                class="btn-micro"
+                (click)="setWorkflowMode('sheet_generation')"
+                title="Passa alla modalità creazione scheda turnaround"
+              >
+                📐 Modalità Scheda
+              </button>
+            </div>
           </div>
           <div class="bound-consistency-bar">
             <span class="cs-label">Metodo Consistenza:</span>
@@ -655,10 +758,21 @@
       title="Scena &amp; Ambiente"
       icon="🏞️"
       accent="#50fa7b"
-      [summary]="spec().scene.environment || 'Ambiente non specificato'"
+      [badge]="isSheetMode() ? '⚪ Studio Bianco Fisso' : null"
+      [summary]="isSheetMode() ? 'Studio Fotografico Bianco Seamless (Cyclorama neutro)' : (spec().scene.environment || 'Ambiente non specificato')"
       [(open)]="sectionSceneOpen"
     >
-      <div class="grid-2">
+      @if (isSheetMode()) {
+        <div class="sheet-locked-section-banner">
+          <span class="sls-icon">⚪</span>
+          <div class="sls-body">
+            <strong>Ambiente bloccato su Studio Fotografico Bianco Seamless</strong>
+            <span>In modalità Scheda Turnaround, lo sfondo è fisso a studio fotografico bianco puro senza scenografie per massimizzare la coerenza visiva.</span>
+          </div>
+          <button type="button" class="btn-micro accent" (click)="switchToSceneStudio()">Passa a Scena 🎬</button>
+        </div>
+      }
+      <div class="grid-2" [class.section-dimmed-sheet]="isSheetMode()">
         <app-smart-field
           class="span-2"
           label="Ambiente / Location"
@@ -696,10 +810,21 @@
       title="Camera &amp; Ottica"
       icon="📷"
       accent="#8be9fd"
-      [summary]="(spec().camera.shot_type || '') + (spec().camera.lens_focal_length ? ' • ' + spec().camera.lens_focal_length.split(' ')[0] : '')"
+      [badge]="isSheetMode() ? '⚪ Ottica Studio' : null"
+      [summary]="isSheetMode() ? 'Studio ortografico / ritratto a fuoco nitido continuo' : ((spec().camera.shot_type || '') + (spec().camera.lens_focal_length ? ' • ' + spec().camera.lens_focal_length.split(' ')[0] : ''))"
       [(open)]="sectionCameraOpen"
     >
-      <div class="grid-2">
+      @if (isSheetMode()) {
+        <div class="sheet-locked-section-banner">
+          <span class="sls-icon">⚪</span>
+          <div class="sls-body">
+            <strong>Ottica impostata su Scheda Modello</strong>
+            <span>Inquadratura multi-angolo e messa a fuoco continua sull'intera figura per catturare fedelmente ogni dettaglio somatico.</span>
+          </div>
+          <button type="button" class="btn-micro accent" (click)="switchToSceneStudio()">Passa a Scena 🎬</button>
+        </div>
+      }
+      <div class="grid-2" [class.section-dimmed-sheet]="isSheetMode()">
         <app-smart-field
           label="Tipo di inquadratura"
           category="shot_type"
@@ -739,10 +864,21 @@
       title="Illuminazione &amp; Palette"
       icon="💡"
       accent="#f1fa8c"
-      [summary]="spec().lighting.key_light || 'Illuminazione standard'"
+      [badge]="isSheetMode() ? '⚪ Luce Studio Diffusa' : null"
+      [summary]="isSheetMode() ? 'Softbox studio diffusa, high-key, ombre morbide a pavimento' : (spec().lighting.key_light || 'Illuminazione standard')"
       [(open)]="sectionLightingOpen"
     >
-      <div class="grid-2">
+      @if (isSheetMode()) {
+        <div class="sheet-locked-section-banner">
+          <span class="sls-icon">⚪</span>
+          <div class="sls-body">
+            <strong>Illuminazione Studio Fotografico Bilanciata</strong>
+            <span>Luce diffusa morbida e omogenea ad alta luminosità (high-key) per esaltare i colori della pelle, capelli e tessuti senza ombre scure.</span>
+          </div>
+          <button type="button" class="btn-micro accent" (click)="switchToSceneStudio()">Passa a Scena 🎬</button>
+        </div>
+      }
+      <div class="grid-2" [class.section-dimmed-sheet]="isSheetMode()">
         <app-smart-field
           label="Luce principale (Key Light)"
           category="key_light"
@@ -819,10 +955,21 @@
       title="Composizione &amp; Inquadratura"
       icon="📐"
       accent="#ffb86c"
-      [summary]="spec().composition.framing_rule || 'Regola compositiva standard'"
+      [badge]="isSheetMode() ? '⚪ Lineup Scheda' : null"
+      [summary]="isSheetMode() ? 'Disposizione multi-vista centrata per scheda turnaround' : (spec().composition.framing_rule || 'Regola compositiva standard')"
       [(open)]="sectionCompositionOpen"
     >
-      <div class="grid-2">
+      @if (isSheetMode()) {
+        <div class="sheet-locked-section-banner">
+          <span class="sls-icon">⚪</span>
+          <div class="sls-body">
+            <strong>Disposizione automatica per Scheda Turnaround</strong>
+            <span>La composizione è ottimizzata per la visualizzazione allineata o a griglia dei singoli angoli e viste del personaggio.</span>
+          </div>
+          <button type="button" class="btn-micro accent" (click)="switchToSceneStudio()">Passa a Scena 🎬</button>
+        </div>
+      }
+      <div class="grid-2" [class.section-dimmed-sheet]="isSheetMode()">
         <app-smart-field
           label="Regola di inquadratura"
           category="framing_rule"
@@ -915,11 +1062,20 @@
       title="Testo nell'immagine (Text-in-Image)"
       icon="🔤"
       accent="#ff5555"
-      [badge]="spec().typography.enabled ? 'Attivo' : null"
-      [summary]="spec().typography.enabled && spec().typography.exact_text ? spec().typography.exact_text : 'Disattivato'"
+      [badge]="isSheetMode() ? '⚪ Disattivato in Scheda' : (spec().typography.enabled ? 'Attivo' : null)"
+      [summary]="isSheetMode() ? 'Disattivato per foglio turnaround' : (spec().typography.enabled && spec().typography.exact_text ? spec().typography.exact_text : 'Disattivato')"
       [(open)]="sectionTypographyOpen"
     >
-      <div class="grid-2">
+      @if (isSheetMode()) {
+        <div class="sheet-locked-section-banner">
+          <span class="sls-icon">⚪</span>
+          <div class="sls-body">
+            <strong>Testo disattivato per Scheda Turnaround</strong>
+            <span>Per evitare scritte accidentali o distrazioni visive sullo sheet modello, il modulo testo è disattivato.</span>
+          </div>
+        </div>
+      }
+      <div class="grid-2" [class.section-dimmed-sheet]="isSheetMode()">
         <label class="toggle span-2">
           <input
             type="checkbox"
@@ -1374,6 +1530,116 @@
       (selected)="onTemplateSelected($event)"
       (deleted)="onTemplateDeleted($event)"
     />
+  </div>
+</app-modal>
+
+<!-- EDIT CHARACTER MODAL -->
+<app-modal
+  [title]="'✏️ Modifica Personaggio: ' + (editCharName() || 'Dettagli')"
+  [wide]="true"
+  [(open)]="showEditCharacterModal"
+>
+  <div class="char-edit-modal-body">
+    <p class="muted" style="margin-bottom: 14px; font-size: 12px; line-height: 1.4;">
+      Modifica i tratti somatici e stilistici del personaggio. Le modifiche vengono salvate nella libreria permanente e aggiornate nel prompt corrente.
+    </p>
+
+    <div class="grid-2">
+      <div class="field span-2">
+        <label class="field-label">Nome Personaggio</label>
+        <input
+          type="text"
+          placeholder="Es. Elena Vance, Ren Takahashi…"
+          [value]="editCharName()"
+          (input)="editCharName.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Genere &amp; Età</label>
+        <input
+          type="text"
+          placeholder="Es. Young woman, 26 years old…"
+          [value]="editCharGenderAge()"
+          (input)="editCharGenderAge.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Corporatura / Body Build</label>
+        <input
+          type="text"
+          placeholder="Es. Athletic, slender build, upright posture…"
+          [value]="editCharBuild()"
+          (input)="editCharBuild.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Occhi &amp; Sguardo</label>
+        <input
+          type="text"
+          placeholder="Es. Almond-shaped hazel eyes with amber gold flecks…"
+          [value]="editCharEyes()"
+          (input)="editCharEyes.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Capelli &amp; Taglio</label>
+        <input
+          type="text"
+          placeholder="Es. Chestnut brown wavy shoulder-length hair…"
+          [value]="editCharHair()"
+          (input)="editCharHair.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="field span-2">
+        <label class="field-label">Etnia, Carnagione &amp; Tratti della Pelle</label>
+        <input
+          type="text"
+          placeholder="Es. Warm olive skin with natural subtle freckles across the bridge of the nose…"
+          [value]="editCharSkin()"
+          (input)="editCharSkin.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="field span-2">
+        <label class="field-label">Segni Particolari &amp; Dettagli Somatici Distintivi</label>
+        <input
+          type="text"
+          placeholder="Es. Tiny faint beauty mark under the left eye, natural skin pores…"
+          [value]="editCharMarks()"
+          (input)="editCharMarks.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Abbigliamento Iconico (Signature Outfit)</label>
+        <input
+          type="text"
+          placeholder="Es. Textured ivory linen button-up shirt…"
+          [value]="editCharOutfit()"
+          (input)="editCharOutfit.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Accessori / Oggetti Iconici (Props)</label>
+        <input
+          type="text"
+          placeholder="Es. Delicate vintage gold signet ring…"
+          [value]="editCharProps()"
+          (input)="editCharProps.set($any($event.target).value)"
+        />
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top: 18px;">
+      <button type="button" class="btn ghost" (click)="showEditCharacterModal.set(false)">Annulla</button>
+      <button type="button" class="btn primary" (click)="saveEditedCharacterModal()">💾 Salva Modifiche</button>
+    </div>
   </div>
 </app-modal>
 
