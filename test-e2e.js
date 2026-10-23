@@ -208,6 +208,11 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
 
   // 10. Test Character Sheet & Visual Consistency
   console.log('👉 Testing Character Sheet & Consistency section...');
+  const openTemplatesBtn2 = page.locator('button.template-modal-btn');
+  if (await openTemplatesBtn2.isVisible()) {
+    await openTemplatesBtn2.click();
+    await page.waitForTimeout(300);
+  }
   const charTemplateCard = page.locator('.template-card:has-text("Character Turnaround 360° Realistico")');
   await charTemplateCard.waitFor({ state: 'visible', timeout: 5000 });
   await charTemplateCard.click();
