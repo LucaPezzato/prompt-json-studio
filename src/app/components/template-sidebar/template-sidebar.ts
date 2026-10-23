@@ -8,6 +8,13 @@ import { PromptTemplate } from '../../models/prompt.model';
   host: { class: 'sidebar' },
   template: `
     <h2>📚 Libreria Template</h2>
+    <input
+      type="search"
+      class="tpl-search"
+      placeholder="🔍 Cerca template…"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+    />
     <div class="cat-filter">
       @for (c of categories(); track c) {
         <button type="button" class="pill" [class.active]="filter() === c" (click)="filter.set(c)">{{ c }}</button>
@@ -15,7 +22,7 @@ import { PromptTemplate } from '../../models/prompt.model';
     </div>
     <div class="template-list">
       @for (t of filtered(); track t.id) {
-        <div class="template-card" tabindex="0" [style.--badge]="t.badgeColor" (click)="selected.emit(t)" (keydown.enter)="selected.emit(t)">
+        <div class="template-card" tabindex="0" [title]="t.description" [style.--badge]="t.badgeColor" (click)="selected.emit(t)" (keydown.enter)="selected.emit(t)">
           <div class="tc-head">
             <span class="tc-badge">{{ t.category }}</span>
             @if (t.isUserPreset) {
@@ -43,10 +50,16 @@ export class TemplateSidebar {
   readonly deleted = output<PromptTemplate>();
 
   readonly filter = signal('Tutti');
+  readonly query = signal('');
   readonly categories = computed(() => ['Tutti', ...new Set(this.templates().map((t) => t.category))]);
   readonly filtered = computed(() => {
     const f = this.filter();
-    return f === 'Tutti' ? this.templates() : this.templates().filter((t) => t.category === f);
+    const q = this.query().trim().toLowerCase();
+    return this.templates().filter(
+      (t) =>
+        (f === 'Tutti' || t.category === f) &&
+        (!q || `${t.name} ${t.description} ${t.category}`.toLowerCase().includes(q)),
+    );
   });
 
   onDelete(t: PromptTemplate, ev: Event): void {

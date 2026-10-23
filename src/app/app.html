@@ -135,15 +135,49 @@
           <span class="meta-tag text">🔤 "{{ spec().typography.exact_text }}"</span>
         }
       </div>
+
+      <!-- PROMPT WORKFLOW SELECTOR BAR -->
+      <div class="workflow-selector-bar">
+        <span class="ws-label">Flusso Operativo:</span>
+        <div class="ws-tabs">
+          <button
+            type="button"
+            class="ws-tab"
+            [class.active]="store.promptKind() === 'scene'"
+            (click)="setWorkflowMode('scene_with_character')"
+            title="Soggetto vincolato al DNA del personaggio. Il prompt finale è autosufficiente."
+          >
+            🎬 Scena con Personaggio
+          </button>
+          <button
+            type="button"
+            class="ws-tab"
+            [class.active]="store.promptKind() === 'sheet'"
+            (click)="setWorkflowMode('sheet_generation')"
+            title="Genera foglio modello turnaround multi-angolo o griglia espressioni."
+          >
+            📐 Scheda Turnaround
+          </button>
+          <button
+            type="button"
+            class="ws-tab"
+            [class.active]="store.promptKind() === 'free'"
+            (click)="store.setPromptKind('free')"
+            title="Scena standard senza vincoli di personaggio."
+          >
+            🌐 Scena Libera
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- CHARACTER SHEET & CONSISTENCY -->
     <app-section-block
-      title="Scheda Personaggio & Consistenza (Turnaround / DNA Visivo)"
+      [title]="spec().character_sheet.enabled ? (spec().character_sheet.mode === 'scene_with_character' ? 'Scheda Personaggio: Vincolato a Scena (DNA Biometrico)' : 'Scheda Personaggio: Turnaround & Espressioni') : 'Scheda Personaggio & Consistenza (DNA Visivo)'"
       icon="🧬"
       accent="#ff79c6"
-      [badge]="spec().character_sheet.enabled ? 'Attivo' : 'Disattivato'"
-      [summary]="spec().character_sheet.character_name ? (spec().character_sheet.character_name + ' • ' + (spec().character_sheet.views.length || 0) + ' viste') : 'Nessun personaggio definito'"
+      [badge]="spec().character_sheet.enabled ? (spec().character_sheet.mode === 'scene_with_character' ? 'Vincolato a Scena 🎬' : 'Turnaround 📐') : 'Disattivato'"
+      [summary]="spec().character_sheet.character_name ? (spec().character_sheet.character_name + ' • ' + (spec().character_sheet.mode === 'scene_with_character' ? 'DNA attivo nel prompt' : ((spec().character_sheet.views.length || 0) + ' viste'))) : 'Nessun personaggio definito'"
       [(open)]="sectionCharacterOpen"
     >
       <!-- Library bar of saved characters -->
@@ -395,35 +429,41 @@
           </div>
         }
 
-        <!-- Midjourney --cref URL & --cw Weight Group -->
-        <div class="cref-config-group span-2">
-          <div class="cref-url-box">
-            <app-smart-field
-              label="Midjourney --cref URL (Immagine Scheda / Referenza Personaggio)"
-              placeholder="https://... Incolla qui l'URL dell'immagine generata del personaggio"
-              [value]="spec().character_sheet.cref_url || ''"
-              (valueChange)="store.set('character_sheet', 'cref_url', $event)"
-            />
-          </div>
-          <div class="cref-weight-box">
-            <div class="cw-header">
-              <label class="field-label">Peso Referenza (--cw: 0-100)</label>
-              <span class="cw-badge">{{ spec().character_sheet.cref_weight ?? 100 }}</span>
+        <!-- Midjourney --cref URL & --cw Weight Group (Facoltativo) -->
+        <details class="cref-accordion span-2">
+          <summary class="cref-accordion-summary">
+            <span>🔗 Parametri Midjourney facoltativi (--cref / --cw)</span>
+            <span class="cref-badge-opt">Opzionale: Solo con URL esistente</span>
+          </summary>
+          <div class="cref-config-group">
+            <div class="cref-url-box">
+              <app-smart-field
+                label="Midjourney --cref URL (Immagine Scheda / Referenza Personaggio)"
+                placeholder="https://... Incolla qui l'URL dell'immagine generata del personaggio"
+                [value]="spec().character_sheet.cref_url || ''"
+                (valueChange)="store.set('character_sheet', 'cref_url', $event)"
+              />
             </div>
-            <input
-              type="range"
-              class="cw-slider"
-              min="0"
-              max="100"
-              step="5"
-              [value]="spec().character_sheet.cref_weight ?? 100"
-              (input)="store.set('character_sheet', 'cref_weight', +$any($event.target).value)"
-            />
-            <span class="cw-hint">
-              {{ (spec().character_sheet.cref_weight ?? 100) === 100 ? '100 = Viso, capelli & abiti fedeli' : (spec().character_sheet.cref_weight ?? 100) <= 20 ? (spec().character_sheet.cref_weight ?? 100) + ' = Solo viso/DNA (abiti liberi)' : (spec().character_sheet.cref_weight ?? 100) + ' = Ibrido' }}
-            </span>
+            <div class="cref-weight-box">
+              <div class="cw-header">
+                <label class="field-label">Peso Referenza (--cw: 0-100)</label>
+                <span class="cw-badge">{{ spec().character_sheet.cref_weight ?? 100 }}</span>
+              </div>
+              <input
+                type="range"
+                class="cw-slider"
+                min="0"
+                max="100"
+                step="5"
+                [value]="spec().character_sheet.cref_weight ?? 100"
+                (input)="store.set('character_sheet', 'cref_weight', +$any($event.target).value)"
+              />
+              <span class="cw-hint">
+                {{ (spec().character_sheet.cref_weight ?? 100) === 100 ? '100 = Viso, capelli & abiti fedeli' : (spec().character_sheet.cref_weight ?? 100) <= 20 ? (spec().character_sheet.cref_weight ?? 100) + ' = Solo viso/DNA (abiti liberi)' : (spec().character_sheet.cref_weight ?? 100) + ' = Ibrido' }}
+              </span>
+            </div>
           </div>
-        </div>
+        </details>
       </div>
     </app-section-block>
 
@@ -443,46 +483,52 @@
               <span class="bound-badge">PERSONAGGIO VINCOLATO</span>
               <strong class="bound-name">{{ spec().character_sheet.character_name || 'Elena Vance' }}</strong>
             </div>
-            <button type="button" class="btn-micro" (click)="setWorkflowMode('sheet_generation')" title="Torna alla modalità creazione scheda">
+            <button type="button" class="btn-micro" (click)="setWorkflowMode('sheet_generation')" title="Passa alla modalità creazione scheda turnaround">
               📐 Modalità Scheda
             </button>
           </div>
           <p class="bound-desc">
-            Il DNA biometrico è fissato dalla scheda. Modifica qui sotto la <strong>posa/azione</strong>, l'<strong>espressione</strong> e l'<strong>abbigliamento specifico</strong> per questa scena (lascia vuoto per usare l'outfit iconico).
+            Il DNA biometrico è incorporato direttamente nel prompt narrativo (100% autosufficiente, nessun allegato richiesto). Configura qui sotto <strong>posa</strong>, <strong>espressione</strong> e l'<strong>abito specifico</strong> per questa scena.
           </p>
           <div class="bound-dna-summary">
             <span>🧬 <strong>Tratti Fissi:</strong> {{ spec().character_sheet.gender_and_age }} · {{ spec().character_sheet.ethnicity_and_skin }} · {{ spec().character_sheet.hair_details }} · {{ spec().character_sheet.eye_details }} · {{ spec().character_sheet.body_build }}</span>
           </div>
 
-          <!-- Quick cref URL & --cw weight input directly in scene mode -->
-          <div class="bound-cref-row">
-            <div class="bound-cref-url-box">
-              <label class="field-label mini">Midjourney --cref URL (Immagine Scheda per Consistenza Visiva)</label>
-              <input
-                type="text"
-                class="bound-cref-input"
-                placeholder="https://... Incolla URL immagine di riferimento del personaggio"
-                [value]="spec().character_sheet.cref_url || ''"
-                (input)="store.set('character_sheet', 'cref_url', $any($event.target).value)"
-              />
-            </div>
-            <div class="bound-cw-box">
-              <div class="bound-cw-header">
-                <span class="field-label mini">Peso Referenza Midjourney (--cw)</span>
-                <span class="cw-badge">{{ spec().character_sheet.cref_weight ?? 100 }}</span>
+          <!-- Quick cref URL & --cw weight input directly in scene mode (facoltativo) -->
+          <details class="bound-cref-details">
+            <summary class="bound-cref-summary">
+              <span>🔗 Parametro facoltativo Midjourney --cref URL / --cw</span>
+              <span class="bound-cref-hint">(Solo per utenti Midjourney con URL immagine online)</span>
+            </summary>
+            <div class="bound-cref-row">
+              <div class="bound-cref-url-box">
+                <label class="field-label mini">Midjourney --cref URL (Facoltativo)</label>
+                <input
+                  type="text"
+                  class="bound-cref-input"
+                  placeholder="https://... Incolla URL immagine di riferimento del personaggio (facoltativo)"
+                  [value]="spec().character_sheet.cref_url || ''"
+                  (input)="store.set('character_sheet', 'cref_url', $any($event.target).value)"
+                />
               </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                class="cw-slider"
-                [value]="spec().character_sheet.cref_weight ?? 100"
-                (input)="store.set('character_sheet', 'cref_weight', +$any($event.target).value)"
-              />
-              <span class="cw-hint mini">{{ (spec().character_sheet.cref_weight ?? 100) <= 20 ? '0-20: Solo viso (abiti liberi per la scena)' : '100: Viso & abiti originali fedeli' }}</span>
+              <div class="bound-cw-box">
+                <div class="bound-cw-header">
+                  <span class="field-label mini">Peso Referenza Midjourney (--cw)</span>
+                  <span class="cw-badge">{{ spec().character_sheet.cref_weight ?? 100 }}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  class="cw-slider"
+                  [value]="spec().character_sheet.cref_weight ?? 100"
+                  (input)="store.set('character_sheet', 'cref_weight', +$any($event.target).value)"
+                />
+                <span class="cw-hint mini">{{ (spec().character_sheet.cref_weight ?? 100) <= 20 ? '0-20: Solo viso (abiti liberi per la scena)' : '100: Viso & abiti originali fedeli' }}</span>
+              </div>
             </div>
-          </div>
+          </details>
         </div>
       }
       <div class="grid-2">
@@ -490,6 +536,7 @@
           class="span-2"
           label="Entità principale"
           category="primary_entity"
+          [disabled]="spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character'"
           placeholder="Es. anziano artigiano con tratti segnati, leopardo delle nevi, flacone di profumo…"
           [value]="spec().subject.primary_entity"
           (valueChange)="store.set('subject', 'primary_entity', $event)"
@@ -499,6 +546,7 @@
           label="Descrizione dettagliata"
           category="subject_description"
           [multiline]="true"
+          [disabled]="spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character'"
           placeholder="Tratti fisici, espressioni, rughe, pori della pelle, dettagli unici…"
           [value]="spec().subject.description"
           (valueChange)="store.set('subject', 'description', $event)"
@@ -506,7 +554,7 @@
         <app-smart-field
           label="Posa / Azione"
           category="pose_or_action"
-          placeholder="Cosa sta facendo il soggetto?"
+          placeholder="Cosa sta facendo il soggetto nella scena?"
           [value]="spec().subject.pose_or_action"
           (valueChange)="store.set('subject', 'pose_or_action', $event)"
         />
@@ -520,7 +568,7 @@
         <app-smart-field
           label="Abbigliamento / Materiali"
           category="clothing_or_materials"
-          placeholder="Giacca in lino naturale, maglione in lana merino, tweed inglese…"
+          placeholder="Lascia vuoto per l'abito iconico del personaggio, o specifica es. Giacca in lino..."
           [value]="spec().subject.clothing_or_materials"
           (valueChange)="store.set('subject', 'clothing_or_materials', $event)"
         />

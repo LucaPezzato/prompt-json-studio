@@ -1561,17 +1561,16 @@ export class PromptService {
               workflow_mode: spec.character_sheet.mode || 'sheet_generation',
               ...(spec.character_sheet.mode === 'scene_with_character'
                 ? {
-                    status: 'BOUND_TO_SCENE',
-                    character_biometrics: {
+                    consistency: 'self_contained_character_dna',
+                    biometrics: {
                       gender_and_age: spec.character_sheet.gender_and_age,
                       ethnicity_and_skin: spec.character_sheet.ethnicity_and_skin,
                       eye_details: spec.character_sheet.eye_details,
                       hair_details: spec.character_sheet.hair_details,
                       distinctive_marks: spec.character_sheet.distinctive_marks,
                       body_build: spec.character_sheet.body_build,
-                      signature_outfit: spec.character_sheet.signature_outfit,
                     },
-                    scene_custom_attire: spec.subject.clothing_or_materials || spec.character_sheet.signature_outfit,
+                    scene_attire: spec.subject.clothing_or_materials || spec.character_sheet.signature_outfit,
                     ...(spec.character_sheet.cref_url?.trim()
                       ? {
                           midjourney_cref: spec.character_sheet.cref_url.trim(),
@@ -1684,7 +1683,7 @@ export class PromptService {
         layoutIntro = `Character design turnaround model sheet of ${cs.character_name}. The image displays multiple simultaneous angles in a single frame: ${views}.`;
       }
 
-      return `${layoutIntro} Character Somatic DNA: ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, distinctive features: ${cs.distinctive_marks}, physique: ${cs.body_build}. Signature attire: ${cs.signature_outfit}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}. Studio setting: ${cs.background_style}, even shadowless high-key studio softbox lighting, ultra-consistent character reference sheet intended for AI image reference training and consistency matching. Style: ${spec.style_and_rendering.medium} (${spec.style_and_rendering.aesthetic}), ${spec.style_and_rendering.quality_tags.join(', ')}.`;
+      return `${layoutIntro} Character Somatic DNA: ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, distinctive features: ${cs.distinctive_marks}, physique: ${cs.body_build}. Signature attire: ${cs.signature_outfit}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}. Studio setting: ${cs.background_style}, even shadowless high-key studio softbox lighting, ultra-consistent character turnaround sheet. Style: ${spec.style_and_rendering.medium} (${spec.style_and_rendering.aesthetic}), ${spec.style_and_rendering.quality_tags.join(', ')}.`;
     }
 
     const parts: string[] = [];

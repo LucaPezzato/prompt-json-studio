@@ -123,12 +123,41 @@ export class PromptStore {
 
   // ---------- Character Sheet ----------
 
+  /**
+   * High-level prompt kind used by the UI:
+   * - 'free'  → classic prompt, no character module
+   * - 'sheet' → character model sheet / turnaround generation
+   * - 'scene' → narrative scene with a bound (locked) character
+   */
+  readonly promptKind = computed<'free' | 'sheet' | 'scene'>(() => {
+    const cs = this.spec().character_sheet;
+    if (!cs.enabled) return 'free';
+    return cs.mode === 'scene_with_character' ? 'scene' : 'sheet';
+  });
+
+  setPromptKind(kind: 'free' | 'sheet' | 'scene'): void {
+    if (kind === 'free') {
+      this.updateCharacterSheet({ enabled: false });
+    } else if (kind === 'sheet') {
+      this.updateCharacterSheet({ enabled: true });
+      this.setWorkflowMode('sheet_generation');
+      // Re-sync subject/camera with the sheet layout
+      this.setLayoutMode(this.spec().character_sheet.layout_mode);
+    } else {
+      this.setWorkflowMode('scene_with_character');
+    }
+  }
+
   setWorkflowMode(mode: CharacterWorkflowMode): void {
     this.spec.update((s) => {
       const cs = s.character_sheet;
       const charName = cs.character_name.trim() || 'Elena Vance';
 
       if (mode === 'scene_with_character') {
+        // Values produced by the sheet layouts make no sense in a narrative scene:
+        // replace them with neutral, editable scene defaults.
+        const SHEET_RE = /turnaround|model sheet|reference sheet|expression sheet|2x3|grid layout|lineup|simultaneous angles|all views|emotional expressions|wardrobe variations|cyclorama|studio void|seamless|across all|multi-angle|inset portrait/i;
+        const fix = (v: string, fallback: string) => (!v.trim() || SHEET_RE.test(v) ? fallback : v);
         const details = [
           cs.ethnicity_and_skin,
           cs.eye_details ? `eyes: ${cs.eye_details}` : '',
@@ -154,7 +183,27 @@ export class PromptStore {
             ...s.subject,
             primary_entity: `${charName}, ${cs.gender_and_age}`,
             description: details,
+            pose_or_action: fix(s.subject.pose_or_action, 'Natural candid pose with relaxed body language'),
+            expression_or_mood: fix(s.subject.expression_or_mood, 'Calm, natural, authentic'),
+            placement: fix(s.subject.placement, 'Foreground-left (Rule of thirds)'),
             clothing_or_materials: s.subject.clothing_or_materials || cs.signature_outfit,
+          },
+          scene: {
+            ...s.scene,
+            environment: fix(s.scene.environment, 'Sunlit cobblestone street in a historic European old town'),
+            background_details: fix(s.scene.background_details, 'Softly blurred storefronts, potted plants and warm bokeh'),
+          },
+          camera: {
+            ...s.camera,
+            shot_type: fix(s.camera.shot_type, 'Medium shot (Waist up)'),
+          },
+          composition: {
+            ...s.composition,
+            focal_point: fix(s.composition.focal_point, "The character's eyes and facial expression"),
+          },
+          style_and_rendering: {
+            ...s.style_and_rendering,
+            quality_tags: s.style_and_rendering.quality_tags.filter((t) => !SHEET_RE.test(t)),
           },
         };
       } else {
@@ -162,11 +211,15 @@ export class PromptStore {
           ...s,
           character_sheet: {
             ...cs,
+            enabled: true,
             mode: 'sheet_generation',
           },
         };
       }
     });
+    if (mode === 'sheet_generation') {
+      this.setLayoutMode(this.spec().character_sheet.layout_mode);
+    }
   }
 
   setLayoutMode(mode: CharacterLayoutMode): void {

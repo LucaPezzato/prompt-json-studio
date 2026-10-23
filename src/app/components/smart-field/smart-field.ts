@@ -47,7 +47,7 @@ import { PromptService } from '../../services/prompt.service';
       font-weight: 500;
       padding: 3px 6px;
       cursor: pointer;
-      max-width: 175px;
+      max-width: 150px;
       text-overflow: ellipsis;
       outline: none;
       font-family: inherit;
@@ -60,6 +60,13 @@ import { PromptService } from '../../services/prompt.service';
     .preset-select option {
       background: #282a36;
       color: #f8f8f2;
+    }
+    input:disabled, textarea:disabled {
+      opacity: 0.75;
+      background: rgba(33, 34, 44, 0.7);
+      cursor: not-allowed;
+      border-style: dashed;
+      color: var(--cyan, #8be9fd);
     }
     .mini-btn {
       background: var(--bg, #1e1f29);
@@ -145,7 +152,7 @@ import { PromptService } from '../../services/prompt.service';
             [attr.aria-label]="'Valori predefiniti per ' + label()"
             (change)="onSelectOption($event)"
           >
-            <option value="" disabled selected>▾ Valori predefiniti ({{ options().length }})</option>
+            <option value="" disabled selected>▾ Preset ({{ options().length }})</option>
             @for (opt of options(); track opt) {
               <option [value]="opt">{{ opt }}</option>
             }
@@ -175,6 +182,7 @@ import { PromptService } from '../../services/prompt.service';
       <textarea
         [id]="fieldId"
         rows="2"
+        [disabled]="disabled()"
         [placeholder]="placeholder()"
         [value]="value()"
         (input)="onInput($event)"
@@ -183,6 +191,7 @@ import { PromptService } from '../../services/prompt.service';
       <input
         [id]="fieldId"
         type="text"
+        [disabled]="disabled()"
         [attr.list]="category() ? fieldId + '-list' : null"
         [placeholder]="placeholder()"
         [value]="value()"
@@ -229,6 +238,7 @@ export class SmartField {
   readonly category = input<PresetCategoryKey | null>(null);
   readonly placeholder = input<string>('');
   readonly multiline = input(false);
+  readonly disabled = input(false);
   readonly value = model<string>('');
 
   /** Emitted when the user saves the current value as a reusable custom element. */
