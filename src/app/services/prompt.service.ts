@@ -2930,7 +2930,7 @@ Instructions:
     return this.compileForGpt4oAndGemini(spec);
   }
 
-  async generateImage(spec: ImagePromptSpec, customConfig?: ImageGenConfig): Promise<GeneratedImageResult> {
+  async generateImage(spec: ImagePromptSpec, customConfig?: ImageGenConfig, signal?: AbortSignal): Promise<GeneratedImageResult> {
     const config = customConfig || this.imageGenConfig();
     const prompt = this.getImageGenerationPrompt(spec, config.provider);
     const aspect = spec.technical_parameters.aspect_ratio || '16:9';
@@ -2977,6 +2977,7 @@ Instructions:
           body: JSON.stringify({
             contents: [{ parts }],
           }),
+          signal,
         });
 
         if (!res.ok) {
@@ -2984,7 +2985,16 @@ Instructions:
           let message = `Errore generazione Gemini Image (${res.status})`;
           try {
             const parsed = JSON.parse(errText);
-            if (parsed.error?.message) message = parsed.error.message;
+            if (parsed.error?.message) {
+              message = parsed.error.message;
+              if (res.status === 400 && message.toLowerCase().includes('api key')) {
+                message = 'API Key non valida o non autorizzata. Verifica la chiave nelle impostazioni (⚙).';
+              } else if (res.status === 429 || message.toLowerCase().includes('quota') || message.toLowerCase().includes('resource_exhausted')) {
+                message = `Quota API superata o rate-limit attivo per "${model}". Prova a selezionare "gemini-2.5-flash-image" (quota più elevata) o attendi qualche minuto.`;
+              } else if (res.status === 404 || message.toLowerCase().includes('not found')) {
+                message = `Il modello "${model}" non è stato trovato su Gemini API v1beta. Usa "gemini-2.5-flash-image" (consigliato).`;
+              }
+            }
           } catch {}
           throw new Error(message);
         }
@@ -2994,8 +3004,22 @@ Instructions:
         const imagePart = candidateParts.find((p: any) => p.inlineData && p.inlineData.data);
 
         if (!imagePart) {
+          const promptBlock = data?.promptFeedback?.blockReason;
+          const finishReason = data?.candidates?.[0]?.finishReason;
           const textPart = candidateParts.find((p: any) => p.text)?.text;
-          throw new Error(textPart ? `Il modello ha risposto: "${textPart}" ma non ha generato un'immagine.` : 'Nessuna immagine restituita dal modello Gemini.');
+          let reason = '';
+          if (promptBlock) {
+            reason = `Generazione bloccata dalle policy di sicurezza Google Gemini (${promptBlock}). Modifica i termini del prompt o del soggetto.`;
+          } else if (finishReason && finishReason === 'SAFETY') {
+            reason = 'Generazione interrotta per policy visive di sicurezza (SAFETY). Riformula i dettagli della scena o del vestiario.';
+          } else if (finishReason && finishReason !== 'STOP') {
+            reason = `Generazione interrotta dal modello: ${finishReason}.`;
+          } else if (textPart) {
+            reason = `Il modello ha risposto: "${textPart.slice(0, 150)}" ma non ha restituito dati grafici. Prova con gemini-2.5-flash-image.`;
+          } else {
+            reason = 'Nessuna immagine restituita dal modello Gemini. Verifica la compatibilità del modello nelle impostazioni.';
+          }
+          throw new Error(reason);
         }
 
         const mime = imagePart.inlineData.mimeType || 'image/png';
@@ -3033,6 +3057,7 @@ Instructions:
               outputMimeType: 'image/jpeg',
             },
           }),
+          signal,
         });
 
         if (!res.ok) {
@@ -3089,6 +3114,7 @@ Instructions:
           size,
           response_format: 'b64_json',
         }),
+        signal,
       });
 
       if (!res.ok) {
@@ -3137,6 +3163,7 @@ Instructions:
           height,
           ...(isSceneWithCharacter && spec.character_sheet?.image_data_url ? { reference_image: spec.character_sheet.image_data_url, init_images: [spec.character_sheet.image_data_url] } : {}),
         }),
+        signal,
       });
 
       if (!res.ok) {

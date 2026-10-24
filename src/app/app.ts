@@ -53,12 +53,16 @@ export class App {
   // Direct Image Generation signals
   readonly generatingImage = signal<boolean>(false);
   readonly generatedImage = signal<GeneratedImageResult | null>(null);
+  readonly imageGenError = signal<string | null>(null);
+  readonly elapsedGenSeconds = signal<number>(0);
   readonly showImageGenSettings = signal<boolean>(false);
   readonly showImageLightbox = signal<boolean>(false);
   readonly imgProvider = signal<ImageGenProvider>('gemini_imagen');
   readonly imgModel = signal<string>('gemini-2.5-flash-image');
   readonly imgApiKey = signal<string>('');
   readonly imgEndpointUrl = signal<string>('');
+  private abortGenController: AbortController | null = null;
+  private genTimerId: any = null;
 
   // Reverse Image to Prompt signals
   readonly showReverseModal = signal(false);
@@ -637,10 +641,37 @@ export class App {
 
   async runGenerateImage(): Promise<void> {
     if (this.generatingImage()) return;
+
+    // Guard: check Gemini API key
+    const cfg = this.svc.imageGenConfig();
+    const apiKey = (cfg.provider === 'gemini_imagen') ? (cfg.apiKey || this.svc.aiConfig().apiKey) : cfg.apiKey;
+    if (cfg.provider === 'gemini_imagen' && !apiKey) {
+      this.showImageGenSettings.set(true);
+      this.showToast('⚠️ Inserisci la tua API Key Gemini nelle impostazioni per generare');
+      return;
+    }
+
     this.generatingImage.set(true);
+    this.imageGenError.set(null);
+    this.elapsedGenSeconds.set(0);
+
+    // Scroll image workspace to top immediately so loading card is visible
+    if (typeof document !== 'undefined') {
+      const ws = document.querySelector('.image-workspace');
+      if (ws) ws.scrollTop = 0;
+    }
+
+    const start = Date.now();
+    this.genTimerId = setInterval(() => {
+      this.elapsedGenSeconds.set(Math.floor((Date.now() - start) / 100));
+    }, 100);
+
+    this.abortGenController = new AbortController();
+
     try {
-      const res = await this.svc.generateImage(this.spec());
+      const res = await this.svc.generateImage(this.spec(), undefined, this.abortGenController.signal);
       this.generatedImage.set(res);
+      this.imageGenError.set(null);
       if (this.isSheetMode() || this.spec().character_sheet.mode === 'sheet_generation') {
         const charName = this.spec().character_sheet.character_name.trim();
         const optimized = await this.optimizeImageDataUrl(res.dataUrl);
@@ -657,12 +688,37 @@ export class App {
         this.showToast(`🎨 Immagine generata con successo (${(res.timeMs / 1000).toFixed(1)}s)`);
       }
     } catch (err: any) {
+      if (err.name === 'AbortError') {
+        this.showToast('⏹ Generazione immagine annullata');
+        return;
+      }
       console.error('Image generation error:', err);
       const msg = err?.message || 'Errore imprevisto durante la generazione';
+      this.imageGenError.set(msg);
       this.showToast(`❌ ${msg}`);
     } finally {
+      if (this.genTimerId) {
+        clearInterval(this.genTimerId);
+        this.genTimerId = null;
+      }
+      this.abortGenController = null;
       this.generatingImage.set(false);
     }
+  }
+
+  cancelGenerateImage(): void {
+    if (this.abortGenController) {
+      this.abortGenController.abort();
+    }
+  }
+
+  switchModelAndRetry(modelName: string): void {
+    this.imgModel.set(modelName);
+    this.svc.setImageGenConfig({
+      ...this.svc.imageGenConfig(),
+      model: modelName,
+    });
+    this.runGenerateImage();
   }
 
   downloadGeneratedImage(): void {

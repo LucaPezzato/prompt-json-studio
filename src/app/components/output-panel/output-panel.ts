@@ -120,11 +120,61 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
               <div class="spinner-radar"></div>
             </div>
             <h4 class="loading-title">Creazione rendering in corso…</h4>
+            <div class="loading-timer-badge">
+              ⏱️ {{ (elapsedGenTime() / 10).toFixed(1) }}s trascorsi
+            </div>
             <p class="loading-desc">
-              Interrogazione di <b>{{ activeEngineLabel() }}</b> con applicazione dei tratti somatici, schema luci e staging scenico.
+              {{ loadingStageText() }}
             </p>
             <div class="loading-bar-track">
               <div class="loading-bar-progress"></div>
+            </div>
+            <div class="loading-engine-tag">
+              <span>Motore: <b>{{ activeEngineLabel() }}</b></span>
+            </div>
+            <button
+              type="button"
+              class="btn-cancel-gen"
+              (click)="cancelGenerate.emit()"
+              title="Annulla la richiesta di generazione"
+            >
+              ⏹ Annulla operazione
+            </button>
+          </div>
+        } @else if (imageGenError()) {
+          <div class="image-error-card">
+            <div class="error-badge-icon">⚠️</div>
+            <h3 class="error-title">Generazione Non Riuscita</h3>
+            <div class="error-msg-box">
+              <p class="error-text">{{ imageGenError() }}</p>
+            </div>
+            <div class="error-actions-group">
+              <button
+                type="button"
+                class="btn-err-action btn-retry"
+                (click)="onGenerateClick()"
+                title="Riprova a generare con i parametri attuali"
+              >
+                🔄 Riprova Generazione
+              </button>
+              @if (activeEngineLabel() !== 'gemini-2.5-flash-image') {
+                <button
+                  type="button"
+                  class="btn-err-action btn-fallback"
+                  (click)="switchModelAndRetry.emit('gemini-2.5-flash-image')"
+                  title="Passa a gemini-2.5-flash-image (modello stabile, veloce e con quota generosa)"
+                >
+                  ⚡ Passa a gemini-2.5-flash-image (Consigliato)
+                </button>
+              }
+              <button
+                type="button"
+                class="btn-err-action btn-config"
+                (click)="openSettings.emit()"
+                title="Controlla la tua API Key e il modello configurato"
+              >
+                ⚙ Controlla API Key / Impostazioni
+              </button>
             </div>
           </div>
         } @else if (generatedImage()) {
@@ -199,23 +249,42 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
             }
 
             <div class="img-prompt-disclosure">
-              <button
-                type="button"
-                class="btn-toggle-prompt"
-                (click)="showFullPrompt.set(!showFullPrompt())"
-              >
-                <span>{{ showFullPrompt() ? '▼ Nascondi Prompt Inviato' : '▶ Mostra Prompt Inviato al Modello' }}</span>
-              </button>
-              @if (showFullPrompt()) {
-                <div class="prompt-snippet-box">
-                  <p class="prompt-text">{{ generatedImage()!.prompt }}</p>
+              <div class="prompt-disclosure-header">
+                <button
+                  type="button"
+                  class="btn-toggle-prompt"
+                  (click)="showFullPrompt.set(!showFullPrompt())"
+                >
+                  <span>{{ showFullPrompt() ? '▼ Nascondi Prompt Inviato' : '▶ Mostra Prompt Inviato al Modello' }}</span>
+                </button>
+                @if (showFullPrompt()) {
                   <button
                     type="button"
-                    class="btn-copy-snippet"
-                    (click)="copy.emit(generatedImage()!.prompt)"
+                    class="btn-goto-prompt-tab"
+                    (click)="viewMode.set('prompt')"
+                    title="Apri la vista completa Prompt & Codice con sintassi colorata"
                   >
-                    📋 Copia Prompt
+                    📝 Apri vista Prompt &amp; Codice ↗
                   </button>
+                }
+              </div>
+
+              @if (showFullPrompt()) {
+                <div class="prompt-snippet-box">
+                  <div class="prompt-snippet-scroll">
+                    <p class="prompt-text">{{ generatedImage()!.prompt }}</p>
+                  </div>
+                  <div class="prompt-snippet-footer">
+                    <span class="snippet-chars-count">{{ generatedImage()!.prompt.length }} caratteri</span>
+                    <button
+                      type="button"
+                      class="btn-copy-snippet"
+                      (click)="copy.emit(generatedImage()!.prompt)"
+                      title="Copia il prompt negli appunti"
+                    >
+                      📋 Copia Prompt
+                    </button>
+                  </div>
                 </div>
               }
             </div>
@@ -339,6 +408,8 @@ export class OutputPanel {
   readonly generating = input<boolean>(false);
   readonly generatedImage = input<GeneratedImageResult | null>(null);
   readonly imageGenConfig = input<ImageGenConfig | null>(null);
+  readonly imageGenError = input<string | null>(null);
+  readonly elapsedGenTime = input<number>(0);
 
   // Character Sheet Attachment inputs
   readonly characterSheetImage = input<string | null>(null);
@@ -350,6 +421,8 @@ export class OutputPanel {
   readonly setDefault = output<OutputTab>();
   readonly copy = output<string>();
   readonly generate = output<void>();
+  readonly cancelGenerate = output<void>();
+  readonly switchModelAndRetry = output<string>();
   readonly openSettings = output<void>();
   readonly openLightbox = output<void>();
   readonly download = output<void>();
@@ -398,10 +471,18 @@ export class OutputPanel {
   readonly activeEngineLabel = computed(() => {
     const cfg = this.imageGenConfig();
     if (!cfg) return 'Imagen 3';
-    if (cfg.provider === 'gemini_imagen') return 'Imagen 3';
-    if (cfg.provider === 'openai_dalle') return 'DALL-E 3';
-    if (cfg.provider === 'comfyui') return 'ComfyUI';
+    if (cfg.provider === 'gemini_imagen') return cfg.model || 'gemini-2.5-flash-image';
+    if (cfg.provider === 'openai_dalle') return cfg.model || 'dall-e-3';
+    if (cfg.provider === 'comfyui') return cfg.model || 'ComfyUI';
     return cfg.model || 'Custom';
+  });
+
+  readonly loadingStageText = computed(() => {
+    const sec = this.elapsedGenTime() / 10;
+    if (sec < 3) return 'Invio istruzioni e staging parametri al modello AI…';
+    if (sec < 7) return 'Elaborazione semantica, studio luci e fisionomia…';
+    if (sec < 14) return 'Sintesi neurale del rendering ad alta risoluzione in corso…';
+    return 'Finalizzazione dettagli e codifica dati grafici…';
   });
 
   onGenerateClick(): void {

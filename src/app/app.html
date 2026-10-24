@@ -1280,6 +1280,8 @@
     [generating]="generatingImage()"
     [generatedImage]="generatedImage()"
     [imageGenConfig]="svc.imageGenConfig()"
+    [imageGenError]="imageGenError()"
+    [elapsedGenTime]="elapsedGenSeconds()"
     [characterSheetImage]="boundCharacterImage()"
     [characterName]="boundCharacterName()"
     [isSceneWithCharacter]="isSceneWithCharacter()"
@@ -1287,6 +1289,8 @@
     (setDefault)="setDefaultOutputModel($event)"
     (copy)="copyText($event)"
     (generate)="runGenerateImage()"
+    (cancelGenerate)="cancelGenerateImage()"
+    (switchModelAndRetry)="switchModelAndRetry($event)"
     (openSettings)="openImageGenSettings()"
     (openLightbox)="openImageLightbox()"
     (download)="downloadGeneratedImage()"
@@ -1313,6 +1317,34 @@
   </select>
 
   <label>Modello</label>
+  @if (imgProvider() === 'gemini_imagen') {
+    <div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
+      <button
+        type="button"
+        class="chip"
+        [class.active]="imgModel() === 'gemini-2.5-flash-image'"
+        (click)="imgModel.set('gemini-2.5-flash-image')"
+      >
+        ⚡ gemini-2.5-flash-image (Consigliato)
+      </button>
+      <button
+        type="button"
+        class="chip"
+        [class.active]="imgModel() === 'gemini-3-pro-image'"
+        (click)="imgModel.set('gemini-3-pro-image')"
+      >
+        🎨 gemini-3-pro-image (Pro)
+      </button>
+      <button
+        type="button"
+        class="chip"
+        [class.active]="imgModel() === 'imagen-3.0-generate-002'"
+        (click)="imgModel.set('imagen-3.0-generate-002')"
+      >
+        Google Imagen 3
+      </button>
+    </div>
+  }
   <input
     type="text"
     [value]="imgModel()"
