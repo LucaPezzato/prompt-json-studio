@@ -272,14 +272,14 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
               @if (showFullPrompt()) {
                 <div class="prompt-snippet-box">
                   <div class="prompt-snippet-scroll">
-                    <p class="prompt-text">{{ generatedImage()!.prompt }}</p>
+                    <p class="prompt-text">{{ displayGeneratedPrompt() }}</p>
                   </div>
                   <div class="prompt-snippet-footer">
-                    <span class="snippet-chars-count">{{ generatedImage()!.prompt.length }} caratteri</span>
+                    <span class="snippet-chars-count">{{ displayGeneratedPrompt().length }} caratteri</span>
                     <button
                       type="button"
                       class="btn-copy-snippet"
-                      (click)="copy.emit(generatedImage()!.prompt)"
+                      (click)="copy.emit(displayGeneratedPrompt())"
                       title="Copia il prompt negli appunti"
                     >
                       📋 Copia Prompt
@@ -437,7 +437,24 @@ export class OutputPanel {
   readonly viewMode = signal<'image' | 'prompt'>('image');
   readonly showFullPrompt = signal<boolean>(false);
 
-  readonly current = computed(() => this.outputs()[this.tab()]);
+  stripBase64ForDisplay(text: string): string {
+    if (!text) return '';
+    return text.replace(
+      /data:image\/[a-zA-Z0-9.+_-]+;base64,[A-Za-z0-9+/=]{30,}/g,
+      '[allegato: immagine base64 omessa]'
+    );
+  }
+
+  readonly current = computed(() => {
+    const raw = this.outputs()[this.tab()] || '';
+    return this.stripBase64ForDisplay(raw);
+  });
+
+  readonly displayGeneratedPrompt = computed(() => {
+    const p = this.generatedImage()?.prompt || '';
+    return this.stripBase64ForDisplay(p);
+  });
+
   readonly hint = computed(() => TABS.find((t) => t.key === this.tab())?.hint ?? '');
   readonly isOtherActive = computed(() => ['flux', 'midjourney', 'sdxl'].includes(this.tab()));
   readonly stats = computed(() => {

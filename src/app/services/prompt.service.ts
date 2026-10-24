@@ -1559,7 +1559,14 @@ export class PromptService {
     const customBySection = (sec: string): Record<string, string> => {
       const out: Record<string, string> = {};
       for (const prop of spec.custom_properties) {
-        if (prop.section === sec && prop.key.trim()) {
+        if (
+          prop.section === sec &&
+          prop.key.trim() &&
+          prop.key !== 'character_sheet' &&
+          prop.key !== 'image_data_url' &&
+          !prop.value?.startsWith('data:image/') &&
+          !prop.value?.includes(';base64,')
+        ) {
           out[prop.key.trim()] = prop.value;
         }
       }
@@ -1668,7 +1675,7 @@ export class PromptService {
                       body_build: spec.character_sheet.body_build,
                     },
                     scene_attire: spec.subject.clothing_or_materials || spec.character_sheet.signature_outfit,
-                    ...(spec.character_sheet.cref_url?.trim()
+                    ...(spec.character_sheet.cref_url?.trim() && !spec.character_sheet.cref_url.startsWith('data:') && !spec.character_sheet.cref_url.includes(';base64,')
                       ? {
                           midjourney_cref: spec.character_sheet.cref_url.trim(),
                           cref_weight: spec.character_sheet.cref_weight ?? 100,
@@ -1887,7 +1894,7 @@ export class PromptService {
         if (spec.technical_parameters.stylize > 0) flags.push(`--s ${spec.technical_parameters.stylize}`);
         if (spec.technical_parameters.chaos > 0) flags.push(`--c ${spec.technical_parameters.chaos}`);
         if (spec.technical_parameters.seed !== null) flags.push(`--seed ${spec.technical_parameters.seed}`);
-        if (cs.cref_url?.trim()) {
+        if (cs.cref_url?.trim() && !cs.cref_url.startsWith('data:') && !cs.cref_url.includes(';base64,')) {
           const cw = cs.cref_weight !== undefined ? cs.cref_weight : 100;
           flags.push(`--cref ${cs.cref_url.trim()} --cw ${cw}`);
         }
@@ -1947,7 +1954,7 @@ export class PromptService {
       if (spec.technical_parameters.stylize > 0) flags.push(`--s ${spec.technical_parameters.stylize}`);
       if (spec.technical_parameters.chaos > 0) flags.push(`--c ${spec.technical_parameters.chaos}`);
       if (spec.technical_parameters.seed !== null) flags.push(`--seed ${spec.technical_parameters.seed}`);
-      if (cs.cref_url?.trim()) {
+      if (cs.cref_url?.trim() && !cs.cref_url.startsWith('data:') && !cs.cref_url.includes(';base64,')) {
         const cw = cs.cref_weight !== undefined ? cs.cref_weight : 100;
         flags.push(`--cref ${cs.cref_url.trim()} --cw ${cw}`);
       }
@@ -2005,7 +2012,7 @@ export class PromptService {
     if (spec.technical_parameters.seed !== null) {
       flags.push(`--seed ${spec.technical_parameters.seed}`);
     }
-    if (spec.character_sheet?.cref_url?.trim()) {
+    if (spec.character_sheet?.cref_url?.trim() && !spec.character_sheet.cref_url.startsWith('data:') && !spec.character_sheet.cref_url.includes(';base64,')) {
       flags.push(`--cref ${spec.character_sheet.cref_url.trim()} --cw 100`);
     }
     if (spec.technical_parameters.negative_prompt.trim()) {

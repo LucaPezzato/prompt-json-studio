@@ -495,13 +495,29 @@ export class PromptStore {
 
     const known = new Set([
       'meta', 'subject', 'additional_subjects', 'scene', 'camera', 'lighting', 'composition',
-      'style_and_rendering', 'style', 'typography', 'technical_parameters', 'custom_properties', '$schema',
+      'style_and_rendering', 'style', 'typography', 'technical_parameters', 'custom_properties',
+      'character_sheet', '$schema',
     ]);
     for (const [k, v] of Object.entries(obj)) {
       if (!known.has(k)) {
-        out.custom_properties.push({ id: rid(), section: 'root', key: k, value: typeof v === 'string' ? v : JSON.stringify(v) });
+        // Guard against rogue image data URLs or character sheets being converted into root custom properties
+        if (
+          k !== 'character_sheet' &&
+          k !== 'image_data_url' &&
+          (typeof v !== 'string' || (!v.startsWith('data:image/') && !v.includes(';base64,')))
+        ) {
+          out.custom_properties.push({ id: rid(), section: 'root', key: k, value: typeof v === 'string' ? v : JSON.stringify(v) });
+        }
       }
     }
+
+    out.custom_properties = (out.custom_properties || []).filter(
+      (cp) =>
+        cp.key !== 'character_sheet' &&
+        cp.key !== 'image_data_url' &&
+        !cp.value?.includes(';base64,') &&
+        !cp.value?.startsWith('data:image/')
+    );
 
     if (!Array.isArray(out.lighting.color_palette)) out.lighting.color_palette = [];
     if (!Array.isArray(out.style_and_rendering.quality_tags)) {
@@ -515,7 +531,17 @@ export class PromptStore {
   private loadDraft(): ImagePromptSpec {
     try {
       const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
-      if (raw) return this.normalize(JSON.parse(raw));
+      if (raw) {
+        const spec = this.normalize(JSON.parse(raw));
+        spec.custom_properties = (spec.custom_properties || []).filter(
+          (cp) =>
+            cp.key !== 'character_sheet' &&
+            cp.key !== 'image_data_url' &&
+            !cp.value?.includes(';base64,') &&
+            !cp.value?.startsWith('data:image/')
+        );
+        return spec;
+      }
     } catch {}
     return this.svc.createEmptySpec();
   }

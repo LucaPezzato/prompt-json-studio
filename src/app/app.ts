@@ -464,7 +464,18 @@ export class App {
   }
 
   exportJsonFile(): void {
-    const raw = JSON.stringify(this.spec(), null, 2);
+    const cleanSpec = structuredClone(this.spec());
+    if (cleanSpec.character_sheet?.image_data_url) {
+      delete cleanSpec.character_sheet.image_data_url;
+    }
+    cleanSpec.custom_properties = (cleanSpec.custom_properties || []).filter(
+      (cp) =>
+        cp.key !== 'character_sheet' &&
+        cp.key !== 'image_data_url' &&
+        !cp.value?.includes(';base64,') &&
+        !cp.value?.startsWith('data:image/')
+    );
+    const raw = JSON.stringify(cleanSpec, null, 2);
     const blob = new Blob([raw], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
