@@ -12,7 +12,7 @@
     <button
       type="button"
       class="btn ghost magic-open-btn"
-      (click)="showMagicModal.set(true)"
+      (click)="openMagicModal()"
       title="Magic Expand con AI: espandi un'idea rapida in un prompt completo"
     >
       ✨ Magic Expand
@@ -1301,12 +1301,12 @@
 <!-- AI Image Generator Settings Modal -->
 <app-modal title="🎨 Configurazione Generatore Immagini AI" [(open)]="showImageGenSettings">
   <p class="muted">
-    Genera rendering direttamente dalla spalla destra dello studio. Puoi utilizzare <b>Google Imagen 3</b> (tramite API Gemini), <b>OpenAI DALL-E 3</b>, oppure un endpoint locale/custom come <b>ComfyUI</b> o <b>SD WebUI</b>.
+    Genera rendering direttamente dalla spalla destra dello studio. Puoi utilizzare <b>Google Gemini Imagen</b> (gemini-2.5-flash-image), <b>OpenAI DALL-E 3</b>, oppure un endpoint locale/custom come <b>ComfyUI</b> o <b>SD WebUI</b>.
   </p>
 
   <label>Provider Motore Immagini</label>
   <select [value]="imgProvider()" (change)="onImgProviderChange($any($event.target).value)">
-    <option value="gemini_imagen">Google Imagen 3 (imagen-3.0-generate-002)</option>
+    <option value="gemini_imagen">Google Imagen / Gemini Image (gemini-2.5-flash-image)</option>
     <option value="openai_dalle">OpenAI DALL-E 3</option>
     <option value="comfyui">ComfyUI / Stable Diffusion WebUI (Locale)</option>
     <option value="custom">Endpoint HTTP Custom</option>
@@ -1317,7 +1317,7 @@
     type="text"
     [value]="imgModel()"
     (input)="imgModel.set($any($event.target).value)"
-    placeholder="es. imagen-3.0-generate-002 o dall-e-3"
+    placeholder="es. gemini-2.5-flash-image o dall-e-3"
   />
 
   @if (imgProvider() === 'gemini_imagen') {
@@ -1384,7 +1384,7 @@
   <label>Modello</label>
   <input
     type="text"
-    placeholder="gemini-2.5-flash / gpt-4o-mini / llama3.2"
+    placeholder="gemini-3.8-flash / gpt-4o-mini / llama3.2"
     [value]="aiModel()"
     (input)="aiModel.set($any($event.target).value)"
   />
@@ -1814,28 +1814,80 @@
   [(open)]="showMagicModal"
 >
   <div class="magic-modal-body">
-    <p class="muted" style="margin-bottom: 14px; font-size: 13px; line-height: 1.4;">
-      Scrivi un'idea sintetica o una descrizione grezza: l'AI analizzerà la tua richiesta e compilerà automaticamente i parametri (soggetto, luce, atmosfera, ottica e stile) ottimizzandoli per la massima qualità visiva.
-    </p>
+    @if (isSheetMode()) {
+      <div class="magic-context-banner sheet-mode">
+        <div class="magic-context-header">
+          <span class="magic-mode-badge">👤 Studio Scheda Personaggio</span>
+          <span class="magic-context-target">Modifica di: <b>{{ spec().character_sheet.character_name || 'Personaggio in corso' }}</b></span>
+        </div>
+        <p class="magic-context-desc">
+          L'AI modificherà e perfezionerà solo i tratti biometrici richiesti (capelli, occhi, outfit, fisionomia) preservando l'identità del personaggio senza sostituirlo né creare una nuova entità.
+        </p>
+      </div>
+    } @else if (isSceneWithCharacter()) {
+      <div class="magic-context-banner scene-mode">
+        <div class="magic-context-header">
+          <span class="magic-mode-badge">🎬 Studio Scena Vincolata</span>
+          <span class="magic-context-target">Personaggio Bloccato: <b>{{ boundCharacterName() || 'Personaggio' }}</b></span>
+        </div>
+        <p class="magic-context-desc">
+          L'identità e i tratti biometrici del personaggio restano rigorosamente vincolati. L'AI arricchirà la scena, l'azione/posa, l'outfit di scena, le luci e l'ottica fotografica.
+        </p>
+      </div>
+    } @else {
+      <p class="muted" style="margin-bottom: 14px; font-size: 13px; line-height: 1.4;">
+        Scrivi un'idea sintetica o una descrizione grezza: l'AI analizzerà la tua richiesta e compilerà automaticamente i parametri (soggetto, luce, atmosfera, ottica e stile) ottimizzandoli per la massima qualità visiva.
+      </p>
+    }
+
     <div class="magic-modal-input-wrap">
       <input
         type="text"
         class="magic-modal-input"
-        placeholder="Es. Guerriera vichinga all'alba sulle coste dei fiordi con corvo sulla spalla…"
+        [disabled]="magicLoading()"
+        [placeholder]="
+          isSheetMode()
+            ? 'Es. Cambia i capelli in biondo platino corti e indossa una giacca di pelle nera vintage oversize…'
+            : isSceneWithCharacter()
+            ? 'Es. In piedi sul tetto di un grattacielo sotto la pioggia al tramonto, posa cinematografica drammatica…'
+            : 'Es. Guerriera vichinga all\'alba sulle coste dei fiordi con corvo sulla spalla…'
+        "
         [value]="magicIdea()"
         (input)="magicIdea.set($any($event.target).value)"
-        (keydown.enter)="runMagicExpand(); showMagicModal.set(false)"
+        (keydown.enter)="runMagicExpand()"
       />
     </div>
+
+    @if (magicError()) {
+      <div class="magic-error-box">
+        ⚠️ {{ magicError() }}
+      </div>
+    }
+
+    @if (magicLoading()) {
+      <div class="magic-loading-indicator">
+        <span class="spinner"></span>
+        Elaborazione con {{ svc.aiConfig().model || svc.aiConfig().provider }} in corso…
+      </div>
+    }
+
     <div class="modal-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px;">
-      <button type="button" class="btn ghost" (click)="showMagicModal.set(false)">Annulla</button>
+      <button type="button" class="btn ghost" [disabled]="magicLoading()" (click)="showMagicModal.set(false)">Annulla</button>
       <button
         type="button"
         class="btn primary"
         [disabled]="magicLoading() || !magicIdea().trim()"
-        (click)="runMagicExpand(); showMagicModal.set(false)"
+        (click)="runMagicExpand()"
       >
-        {{ magicLoading() ? 'Generazione in corso…' : '✨ Espandi in Prompt' }}
+        @if (magicLoading()) {
+          Generazione in corso…
+        } @else if (isSheetMode()) {
+          ✨ Modifica Scheda con AI
+        } @else if (isSceneWithCharacter()) {
+          ✨ Componi Scena con AI
+        } @else {
+          ✨ Espandi in Prompt
+        }
       </button>
     </div>
   </div>

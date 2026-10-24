@@ -329,8 +329,9 @@
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
+  height: 100%;
 }
 :host ::ng-deep .output .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 :host ::ng-deep .output .tab {
@@ -2002,6 +2003,89 @@
   box-shadow: 0 0 0 2px rgba(189, 147, 249, 0.25);
 }
 
+.magic-context-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(40, 42, 54, 0.7);
+  border: 1px solid var(--line, #44475a);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.magic-context-banner.sheet-mode {
+  border-color: rgba(255, 121, 198, 0.4);
+  background: rgba(255, 121, 198, 0.08);
+}
+
+.magic-context-banner.scene-mode {
+  border-color: rgba(139, 233, 253, 0.4);
+  background: rgba(139, 233, 253, 0.08);
+}
+
+.magic-context-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.magic-mode-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-1, #21222c);
+  color: var(--fg, #f8f8f2);
+  border: 1px solid var(--line, #44475a);
+}
+
+.magic-context-banner.sheet-mode .magic-mode-badge {
+  color: var(--pink, #ff79c6);
+  border-color: rgba(255, 121, 198, 0.4);
+}
+
+.magic-context-banner.scene-mode .magic-mode-badge {
+  color: var(--cyan, #8be9fd);
+  border-color: rgba(139, 233, 253, 0.4);
+}
+
+.magic-context-target {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg, #f8f8f2);
+}
+
+.magic-context-desc {
+  font-size: 12px;
+  color: var(--comment, #6272a4);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.magic-error-box {
+  background: rgba(255, 85, 85, 0.15);
+  border: 1px solid var(--red, #ff5555);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-top: 12px;
+  color: #ffb8b8;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.magic-loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--purple, #bd93f9);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 /* OUTPUT PANEL OTHER MODELS SELECT */
 :host ::ng-deep .output .other-models-wrap {
   display: inline-flex;
@@ -2188,6 +2272,23 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+:host ::ng-deep .output .image-workspace::-webkit-scrollbar {
+  width: 6px;
+}
+:host ::ng-deep .output .image-workspace::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+:host ::ng-deep .output .image-workspace::-webkit-scrollbar-thumb {
+  background: var(--line, #44475a);
+  border-radius: 3px;
+}
+:host ::ng-deep .output .image-workspace::-webkit-scrollbar-thumb:hover {
+  background: var(--purple, #bd93f9);
 }
 
 :host ::ng-deep .output .image-empty-card {
@@ -2350,6 +2451,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-bottom: 24px;
 }
 
 :host ::ng-deep .output .img-preview-container {
@@ -2492,11 +2594,11 @@
   margin-top: 8px;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 10px;
+  border-radius: 8px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 :host ::ng-deep .output .prompt-text {
@@ -2504,11 +2606,9 @@
   font-family: var(--mono);
   font-size: 11.5px;
   color: var(--comment);
-  line-height: 1.5;
+  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 140px;
-  overflow-y: auto;
 }
 
 :host ::ng-deep .output .btn-copy-snippet {

@@ -56,7 +56,7 @@ export class App {
   readonly showImageGenSettings = signal<boolean>(false);
   readonly showImageLightbox = signal<boolean>(false);
   readonly imgProvider = signal<ImageGenProvider>('gemini_imagen');
-  readonly imgModel = signal<string>('imagen-3.0-generate-002');
+  readonly imgModel = signal<string>('gemini-2.5-flash-image');
   readonly imgApiKey = signal<string>('');
   readonly imgEndpointUrl = signal<string>('');
 
@@ -81,6 +81,7 @@ export class App {
   // Form input signals for modals / tools
   readonly magicIdea = signal('');
   readonly magicLoading = signal(false);
+  readonly magicError = signal('');
   readonly showMagicModal = signal(false);
   readonly showProjectMenu = signal(false);
   readonly importText = signal('');
@@ -492,18 +493,47 @@ export class App {
     this.showToast(`Preset "${p.name}" salvato`);
   }
 
+  openMagicModal(): void {
+    this.magicError.set('');
+    this.showMagicModal.set(true);
+  }
+
   async runMagicExpand(): Promise<void> {
     const idea = this.magicIdea().trim();
     if (!idea || this.magicLoading()) return;
     this.magicLoading.set(true);
+    this.magicError.set('');
     try {
       const cfg = this.svc.aiConfig();
       const nextSpec = await this.svc.magicExpandIdea(idea, this.spec(), cfg);
       this.store.replace(nextSpec);
+
+      // If we are editing a saved character in Character Studio, synchronize the character library
+      if (this.isSheetMode()) {
+        const cur = this.currentSavedCharacter();
+        if (cur) {
+          this.svc.updateCharacter(
+            cur.id,
+            nextSpec.character_sheet,
+            nextSpec.character_sheet.character_name || cur.name,
+            nextSpec.character_sheet.image_data_url || cur.imageDataUrl
+          );
+        }
+      }
+
       const isLlm = !!cfg.apiKey.trim() || cfg.provider === 'ollama';
-      this.showToast(isLlm ? `✨ Espanso con ${cfg.provider}` : '✨ Espansione offline applicata');
+      const modeLabel = this.isSheetMode()
+        ? 'Scheda Personaggio aggiornata'
+        : this.isSceneWithCharacter()
+        ? 'Scena arricchita con personaggio vincolato'
+        : 'Prompt espanso';
+      this.showToast(isLlm ? `✨ ${modeLabel} con ${cfg.model || cfg.provider}` : `✨ ${modeLabel} (offline)`);
+      this.magicIdea.set('');
+      this.showMagicModal.set(false);
     } catch (e) {
-      this.showToast('Errore espansione: ' + (e as Error).message);
+      const msg = (e as Error).message || 'Errore sconosciuto';
+      this.magicError.set(msg);
+      this.showToast('Errore espansione: ' + msg);
     } finally {
       this.magicLoading.set(false);
     }
@@ -575,7 +605,9 @@ export class App {
   openImageGenSettings(): void {
     const cfg = this.svc.imageGenConfig();
     this.imgProvider.set(cfg.provider);
-    this.imgModel.set(cfg.model);
+    this.imgModel.set(
+      cfg.model === 'imagen-3.0-generate-002' || !cfg.model ? 'gemini-2.5-flash-image' : cfg.model
+    );
     this.imgApiKey.set(cfg.apiKey);
     this.imgEndpointUrl.set(cfg.endpointUrl);
     this.showImageGenSettings.set(true);
@@ -583,9 +615,9 @@ export class App {
 
   onImgProviderChange(prov: ImageGenProvider): void {
     this.imgProvider.set(prov);
-    if (prov === 'gemini_imagen' && (!this.imgModel() || this.imgModel() === 'dall-e-3')) {
-      this.imgModel.set('imagen-3.0-generate-002');
-    } else if (prov === 'openai_dalle' && (!this.imgModel() || this.imgModel() === 'imagen-3.0-generate-002')) {
+    if (prov === 'gemini_imagen' && (!this.imgModel() || this.imgModel() === 'dall-e-3' || this.imgModel() === 'imagen-3.0-generate-002')) {
+      this.imgModel.set('gemini-2.5-flash-image');
+    } else if (prov === 'openai_dalle' && (!this.imgModel() || this.imgModel() === 'imagen-3.0-generate-002' || this.imgModel() === 'gemini-2.5-flash-image')) {
       this.imgModel.set('dall-e-3');
     } else if (prov === 'comfyui' && !this.imgEndpointUrl()) {
       this.imgEndpointUrl.set('http://127.0.0.1:7860/sdapi/v1/txt2img');

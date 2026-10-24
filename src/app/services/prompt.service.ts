@@ -5,6 +5,7 @@ import {
   CustomOptionsMap,
   GeneratedImageResult,
   ImageGenConfig,
+  ImageGenProvider,
   ImagePromptSpec,
   OutputTab,
   PresetCategoryKey,
@@ -1411,19 +1412,18 @@ export class PromptService {
       if (res.ok) {
         const data = await res.json();
         if (data.GEMINI_API_KEY) {
-          if (!this.aiConfig().apiKey) {
-            this.aiConfig.update((c) => ({
-              ...c,
-              apiKey: data.GEMINI_API_KEY,
-              model: data.DEFAULT_MODEL || c.model || 'gemini-3.8-flash',
-            }));
-          }
-          if (!this.imageGenConfig().apiKey) {
-            this.imageGenConfig.update((c) => ({
-              ...c,
-              apiKey: data.GEMINI_API_KEY,
-            }));
-          }
+          this.aiConfig.update((c) => ({
+            ...c,
+            apiKey: c.apiKey || data.GEMINI_API_KEY,
+            model: (c.model === 'imagen-3.0-generate-002' || !c.model || c.model === 'gemini-2.5-flash' || c.model === 'gemini-1.5-flash' || c.model === 'gemini-pro')
+              ? (data.DEFAULT_MODEL || 'gemini-3.8-flash')
+              : c.model,
+          }));
+          this.imageGenConfig.update((c) => ({
+            ...c,
+            apiKey: c.apiKey || data.GEMINI_API_KEY,
+            model: (c.model === 'imagen-3.0-generate-002' || !c.model) ? 'gemini-2.5-flash-image' : c.model,
+          }));
         }
       }
     } catch {}
@@ -1766,18 +1766,18 @@ export class PromptService {
       const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side profile view, Back view';
       let layoutIntro = '';
       if (cs.layout_mode === 'expressions_grid') {
-        layoutIntro = `Facial expression model sheet of ${cs.character_name}. The image is a multi-panel headshot grid displaying distinct emotional expressions of the exact same character in a single frame: ${views}. Facial features, eye color, bone structure, and hairstyle remain 100% consistent across all panels.`;
+        layoutIntro = `Editorial studio photography composite of ${cs.character_name}. The image is a multi-panel photographic portrait grid displaying distinct emotional expressions of the exact same real human person in a single frame: ${views}. Facial features, natural skin pores, eye reflections, and hairstyle remain 100% consistent across all portraits.`;
       } else if (cs.layout_mode === 'outfit_study') {
-        layoutIntro = `Character costume and wardrobe study sheet of ${cs.character_name}. The image displays the same character in multiple simultaneous outfits in a single frame: ${views}.`;
+        layoutIntro = `High-end fashion editorial wardrobe study of ${cs.character_name}. The image displays the same real person in multiple simultaneous outfits in a single photographic contact sheet: ${views}.`;
       } else if (cs.layout_mode === 'full_body_and_portraits') {
-        layoutIntro = `Character model reference sheet of ${cs.character_name} combining full-body lineup and high-resolution facial close-ups: ${views}.`;
+        layoutIntro = `Professional editorial casting composite of ${cs.character_name} combining full-body studio lineup and high-resolution facial close-ups: ${views}.`;
       } else if (cs.layout_mode === 'turnaround_3_views') {
-        layoutIntro = `Character design 3-view turnaround model sheet of ${cs.character_name}. The image displays three simultaneous angles in a single frame: ${views}.`;
+        layoutIntro = `Professional studio casting photographic composite of ${cs.character_name}. The image displays three simultaneous photographic angles of the same real human being in a single frame: ${views}.`;
       } else {
-        layoutIntro = `Character design turnaround model sheet of ${cs.character_name}. The image displays multiple simultaneous angles in a single frame: ${views}.`;
+        layoutIntro = `Professional studio casting photographic composite of ${cs.character_name}. The image displays multiple simultaneous photographic angles of the same real human person in a single clean contact sheet: ${views}.`;
       }
 
-      return `${layoutIntro} Character Somatic DNA: ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, distinctive features: ${cs.distinctive_marks}, physique: ${cs.body_build}. Signature attire: ${cs.signature_outfit}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}. Studio setting: ${cs.background_style}, even shadowless high-key studio softbox lighting, ultra-consistent character turnaround sheet. Style: ${spec.style_and_rendering.medium} (${spec.style_and_rendering.aesthetic}), ${spec.style_and_rendering.quality_tags.join(', ')}.`;
+      return `${layoutIntro} Character Somatic DNA: ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, distinctive features: ${cs.distinctive_marks}, physique: ${cs.body_build}. Signature attire: ${cs.signature_outfit}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}. Studio setting: ${cs.background_style}, even shadowless high-key studio softbox lighting. Style: ${spec.style_and_rendering.medium} (${spec.style_and_rendering.aesthetic}), authentic human skin micro-texture, visible pores, Hasselblad medium format camera optics. Strict constraints: 100% authentic raw photography of a real human being. No 3D render, no video game asset, no CGI, no digital illustration.`;
     }
 
     const parts: string[] = [];
@@ -1927,7 +1927,7 @@ export class PromptService {
         cs.signature_props ? `accessories: ${cs.signature_props}` : '',
         layoutToken,
         cs.background_style,
-        'character concept reference sheet, consistent character design, even studio lighting, 8k',
+        'editorial studio casting photography composite of a real human being, Hasselblad medium format portraiture, realistic human skin pores, authentic natural textures',
         spec.style_and_rendering.medium,
         spec.style_and_rendering.aesthetic,
         spec.style_and_rendering.color_grading,
@@ -2053,13 +2053,15 @@ export class PromptService {
       const cs = spec.character_sheet;
       const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side profile view, Back view';
       return (
-        `[CHARACTER MODEL SHEET PRODUCTION DIRECTIVE FOR GEMINI / MULTIMODAL LLM]\n` +
-        `Generate a professional ${cs.layout_mode === 'expressions_grid' ? 'facial expression grid sheet' : 'multi-angle character design turnaround model sheet'} for "${cs.character_name}".\n\n` +
+        `[EDITORIAL STUDIO PHOTOGRAPHY REFERENCE - AUTHENTIC HUMAN CASTING COMPOSITE / CHARACTER MODEL SHEET]\n` +
+        `High-end editorial studio portraiture and full-body multi-angle casting composite of an authentic, real living human person: "${cs.character_name}".\n` +
+        `Photographed on medium format Hasselblad H6D-100c camera, 85mm portrait prime lens, natural human skin micro-texture, visible skin pores, natural eye moisture reflections, and authentic fabric texture.\n\n` +
         `CRITICAL REQUIREMENTS FOR CONSISTENCY ANCHOR:\n` +
-        `1. BACKDROP: Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor contact shadow, high-key even studio lighting, zero scene clutter, 100% visual isolation.\n` +
+        `1. BACKDROP: Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor contact shadow, high-key even studio softbox lighting, zero scene clutter, 100% visual isolation.\n` +
         `2. SOMATIC CONTINUITY: Identical facial bone structure, eyes (${cs.eye_details || 'as specified in brief'}), hair (${cs.hair_details || 'as specified in brief'}), skin tone (${cs.ethnicity_and_skin || 'as specified in brief'}), and physique across all angles.\n` +
         `3. ATTIRE & WARDROBE: ${cs.signature_outfit || 'Neutral minimalist athletic basics'}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}.\n` +
-        `4. FRAME LAYOUT: ${views} displayed simultaneously in a single composite frame.\n\n` +
+        `4. FRAME LAYOUT: ${views} captured simultaneously of the same person displayed in a single clean editorial studio contact sheet.\n` +
+        `5. STRICT ANTI-CGI / ANTI-VIDEOGAME DIRECTIVE: 100% authentic raw photography of a real human being. ABSOLUTELY NO 3D render, NO video game graphics, NO Unreal Engine / Unity 3D asset, NO CGI, NO digital painting, NO plastic or airbrushed skin, NO cartoon, NO anime, NO stylized concept art. The subject must look undeniably like an authentic human model photographed in a real studio.\n\n` +
         `[PRODUCTION SPECIFICATION JSON]\n` +
         '```json\n' +
         jsonStr +
@@ -2182,8 +2184,9 @@ export class PromptService {
     if (config.apiKey.trim() || config.provider === 'ollama') {
       try {
         return await this.callLlmExpander(cleanIdea, currentSpec, config);
-      } catch (err) {
-        console.warn('LLM API call failed, falling back to built-in heuristic expander:', err);
+      } catch (err: any) {
+        console.error('LLM API call failed in magicExpandIdea:', err);
+        throw err;
       }
     }
 
@@ -2193,6 +2196,32 @@ export class PromptService {
   private heuristicExpand(idea: string, base: ImagePromptSpec): ImagePromptSpec {
     const next = structuredClone(base);
     const lower = idea.toLowerCase();
+    const isCharacterSheetMode = base.character_sheet.enabled && base.character_sheet.mode !== 'scene_with_character';
+    const isSceneWithCharacter = base.character_sheet.enabled && base.character_sheet.mode === 'scene_with_character';
+
+    if (isCharacterSheetMode) {
+      if (lower.includes('capelli') || lower.includes('hair') || lower.includes('biond') || lower.includes('castan') || lower.includes('mor') || lower.includes('ross')) {
+        next.character_sheet.hair_details = idea;
+      } else if (lower.includes('abito') || lower.includes('vestit') || lower.includes('outfit') || lower.includes('giacca') || lower.includes('pelle')) {
+        next.character_sheet.signature_outfit = idea;
+      } else if (lower.includes('cicatric') || lower.includes('tatuagg') || lower.includes('mark') || lower.includes('scar')) {
+        next.character_sheet.distinctive_marks = (next.character_sheet.distinctive_marks ? `${next.character_sheet.distinctive_marks}, ` : '') + idea;
+      } else if (lower.includes('occhi') || lower.includes('eyes') || lower.includes('sguardo')) {
+        next.character_sheet.eye_details = idea;
+      } else {
+        next.character_sheet.signature_outfit = idea;
+      }
+      return next;
+    }
+
+    if (isSceneWithCharacter) {
+      next.subject.pose_or_action = idea;
+      if (lower.includes('notte') || lower.includes('night')) next.scene.time_of_day = 'Midnight / Deep night';
+      if (lower.includes('tramonto') || lower.includes('sunset') || lower.includes('golden')) next.scene.time_of_day = 'Golden hour sunset';
+      if (lower.includes('pioggia') || lower.includes('rain')) next.scene.atmosphere_weather = 'Heavy rain, wet reflective pavement';
+      next.scene.environment = idea;
+      return next;
+    }
 
     next.meta.title = idea.slice(0, 48);
     next.subject.primary_entity = idea;
@@ -2241,14 +2270,54 @@ export class PromptService {
     base: ImagePromptSpec,
     config: AiAssistantConfig
   ): Promise<ImagePromptSpec> {
-    const systemPrompt = `You are an expert AI Image Director. Convert the user's short idea into a rich, structured JSON object matching the exact keys of this template: ${JSON.stringify(
-      base
-    )}. Return ONLY valid JSON without markdown fences.`;
+    const isCharacterSheetMode = base.character_sheet.enabled && base.character_sheet.mode !== 'scene_with_character';
+    const isSceneWithCharacter = base.character_sheet.enabled && base.character_sheet.mode === 'scene_with_character';
+    const charName = base.character_sheet.character_name?.trim() || '';
+
+    let contextInstruction = '';
+    if (isCharacterSheetMode) {
+      contextInstruction = `CRITICAL DIRECTIVE - YOU ARE EDITING AN EXISTING CHARACTER MODEL SHEET:
+The user is modifying and refining the character "${charName || 'Current Character'}".
+1. DO NOT replace this character with another entity. Preserve character_sheet.character_name as "${charName || 'Character'}".
+2. Update ONLY the biometric/appearance traits that are mentioned or implied by the user's idea ("${idea}"). Keep all other existing traits in character_sheet (skin, eyes, hair, marks, body, outfit) exactly as they are.
+3. Keep character_sheet.enabled = true, character_sheet.mode = 'sheet_generation', and character_sheet.background_style = 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting'.
+4. Keep scene.environment as 'Solid clean white seamless photo studio cyclorama backdrop'.
+5. Update subject.description and subject.primary_entity to match the updated character turnaround.`;
+    } else if (isSceneWithCharacter) {
+      contextInstruction = `CRITICAL DIRECTIVE - YOU ARE COMPOSING A SCENE WITH A LOCKED CHARACTER:
+The character "${charName}" is strictly LOCKED.
+1. DO NOT change the character's biometric DNA in character_sheet (preserve character_name, gender_and_age, ethnicity_and_skin, eye_details, hair_details, distinctive_marks, body_build, image_data_url exactly).
+2. Apply the user's idea ("${idea}") exclusively to:
+   - subject.pose_or_action and subject.expression_or_mood
+   - subject.clothing_or_materials (the outfit worn in this specific scene)
+   - scene (environment, background_details, time_of_day, atmosphere_weather)
+   - camera, lighting, composition, style_and_rendering.`;
+    } else {
+      contextInstruction = `CRITICAL DIRECTIVE - YOU ARE EXPANDING / REFINING AN IMAGE PROMPT:
+Modify and enrich the CURRENT SPECIFICATION according to the user's idea ("${idea}").
+Preserve existing detailed camera, lighting, and style choices unless the user's idea modifies them.`;
+    }
+
+    const systemPrompt = `You are an elite Computer Vision Director and AI Prompt Engineer.
+${contextInstruction}
+
+CURRENT SPECIFICATION (JSON):
+${JSON.stringify(base, null, 2)}
+
+USER IDEA / MODIFICATION REQUEST:
+"${idea}"
+
+TASK:
+Return the full updated ImagePromptSpec JSON object reflecting these changes.
+Return ONLY valid JSON matching the schema. No markdown fences, no conversational text.`;
 
     let rawJson = '';
     if (config.provider === 'gemini') {
-      const model = config.model || 'gemini-3.8-flash';
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
+      let model = config.model?.trim() || 'gemini-3.8-flash';
+      if (model === 'gemini-2.5-flash' || model === 'gemini-1.5-flash' || model === 'gemini-pro') {
+        model = 'gemini-3.8-flash';
+      }
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(
         config.apiKey
       )}`;
       const res = await fetch(url, {
@@ -2259,6 +2328,17 @@ export class PromptService {
           generationConfig: { responseMimeType: 'application/json' },
         }),
       });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        let message = `Errore API Gemini (${res.status})`;
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.error?.message) message = parsed.error.message;
+        } catch {}
+        throw new Error(message);
+      }
+
       const data = await res.json();
       rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     } else if (config.provider === 'openai' || config.provider === 'openrouter') {
@@ -2281,6 +2361,17 @@ export class PromptService {
           ],
         }),
       });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        let message = `Errore API OpenAI (${res.status})`;
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.error?.message) message = parsed.error.message;
+        } catch {}
+        throw new Error(message);
+      }
+
       const data = await res.json();
       rawJson = data?.choices?.[0]?.message?.content || '';
     } else if (config.provider === 'ollama') {
@@ -2295,13 +2386,42 @@ export class PromptService {
           stream: false,
         }),
       });
+
+      if (!res.ok) {
+        throw new Error(`Errore server Ollama (${res.status}): ${await res.text()}`);
+      }
+
       const data = await res.json();
       rawJson = data?.response || '';
     }
 
     const clean = rawJson.replace(/^```(?:json)?\s*|\s*```$/gi, '').trim();
+    if (!clean) {
+      throw new Error('Nessuna risposta JSON valida ricevuta dal modello di intelligenza artificiale.');
+    }
     const parsed = JSON.parse(clean);
-    return { ...structuredClone(base), ...parsed };
+    const result: ImagePromptSpec = { ...structuredClone(base), ...parsed };
+
+    if (isSceneWithCharacter) {
+      result.character_sheet = structuredClone(base.character_sheet);
+      result.character_sheet.mode = 'scene_with_character';
+      result.character_sheet.enabled = true;
+    } else if (isCharacterSheetMode) {
+      result.character_sheet = {
+        ...structuredClone(base.character_sheet),
+        ...(parsed.character_sheet || {}),
+        mode: 'sheet_generation',
+        enabled: true,
+      };
+      if (base.character_sheet.character_name) {
+        result.character_sheet.character_name = base.character_sheet.character_name;
+      }
+      if (base.character_sheet.image_data_url) {
+        result.character_sheet.image_data_url = base.character_sheet.image_data_url;
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -2776,141 +2896,174 @@ Instructions:
   private loadImageGenConfig(): ImageGenConfig {
     try {
       const raw = localStorage.getItem(IMAGE_GEN_CONFIG_STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.model === 'imagen-3.0-generate-002' || !parsed.model) {
+          parsed.model = 'gemini-2.5-flash-image';
+        }
+        return parsed;
+      }
     } catch {}
     return {
       provider: 'gemini_imagen',
-      model: 'imagen-3.0-generate-002',
+      model: 'gemini-2.5-flash-image',
       apiKey: '',
       endpointUrl: 'http://127.0.0.1:7860/sdapi/v1/txt2img',
     };
   }
 
-  getImageGenerationPrompt(spec: ImagePromptSpec): string {
-    if (
-      spec.character_sheet?.enabled &&
-      spec.character_sheet.character_name.trim() &&
-      spec.character_sheet.mode === 'sheet_generation'
-    ) {
-      const cs = spec.character_sheet;
-      const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side view, Back view';
-      return (
-        `Character design turnaround model sheet of ${cs.character_name}, ${cs.gender_and_age}, ` +
-        `${cs.ethnicity_and_skin}, eye details: ${cs.eye_details || 'as shown'}, hair details: ${cs.hair_details || 'as shown'}, ` +
-        `${cs.distinctive_marks || ''}, body build: ${cs.body_build || 'athletic'}. ` +
-        `Wearing signature attire: ${cs.signature_outfit || 'Neutral minimalist athletic basics'}. ` +
-        `Displaying simultaneous multi-angle views in a single frame: ${views}. ` +
-        `Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even studio lighting, 8k resolution, photorealistic character concept sheet.`
-      );
+  getImageGenerationPrompt(spec: ImagePromptSpec, provider?: ImageGenProvider): string {
+    const prov = provider || this.imageGenConfig().provider;
+
+    if (prov === 'gemini_imagen') {
+      return this.compileForGpt4oAndGemini(spec);
     }
 
-    if (
-      spec.character_sheet?.enabled &&
-      spec.character_sheet.character_name.trim() &&
-      spec.character_sheet.mode === 'scene_with_character'
-    ) {
-      const cs = spec.character_sheet;
-      const attire = spec.subject.clothing_or_materials.trim() || cs.signature_outfit;
-      const parts: string[] = [
-        `${spec.style_and_rendering.medium || 'Photorealistic photography'} of ${cs.character_name}, a ${cs.gender_and_age} with ${cs.ethnicity_and_skin}, eyes: ${cs.eye_details}, hair: ${cs.hair_details}, ${cs.distinctive_marks || ''}, build: ${cs.body_build}.`,
-        `Wearing ${attire}.`,
-      ];
-      if (spec.subject.pose_or_action) parts.push(`Action and pose: ${spec.subject.pose_or_action}.`);
-      if (spec.subject.expression_or_mood) parts.push(`Expression: ${spec.subject.expression_or_mood}.`);
-      if (spec.scene.environment) parts.push(`Setting and location: ${spec.scene.environment}.`);
-      if (spec.scene.time_of_day) parts.push(`Time of day: ${spec.scene.time_of_day}.`);
-      if (spec.scene.atmosphere_weather) parts.push(`Atmosphere: ${spec.scene.atmosphere_weather}.`);
-      if (spec.camera.shot_type) parts.push(`Framing: ${spec.camera.shot_type}, ${spec.camera.angle || 'eye-level'}.`);
-      if (spec.camera.lens_focal_length) parts.push(`Lens: ${spec.camera.lens_focal_length}.`);
-      if (spec.lighting.key_light) parts.push(`Lighting: ${spec.lighting.key_light}, ${spec.lighting.color_temperature || ''}.`);
-      if (spec.style_and_rendering.aesthetic) parts.push(`Style: ${spec.style_and_rendering.aesthetic}.`);
-      parts.push('masterpiece, 8k, sharp focus, ultra-detailed.');
-      return parts.join(' ');
+    if (prov === 'openai_dalle') {
+      return this.compileForFlux(spec);
     }
 
-    // Free scene
-    const parts: string[] = [
-      `${spec.style_and_rendering.medium || 'Photograph'} of ${spec.subject.primary_entity || 'a cinematic scene'}.`,
-    ];
-    if (spec.subject.description) parts.push(spec.subject.description + '.');
-    if (spec.subject.clothing_or_materials) parts.push(`Wearing ${spec.subject.clothing_or_materials}.`);
-    if (spec.subject.pose_or_action) parts.push(`Action: ${spec.subject.pose_or_action}.`);
-    if (spec.subject.expression_or_mood) parts.push(`Expression: ${spec.subject.expression_or_mood}.`);
-    if (spec.scene.environment) parts.push(`Environment: ${spec.scene.environment}.`);
-    if (spec.scene.time_of_day) parts.push(`Time: ${spec.scene.time_of_day}.`);
-    if (spec.scene.atmosphere_weather) parts.push(`Weather: ${spec.scene.atmosphere_weather}.`);
-    if (spec.camera.shot_type) parts.push(`Shot: ${spec.camera.shot_type}, ${spec.camera.angle || ''}.`);
-    if (spec.lighting.key_light) parts.push(`Lighting: ${spec.lighting.key_light}.`);
-    if (spec.style_and_rendering.aesthetic) parts.push(`Aesthetic: ${spec.style_and_rendering.aesthetic}.`);
-    parts.push('8k, photorealistic, cinematic masterpiece.');
-    return parts.join(' ');
+    if (prov === 'comfyui' || prov === 'custom') {
+      return this.compileForSdxl(spec).positive;
+    }
+
+    return this.compileForGpt4oAndGemini(spec);
   }
 
   async generateImage(spec: ImagePromptSpec, customConfig?: ImageGenConfig): Promise<GeneratedImageResult> {
     const config = customConfig || this.imageGenConfig();
-    const prompt = this.getImageGenerationPrompt(spec);
+    const prompt = this.getImageGenerationPrompt(spec, config.provider);
     const aspect = spec.technical_parameters.aspect_ratio || '16:9';
     const startTime = Date.now();
+    const isSceneWithCharacter = spec.character_sheet?.enabled && spec.character_sheet?.mode === 'scene_with_character';
 
     if (config.provider === 'gemini_imagen') {
       const apiKey = config.apiKey || this.aiConfig().apiKey;
       if (!apiKey) {
-        throw new Error('API Key mancante per Google Imagen. Inseriscila nelle impostazioni (icona ⚙).');
+        throw new Error('API Key mancante per Google Gemini / Imagen. Inseriscila nelle impostazioni (icona ⚙).');
       }
 
-      const model = config.model.trim() || 'imagen-3.0-generate-002';
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:predict?key=${encodeURIComponent(apiKey)}`;
-
-      // Map aspect ratio for Imagen 3: valid values are "1:1", "3:4", "4:3", "9:16", "16:9"
-      let imagenAspect = '16:9';
-      if (aspect === '1:1') imagenAspect = '1:1';
-      else if (aspect === '9:16' || aspect === '2:3') imagenAspect = '9:16';
-      else if (aspect === '4:3') imagenAspect = '4:3';
-      else if (aspect === '3:4' || aspect === '4:5') imagenAspect = '3:4';
-      else imagenAspect = '16:9';
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          instances: [{ prompt }],
-          parameters: {
-            sampleCount: 1,
-            aspectRatio: imagenAspect,
-            personGeneration: 'ALLOW_ADULT',
-            outputMimeType: 'image/jpeg',
-          },
-        }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        let message = `Errore generazione Imagen 3 (${res.status})`;
-        try {
-          const parsed = JSON.parse(errText);
-          if (parsed.error?.message) message = parsed.error.message;
-        } catch {}
-        throw new Error(message);
+      let model = config.model?.trim() || 'gemini-2.5-flash-image';
+      if (model === 'imagen-3.0-generate-002') {
+        model = 'gemini-2.5-flash-image';
       }
 
-      const data = await res.json();
-      const prediction = data?.predictions?.[0];
-      if (!prediction?.bytesBase64Encoded) {
-        throw new Error('Nessuna immagine restituita dal modello Imagen 3.');
+      // Check whether to use generateContent (standard for gemini multimodal models) or predict (for legacy vertex/imagen models)
+      const isGenerateContent = model.startsWith('gemini') || !model.startsWith('imagen');
+
+      if (isGenerateContent) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+        const parts: any[] = [];
+        // Only attach reference sheet image when composing a SCENE with a locked character!
+        // In sheet generation mode (Character Studio), we generate the character from scratch and must NOT attach an old turnaround image.
+        if (isSceneWithCharacter && spec.character_sheet?.image_data_url) {
+          const match = spec.character_sheet.image_data_url.match(/^data:(image\/[a-zA-Z0-9.+_-]+);base64,(.+)$/);
+          if (match) {
+            parts.push({
+              inlineData: {
+                mimeType: match[1],
+                data: match[2],
+              },
+            });
+          }
+        }
+
+        parts.push({ text: prompt });
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts }],
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          let message = `Errore generazione Gemini Image (${res.status})`;
+          try {
+            const parsed = JSON.parse(errText);
+            if (parsed.error?.message) message = parsed.error.message;
+          } catch {}
+          throw new Error(message);
+        }
+
+        const data = await res.json();
+        const candidateParts: any[] = data?.candidates?.[0]?.content?.parts || [];
+        const imagePart = candidateParts.find((p: any) => p.inlineData && p.inlineData.data);
+
+        if (!imagePart) {
+          const textPart = candidateParts.find((p: any) => p.text)?.text;
+          throw new Error(textPart ? `Il modello ha risposto: "${textPart}" ma non ha generato un'immagine.` : 'Nessuna immagine restituita dal modello Gemini.');
+        }
+
+        const mime = imagePart.inlineData.mimeType || 'image/png';
+        const dataUrl = `data:${mime};base64,${imagePart.inlineData.data}`;
+
+        return {
+          dataUrl,
+          mimeType: mime,
+          model,
+          prompt,
+          aspectRatio: aspect,
+          timeMs: Date.now() - startTime,
+          timestamp: Date.now(),
+        };
+      } else {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:predict?key=${encodeURIComponent(apiKey)}`;
+
+        // Map aspect ratio for Imagen: valid values are "1:1", "3:4", "4:3", "9:16", "16:9"
+        let imagenAspect = '16:9';
+        if (aspect === '1:1') imagenAspect = '1:1';
+        else if (aspect === '9:16' || aspect === '2:3') imagenAspect = '9:16';
+        else if (aspect === '4:3') imagenAspect = '4:3';
+        else if (aspect === '3:4' || aspect === '4:5') imagenAspect = '3:4';
+        else imagenAspect = '16:9';
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instances: [{ prompt }],
+            parameters: {
+              sampleCount: 1,
+              aspectRatio: imagenAspect,
+              personGeneration: 'ALLOW_ADULT',
+              outputMimeType: 'image/jpeg',
+            },
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          let message = `Errore generazione Imagen (${res.status})`;
+          try {
+            const parsed = JSON.parse(errText);
+            if (parsed.error?.message) message = parsed.error.message;
+          } catch {}
+          throw new Error(message);
+        }
+
+        const data = await res.json();
+        const prediction = data?.predictions?.[0];
+        if (!prediction?.bytesBase64Encoded) {
+          throw new Error('Nessuna immagine restituita dal modello Imagen.');
+        }
+
+        const mime = prediction.mimeType || 'image/jpeg';
+        const dataUrl = `data:${mime};base64,${prediction.bytesBase64Encoded}`;
+
+        return {
+          dataUrl,
+          mimeType: mime,
+          model,
+          prompt,
+          aspectRatio: imagenAspect,
+          timeMs: Date.now() - startTime,
+          timestamp: Date.now(),
+        };
       }
-
-      const mime = prediction.mimeType || 'image/jpeg';
-      const dataUrl = `data:${mime};base64,${prediction.bytesBase64Encoded}`;
-
-      return {
-        dataUrl,
-        mimeType: mime,
-        model,
-        prompt,
-        aspectRatio: imagenAspect,
-        timeMs: Date.now() - startTime,
-        timestamp: Date.now(),
-      };
     } else if (config.provider === 'openai_dalle') {
       const apiKey = config.apiKey;
       if (!apiKey) {
@@ -2982,7 +3135,7 @@ Instructions:
           steps: 25,
           width,
           height,
-          ...(spec.character_sheet?.image_data_url ? { reference_image: spec.character_sheet.image_data_url, init_images: [spec.character_sheet.image_data_url] } : {}),
+          ...(isSceneWithCharacter && spec.character_sheet?.image_data_url ? { reference_image: spec.character_sheet.image_data_url, init_images: [spec.character_sheet.image_data_url] } : {}),
         }),
       });
 

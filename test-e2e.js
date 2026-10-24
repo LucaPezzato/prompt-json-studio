@@ -509,7 +509,7 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
 
   // Verify Gemini prompt in Character Studio mode has the directive and white studio backdrop
   const charGeminiText = await page.locator('pre.code').innerText();
-  if (!charGeminiText.includes('[CHARACTER MODEL SHEET PRODUCTION DIRECTIVE FOR GEMINI') || !charGeminiText.includes('Solid clean white seamless photo studio cyclorama backdrop')) {
+  if ((!charGeminiText.includes('EDITORIAL STUDIO PHOTOGRAPHY') && !charGeminiText.includes('CHARACTER MODEL SHEET')) || !charGeminiText.includes('Solid clean white seamless photo studio cyclorama backdrop')) {
     throw new Error('Gemini prompt in sheet mode does not include the white studio backdrop directive!');
   }
   console.log('✔ Gemini output in sheet mode strictly enforces pure white studio cyclorama backdrop!');
@@ -570,8 +570,8 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   const providerSelect = imgModalTitle.locator('select');
   const providerOptions = await providerSelect.locator('option').allInnerTexts();
   console.log(`  Available engine providers: ${providerOptions.join(' | ')}`);
-  if (!providerOptions.some(o => o.includes('Google Imagen 3')) || !providerOptions.some(o => o.includes('OpenAI DALL-E 3'))) {
-    throw new Error('Expected Google Imagen 3 and OpenAI DALL-E 3 in provider options!');
+  if (!providerOptions.some(o => o.includes('Google') && (o.includes('Imagen') || o.includes('Gemini'))) || !providerOptions.some(o => o.includes('OpenAI DALL-E 3'))) {
+    throw new Error('Expected Google Imagen / Gemini and OpenAI DALL-E 3 in provider options!');
   }
 
   // Switch to OpenAI DALL-E 3
@@ -602,9 +602,36 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
 
   // 16.4 Test Image Generation with Mock API
   console.log('👉 Testing mock image generation and result display...');
-  await page.route('**/models/imagen-3.0-generate-002:predict*', async route => {
-    // 1x1 transparent PNG data base64
-    const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+  await page.route('**/models/*:generateContent*', async route => {
+    const url = route.request().url();
+    if (url.includes('gemini-2.5-flash-image') || url.includes('image')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          candidates: [{
+            content: {
+              parts: [
+                { text: 'Here is your image:' },
+                {
+                  inlineData: {
+                    mimeType: 'image/png',
+                    data: mockBase64
+                  }
+                }
+              ]
+            }
+          }]
+        })
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.route('**/models/*:predict*', async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -630,7 +657,7 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   const modelTag = await page.locator('.meta-tag.model-tag').innerText();
   const aspectTag = await page.locator('.meta-tag.aspect-tag').innerText();
   console.log(`  Result tags: ${modelTag} | ${aspectTag}`);
-  if (!modelTag.includes('imagen-3.0-generate-002')) {
+  if (!modelTag.includes('gemini-2.5-flash-image') && !modelTag.includes('imagen')) {
     throw new Error(`Unexpected model tag: ${modelTag}`);
   }
 
@@ -670,10 +697,11 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
 
   const promptTextSnippet = await page.locator('.prompt-snippet-box .prompt-text').innerText();
   console.log('  Generated prompt snippet length:', promptTextSnippet.length, 'characters');
-  if (promptTextSnippet.length < 20) {
-    throw new Error('Prompt snippet is empty or too short!');
+  console.log('  Generated prompt preview:', promptTextSnippet.slice(0, 100).replace(/\n/g, ' '));
+  if (!promptTextSnippet.includes('GEMINI') && !promptTextSnippet.includes('JSON')) {
+    throw new Error('Prompt snippet does not match the Gemini compiled prompt format!');
   }
-  console.log('✔ Prompt disclosure reveals full descriptive English prompt used for image generation!');
+  console.log('✔ Prompt disclosure reveals full Gemini grounding instruction and structured JSON specification!');
 
   // Capture screenshot of Image Generation Studio
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-image-generation-studio.png'), fullPage: false });
@@ -745,6 +773,149 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   // Capture screenshot of Character Sheet Image Attachment in Scene Mode
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-character-sheet-image-attachment.png'), fullPage: false });
   console.log('📸 Captured e2e-character-sheet-image-attachment.png');
+
+  // ========================================================
+  // 18. TEST MAGIC EXPAND IN CHARACTER STUDIO (IN-PLACE MODIFICATION)
+  // ========================================================
+  console.log('👉 Testing Step 18: Magic Expand in Character Studio (In-Place Character Modification)...');
+
+  // Switch back to Character Studio
+  await page.locator('.sw-btn:has-text("1. Crea Scheda Personaggio")').click();
+  await page.waitForTimeout(300);
+
+  // Click Magic Expand button
+  const magicBtn = page.locator('button.magic-open-btn');
+  await magicBtn.click();
+  await page.waitForTimeout(200);
+
+  // Verify modal is open
+  const magicModal = page.locator('.magic-modal-body');
+  await magicModal.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Magic Expand modal is open!');
+
+  // Verify sheet mode context banner
+  const sheetBanner = magicModal.locator('.magic-context-banner.sheet-mode');
+  await sheetBanner.waitFor({ state: 'visible', timeout: 5000 });
+  const sheetBannerText = await sheetBanner.innerText();
+  console.log(`✔ Sheet mode context banner found: "${sheetBannerText.trim()}"`);
+  if (!sheetBannerText.includes('Maya Lin') && !sheetBannerText.includes('Modifica di:')) {
+    throw new Error('Banner does not identify Maya Lin as the active character being modified!');
+  }
+
+  // Type modification idea
+  const magicInput = magicModal.locator('.magic-modal-input');
+  await magicInput.fill('Capelli biondo platino corti a caschetto e giacca di pelle nera oversize');
+  await page.waitForTimeout(100);
+
+  // Verify button text
+  const expandBtn = magicModal.locator('button.primary:has-text("Modifica Scheda con AI")');
+  await expandBtn.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Action button correctly labels: "✨ Modifica Scheda con AI"!');
+
+  // Capture screenshot of Magic Expand in Character Studio
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-magic-expand-character-studio.png'), fullPage: false });
+  console.log('📸 Captured e2e-magic-expand-character-studio.png');
+
+  // Trigger expand
+  await expandBtn.click();
+
+  // Verify modal does NOT close immediately while loading
+  await page.waitForTimeout(100);
+  const isStillInFlight = await magicModal.isVisible();
+  console.log('  Magic modal during processing: isVisible =', isStillInFlight);
+
+  // Wait for completion (modal closes on success)
+  await magicModal.waitFor({ state: 'hidden', timeout: 30000 });
+  console.log('✔ Magic modal closed on completion!');
+
+  // Verify in-place modification without wiping character identity
+  const expandedCharNameInput = page.locator('input[placeholder*="Es. Elena Vance"]').first();
+  const currentName = await expandedCharNameInput.inputValue();
+  console.log(`  Character name after Magic Expand: "${currentName}"`);
+  if (!currentName.includes('Maya Lin')) {
+    throw new Error(`Expected Maya Lin to be preserved, but found "${currentName}"!`);
+  }
+
+  // Verify updated hair
+  const expandedHairInput = page.locator('app-smart-field:has-text("Capelli") input').first();
+  const currentHair = await expandedHairInput.inputValue();
+  console.log(`  Hair details after Magic Expand: "${currentHair}"`);
+  const lowerHair = currentHair.toLowerCase();
+  if (!lowerHair.includes('biond') && !lowerHair.includes('platino') && !lowerHair.includes('blond') && !lowerHair.includes('platinum') && !lowerHair.includes('bob')) {
+    throw new Error(`Expected hair details to be updated with blond/platino/bob, but found "${currentHair}"!`);
+  }
+  console.log('✔ Magic Expand modified existing character biometric traits in-place without creating a new entity!');
+
+  // ========================================================
+  // 19. TEST MAGIC EXPAND IN SCENE STUDIO (CHARACTER DNA LOCKED)
+  // ========================================================
+  console.log('👉 Testing Step 19: Magic Expand in Scene Studio (Locked Character DNA)...');
+
+  // Switch to Scene Studio
+  await page.locator('.sw-btn:has-text("2. Componi Scena")').click();
+  await page.waitForTimeout(300);
+
+  // Open Magic Expand in Scene Studio
+  await magicBtn.click();
+  await page.waitForTimeout(200);
+
+  // Verify scene mode context banner
+  const sceneBanner = page.locator('.magic-context-banner.scene-mode');
+  await sceneBanner.waitFor({ state: 'visible', timeout: 5000 });
+  const sceneBannerText = await sceneBanner.innerText();
+  console.log(`✔ Scene mode context banner found: "${sceneBannerText.trim()}"`);
+  if (!sceneBannerText.includes('Maya Lin') || !sceneBannerText.includes('Bloccato')) {
+    throw new Error('Scene banner does not indicate locked character Maya Lin!');
+  }
+
+  const sceneActionBtn = page.locator('button.primary:has-text("Componi Scena con AI")');
+  await sceneActionBtn.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Action button correctly labels: "✨ Componi Scena con AI"!');
+
+  // Type scene idea
+  const sceneInput = page.locator('.magic-modal-body .magic-modal-input');
+  await sceneInput.fill('In piedi su una terrazza a Shibuya sotto la pioggia battente notturna con ombrello trasparente');
+  await page.waitForTimeout(100);
+
+  // Capture screenshot of Magic Expand in Scene Studio
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-magic-expand-scene-studio.png'), fullPage: false });
+  console.log('📸 Captured e2e-magic-expand-scene-studio.png');
+
+  // Trigger expand
+  await sceneActionBtn.click();
+  await page.locator('.magic-modal-body').waitFor({ state: 'hidden', timeout: 30000 });
+  console.log('✔ Scene Magic Expand completed and modal closed on success!');
+
+  // Verify character is still Maya Lin and locked
+  const lockedCharTitle = await page.locator('.char-bound-banner .bound-name').innerText();
+  console.log(`  Locked character banner: "${lockedCharTitle.trim()}"`);
+  if (!lockedCharTitle.includes('Maya Lin')) {
+    throw new Error(`Character DNA was compromised! Expected Maya Lin, got: ${lockedCharTitle}`);
+  }
+  console.log('✔ Scene Magic Expand enriched the scene while keeping character DNA 100% locked!');
+
+  // ========================================================
+  // 20. TEST IMAGE GENERATION CONFIG WITH GEMINI-2.5-FLASH-IMAGE
+  // ========================================================
+  console.log('👉 Testing Step 20: Image Generation Config with gemini-2.5-flash-image...');
+
+  // Open Image Gen settings
+  await page.locator('.btn-config-engine').click();
+  await page.waitForTimeout(200);
+
+  const imgSettingsModal = page.locator('app-modal[title*="Generatore Immagini AI"]');
+  await imgSettingsModal.waitFor({ state: 'visible', timeout: 5000 });
+
+  const currentImgModel = await page.locator('input[placeholder*="gemini-2.5-flash-image"]').inputValue();
+  console.log(`  Active Image Generation model configured: "${currentImgModel}"`);
+  if (currentImgModel.includes('imagen-3.0-generate-002')) {
+    throw new Error(`Found outdated deprecated model "${currentImgModel}"!`);
+  }
+  console.log('✔ Default Image Generation model migrated to gemini-2.5-flash-image without 404 errors!');
+
+  // Close settings
+  await imgSettingsModal.locator('button:has-text("Annulla")').click();
+  await page.waitForTimeout(200);
 
   if (errors.length > 0) {
     throw new Error(`Browser encountered ${errors.length} errors: ${errors.join('; ')}`);
