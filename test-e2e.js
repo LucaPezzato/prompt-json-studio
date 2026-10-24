@@ -679,10 +679,77 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-image-generation-studio.png'), fullPage: false });
   console.log('📸 Captured e2e-image-generation-studio.png');
 
+  // ========================================================
+  // 17. TEST CHARACTER SHEET IMAGE PERSISTENCE & ATTACHMENT
+  // ========================================================
+  console.log('👉 Testing Step 17: Character Sheet Image Persistence and Attachment in Scene Generations...');
+
+  // 17.1 Switch to Character Studio Mode
+  const charStudioModeBtn = page.locator('.sw-btn:has-text("1. Crea Scheda Personaggio")');
+  await charStudioModeBtn.click();
+  await page.waitForTimeout(300);
+
+  // Verify visual sheet image box in character studio
+  const charSheetImgBox = page.locator('.char-sheet-image-box');
+  await charSheetImgBox.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Visual Sheet Image box displayed in Character Studio!');
+
+  // Generate character sheet turnaround image
+  console.log('  Generating character sheet turnaround image in sidebar...');
+  await page.locator('.mode-btn:has-text("Immagine")').click();
+  await page.waitForTimeout(200);
+
+  const genSheetBtn = page.locator('.btn-generate-hero');
+  await genSheetBtn.click();
+  await page.waitForTimeout(500);
+
+  // Wait for result and auto-association
+  await page.locator('.image-result-card').waitFor({ state: 'visible', timeout: 8000 });
+  const sheetThumbInEditor = page.locator('.char-sheet-image-box .cs-img-thumb');
+  await sheetThumbInEditor.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Generated turnaround image was automatically saved and attached to the character sheet!');
+
+  // Verify character pill avatar
+  const charAvatar = page.locator('.char-pill.active .char-pill-avatar');
+  await charAvatar.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Character library pill displays the circular portrait avatar!');
+
+  // 17.2 Switch to Scene Studio Mode
+  console.log('  Switching to Scene Studio mode to verify sheet image attachment...');
+  const sceneStudioModeBtn = page.locator('.sw-btn:has-text("2. Componi Scena")');
+  await sceneStudioModeBtn.click();
+  await page.waitForTimeout(300);
+
+  // Verify bound character banner displays the attached sheet image
+  const boundSheetThumb = page.locator('.char-bound-banner .bound-sheet-thumb');
+  await boundSheetThumb.waitFor({ state: 'visible', timeout: 5000 });
+  const boundSheetTag = await page.locator('.char-bound-banner .bound-sheet-tag').innerText();
+  console.log(`✔ Locked Character Banner displays attached sheet image (${boundSheetTag.trim()})!`);
+
+  // Verify attached sheet strip in the right output sidebar
+  const outputAttachedStrip = page.locator('.attached-sheet-strip');
+  await outputAttachedStrip.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Output panel sidebar displays docked attached sheet strip!');
+
+  // 17.3 Switch to Prompt view to inspect Gemini alert
+  await page.locator('.mode-btn:has-text("Prompt & Codice")').click();
+  await page.waitForTimeout(200);
+  await page.locator('button.tab:has-text("Gemini")').click();
+  await page.waitForTimeout(200);
+
+  const geminiSheetAlert = page.locator('.gemini-sheet-alert');
+  await geminiSheetAlert.waitFor({ state: 'visible', timeout: 5000 });
+  const alertTitle = await geminiSheetAlert.locator('.alert-title').innerText();
+  console.log(`✔ Gemini prompt view displays grounding image alert: "${alertTitle.trim()}" with 1-click copy button!`);
+
+  // Capture screenshot of Character Sheet Image Attachment in Scene Mode
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-character-sheet-image-attachment.png'), fullPage: false });
+  console.log('📸 Captured e2e-character-sheet-image-attachment.png');
+
   if (errors.length > 0) {
     throw new Error(`Browser encountered ${errors.length} errors: ${errors.join('; ')}`);
   }
 
-  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS (INCLUDING DUAL-MODE WORKFLOW) PASSED PERFECTLY!');
+  console.log('🎉 ALL PLAYWRIGHT VERIFICATION CHECKS (INCLUDING CHARACTER SHEET IMAGE ATTACHMENT) PASSED PERFECTLY!');
   await browser.close();
 })();

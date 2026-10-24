@@ -75,6 +75,42 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
       </button>
     </div>
 
+    <!-- Attached Character Sheet Strip (Visible when in Scene Mode with an attached sheet) -->
+    @if (isSceneWithCharacter() && characterSheetImage()) {
+      <div class="attached-sheet-strip">
+        <div
+          class="sheet-strip-thumb-wrap"
+          (click)="openSheetLightbox.emit()"
+          title="Clicca per ingrandire la scheda del personaggio allegata"
+        >
+          <img [src]="characterSheetImage()!" alt="Scheda {{ characterName() }}" class="sheet-strip-thumb" />
+          <span class="sheet-strip-badge">📎 Scheda</span>
+        </div>
+        <div class="sheet-strip-info">
+          <span class="sheet-strip-title">Scheda di Riferimento Allegata</span>
+          <strong class="sheet-strip-name">{{ characterName() || 'Personaggio' }}</strong>
+        </div>
+        <div class="sheet-strip-actions">
+          <button
+            type="button"
+            class="btn-sheet-strip-action"
+            (click)="copySheetImage.emit()"
+            title="Copia l'immagine della scheda negli appunti per incollarla in Gemini o ChatGPT"
+          >
+            📋 Copia
+          </button>
+          <button
+            type="button"
+            class="btn-sheet-strip-action"
+            (click)="openSheetLightbox.emit()"
+            title="Ingrandisci scheda a schermo intero"
+          >
+            🔍
+          </button>
+        </div>
+      </div>
+    }
+
     <!-- VIEW MODE: IMAGE WORKSPACE -->
     @if (viewMode() === 'image') {
       <div class="image-workspace">
@@ -149,6 +185,19 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
               </button>
             </div>
 
+            @if (isSheetMode()) {
+              <div class="sheet-save-prompt-bar">
+                <button
+                  type="button"
+                  class="btn-save-as-sheet"
+                  (click)="saveAsCharacterSheetImage.emit(generatedImage()!.dataUrl)"
+                  title="Salva questa immagine generata come scheda ufficiale associata al personaggio"
+                >
+                  📌 Salva come Immagine Scheda di {{ characterName() || 'questo Personaggio' }}
+                </button>
+              </div>
+            }
+
             <div class="img-prompt-disclosure">
               <button
                 type="button"
@@ -190,6 +239,26 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
       </div>
     } @else {
       <!-- VIEW MODE: PROMPT & CODE INSPECTION -->
+      @if (tab() === 'gpt' && isSceneWithCharacter() && characterSheetImage()) {
+        <div class="gemini-sheet-alert">
+          <div class="alert-top">
+            <span class="alert-icon">📎</span>
+            <strong class="alert-title">Scheda Visiva di "{{ characterName() }}" pronta da allegare</strong>
+          </div>
+          <p class="alert-desc">
+            Questo prompt contiene le istruzioni di grounding visivo per Gemini. Copia l'immagine della scheda e incollala nella chat con Gemini assieme al prompt:
+          </p>
+          <div class="alert-actions">
+            <button type="button" class="btn-copy-sheet-alert" (click)="copySheetImage.emit()">
+              📋 Copia Immagine Scheda
+            </button>
+            <button type="button" class="btn-view-sheet-alert" (click)="openSheetLightbox.emit()">
+              🔍 Visualizza Scheda
+            </button>
+          </div>
+        </div>
+      }
+
       <div class="tabs" role="tablist">
         <button
           type="button"
@@ -271,6 +340,12 @@ export class OutputPanel {
   readonly generatedImage = input<GeneratedImageResult | null>(null);
   readonly imageGenConfig = input<ImageGenConfig | null>(null);
 
+  // Character Sheet Attachment inputs
+  readonly characterSheetImage = input<string | null>(null);
+  readonly characterName = input<string>('');
+  readonly isSceneWithCharacter = input<boolean>(false);
+  readonly isSheetMode = input<boolean>(false);
+
   // Outputs
   readonly setDefault = output<OutputTab>();
   readonly copy = output<string>();
@@ -279,6 +354,11 @@ export class OutputPanel {
   readonly openLightbox = output<void>();
   readonly download = output<void>();
   readonly copyImage = output<void>();
+
+  // Character Sheet Attachment outputs
+  readonly openSheetLightbox = output<void>();
+  readonly copySheetImage = output<void>();
+  readonly saveAsCharacterSheetImage = output<string>();
 
   // Internal state
   readonly viewMode = signal<'image' | 'prompt'>('image');

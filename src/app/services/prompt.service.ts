@@ -1451,31 +1451,37 @@ export class PromptService {
     this.userPresets.update((list) => list.filter((p) => p.id !== id));
   }
 
-  saveCharacter(name: string, sheet: CharacterSheetBlock): SavedCharacter {
+  saveCharacter(name: string, sheet: CharacterSheetBlock, imageDataUrl?: string): SavedCharacter {
     const summary = `${sheet.gender_and_age} · ${sheet.hair_details.split(',')[0]} · ${sheet.signature_outfit.split(',')[0]}`;
+    const img = imageDataUrl || sheet.image_data_url || '';
+    const charSheet = structuredClone({ ...sheet, character_name: name.trim() || sheet.character_name, image_data_url: img });
     const char: SavedCharacter = {
       id: 'char-' + Date.now(),
       name: name.trim() || sheet.character_name || 'Nuovo Personaggio',
       summary,
-      sheet: structuredClone({ ...sheet, character_name: name.trim() || sheet.character_name }),
+      sheet: charSheet,
+      imageDataUrl: img,
       createdAt: Date.now(),
     };
     this.savedCharacters.update((list) => [char, ...list.filter((c) => c.name !== char.name)]);
     return char;
   }
 
-  updateCharacter(id: string, sheet: CharacterSheetBlock, newName?: string): SavedCharacter | null {
+  updateCharacter(id: string, sheet: CharacterSheetBlock, newName?: string, imageDataUrl?: string): SavedCharacter | null {
     let updatedChar: SavedCharacter | null = null;
     const name = (newName || sheet.character_name).trim() || 'Personaggio';
     const summary = `${sheet.gender_and_age} · ${sheet.hair_details.split(',')[0]} · ${sheet.signature_outfit.split(',')[0]}`;
     this.savedCharacters.update((list) =>
       list.map((c) => {
         if (c.id === id) {
+          const img = imageDataUrl !== undefined ? imageDataUrl : (sheet.image_data_url || c.imageDataUrl || '');
+          const charSheet = structuredClone({ ...sheet, character_name: name, image_data_url: img });
           updatedChar = {
             ...c,
             name,
             summary,
-            sheet: structuredClone({ ...sheet, character_name: name }),
+            sheet: charSheet,
+            imageDataUrl: img,
           };
           return updatedChar;
         }
@@ -2976,6 +2982,7 @@ Instructions:
           steps: 25,
           width,
           height,
+          ...(spec.character_sheet?.image_data_url ? { reference_image: spec.character_sheet.image_data_url, init_images: [spec.character_sheet.image_data_url] } : {}),
         }),
       });
 

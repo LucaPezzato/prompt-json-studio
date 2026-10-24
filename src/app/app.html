@@ -264,8 +264,15 @@
                 [class.active]="spec().character_sheet.character_name === char.name"
                 (click)="loadSavedCharacter(char)"
               >
-                <span class="char-pill-name">👤 {{ char.name }}</span>
-                <span class="char-pill-sub">{{ char.summary }}</span>
+                @if (char.imageDataUrl || char.sheet.image_data_url) {
+                  <img [src]="char.imageDataUrl || char.sheet.image_data_url" alt="" class="char-pill-avatar" />
+                } @else {
+                  <span class="char-pill-icon">👤</span>
+                }
+                <div class="char-pill-body">
+                  <span class="char-pill-name">{{ char.name }}</span>
+                  <span class="char-pill-sub">{{ char.summary }}</span>
+                </div>
                 <button
                   type="button"
                   class="char-pill-edit"
@@ -435,6 +442,56 @@
         </div>
 
         @if (spec().character_sheet.mode !== 'scene_with_character') {
+          <!-- Visual Sheet Image Card (Current or Uploaded / Generated) -->
+          <div class="char-sheet-image-box span-2">
+            <div class="char-sheet-image-header">
+              <span class="cs-img-title">🖼️ Immagine Scheda / Modello Associata</span>
+              <span class="cs-img-badge" [class.has-img]="!!spec().character_sheet.image_data_url">
+                {{ spec().character_sheet.image_data_url ? '● Immagine Salvata' : '○ Nessuna Immagine' }}
+              </span>
+            </div>
+            @if (spec().character_sheet.image_data_url) {
+              <div class="cs-img-preview-card">
+                <div class="cs-img-thumb-container" (click)="openBoundSheetLightbox()" title="Clicca per ingrandire">
+                  <img [src]="spec().character_sheet.image_data_url" alt="Scheda modello del personaggio" class="cs-img-thumb" />
+                  <div class="cs-img-hover-overlay">🔍 Ingrandisci</div>
+                </div>
+                <div class="cs-img-details">
+                  <p class="cs-img-desc">
+                    Questa immagine è salvata insieme alla scheda di <b>{{ spec().character_sheet.character_name || 'questo personaggio' }}</b> e verrà allegata come referenza visiva biometrica nelle scene.
+                  </p>
+                  <div class="cs-img-actions">
+                    <label class="btn-sheet-mini upload-label">
+                      🔄 Sostituisci Immagine
+                      <input type="file" accept="image/*" class="sr-only" (change)="onUploadSheetImage($event)" />
+                    </label>
+                    <button type="button" class="btn-sheet-mini" (click)="copyBoundSheetImage()">
+                      📋 Copia Immagine
+                    </button>
+                    <button type="button" class="btn-sheet-mini" (click)="downloadBoundSheetImage()">
+                      💾 Scarica
+                    </button>
+                    <button type="button" class="btn-sheet-mini danger" (click)="removeBoundSheetImage()">
+                      🗑️ Rimuovi
+                    </button>
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="cs-img-dropzone" (dragover)="$event.preventDefault()" (drop)="onSheetImageDrop($event)">
+                <div class="cs-drop-icon">🎨</div>
+                <div class="cs-drop-text">
+                  <strong>Collega un'immagine modello a questa scheda</strong>
+                  <span>Puoi generarla con <b>Genera Immagine</b> nella spalla destra, oppure caricare un file dal tuo computer.</span>
+                </div>
+                <label class="btn-sheet-mini upload-label">
+                  📁 Scegli Immagine dal Disco
+                  <input type="file" accept="image/*" class="sr-only" (change)="onUploadSheetImage($event)" />
+                </label>
+              </div>
+            }
+          </div>
+
           <!-- Layout Mode & Views Selection -->
           <div class="field-group span-2">
             <label class="field-label">Formato Scheda Turnaround (Layout Mode)</label>
@@ -623,6 +680,50 @@
 
           <div class="bound-dna-summary">
             <span>🧬 <strong>DNA Somatico Ereditato:</strong> {{ spec().character_sheet.gender_and_age }} · {{ spec().character_sheet.ethnicity_and_skin }} · {{ spec().character_sheet.hair_details }} · {{ spec().character_sheet.eye_details }} · {{ spec().character_sheet.body_build }}</span>
+          </div>
+
+          <!-- Bound Sheet Image Media Card -->
+          <div class="bound-sheet-media-row">
+            @if (spec().character_sheet.image_data_url) {
+              <div class="bound-sheet-card">
+                <div class="bound-sheet-thumb-wrap" (click)="openBoundSheetLightbox()" title="Clicca per ingrandire la scheda del personaggio allegata">
+                  <img [src]="spec().character_sheet.image_data_url" alt="Scheda visiva personaggio" class="bound-sheet-thumb" />
+                  <div class="bound-sheet-zoom-overlay">🔍 Ingrandisci</div>
+                </div>
+                <div class="bound-sheet-meta">
+                  <span class="bound-sheet-tag">📎 Scheda di Riferimento Allegata</span>
+                  <span class="bound-sheet-hint">Questa immagine costituisce la referenza visiva biometrica per la scena.</span>
+                  <div class="bound-sheet-btns">
+                    <button type="button" class="btn-sheet-mini" (click)="copyBoundSheetImage()" title="Copia negli appunti per incollarla in Gemini o ChatGPT">
+                      📋 Copia Immagine
+                    </button>
+                    <button type="button" class="btn-sheet-mini" (click)="openBoundSheetLightbox()" title="Visualizza ad alta risoluzione">
+                      🔍 Ingrandisci
+                    </button>
+                    <button type="button" class="btn-sheet-mini ghost" (click)="removeBoundSheetImage()" title="Rimuovi immagine scheda">
+                      ✕ Rimuovi
+                    </button>
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="bound-sheet-empty-card">
+                <span class="empty-sheet-icon">🖼️</span>
+                <div class="empty-sheet-text">
+                  <strong>Nessuna immagine scheda ancora associata a {{ spec().character_sheet.character_name || 'questo personaggio' }}</strong>
+                  <span>Carica una scheda o foto turnaround, oppure creala in "Crea Scheda Personaggio".</span>
+                </div>
+                <div class="empty-sheet-actions">
+                  <label class="btn-sheet-mini upload-label">
+                    📁 Carica Scheda
+                    <input type="file" accept="image/*" class="sr-only" (change)="onUploadSheetImage($event)" />
+                  </label>
+                  <button type="button" class="btn-sheet-mini accent" (click)="switchToCharacterStudio()">
+                    📐 Genera Scheda
+                  </button>
+                </div>
+              </div>
+            }
           </div>
 
           <p class="bound-desc">
@@ -1179,6 +1280,10 @@
     [generating]="generatingImage()"
     [generatedImage]="generatedImage()"
     [imageGenConfig]="svc.imageGenConfig()"
+    [characterSheetImage]="boundCharacterImage()"
+    [characterName]="boundCharacterName()"
+    [isSceneWithCharacter]="isSceneWithCharacter()"
+    [isSheetMode]="isSheetMode()"
     (setDefault)="setDefaultOutputModel($event)"
     (copy)="copyText($event)"
     (generate)="runGenerateImage()"
@@ -1186,6 +1291,9 @@
     (openLightbox)="openImageLightbox()"
     (download)="downloadGeneratedImage()"
     (copyImage)="copyGeneratedImage()"
+    (openSheetLightbox)="openBoundSheetLightbox()"
+    (copySheetImage)="copyBoundSheetImage()"
+    (saveAsCharacterSheetImage)="saveGeneratedAsSheetImage($event)"
   />
 </main>
 
@@ -1658,6 +1766,37 @@
           [value]="editCharProps()"
           (input)="editCharProps.set($any($event.target).value)"
         />
+      </div>
+
+      <div class="field span-2">
+        <label class="field-label">Immagine Scheda / Modello di Riferimento</label>
+        <div class="edit-char-img-row">
+          @if (editCharImage()) {
+            <div class="edit-char-img-wrap">
+              <img [src]="editCharImage()" alt="Foto personaggio" class="edit-char-img-thumb" />
+            </div>
+            <div class="edit-char-img-meta">
+              <span class="muted" style="font-size: 11.5px;">Immagine referenza associata al personaggio.</span>
+              <div style="display: flex; gap: 8px; margin-top: 6px;">
+                <label class="btn-sheet-mini upload-label">
+                  🔄 Cambia Immagine
+                  <input type="file" accept="image/*" class="sr-only" (change)="onUploadEditCharImage($event)" />
+                </label>
+                <button type="button" class="btn-sheet-mini danger" (click)="editCharImage.set('')">
+                  🗑️ Rimuovi
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="edit-char-img-empty">
+              <span class="muted" style="font-size: 11.5px;">Nessuna immagine associata a questa scheda.</span>
+              <label class="btn-sheet-mini upload-label" style="margin-top: 6px;">
+                📁 Carica Immagine Scheda
+                <input type="file" accept="image/*" class="sr-only" (change)="onUploadEditCharImage($event)" />
+              </label>
+            </div>
+          }
+        </div>
       </div>
     </div>
 

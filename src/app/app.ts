@@ -270,6 +270,12 @@ export class App {
   readonly editCharMarks = signal('');
   readonly editCharOutfit = signal('');
   readonly editCharProps = signal('');
+  readonly editCharImage = signal('');
+
+  // Character Sheet Attachment computeds
+  readonly boundCharacterImage = computed(() => this.spec().character_sheet.image_data_url || null);
+  readonly boundCharacterName = computed(() => this.spec().character_sheet.character_name || '');
+  readonly isSceneWithCharacter = computed(() => this.spec().character_sheet.enabled && this.spec().character_sheet.mode === 'scene_with_character');
 
   openEditCharacterModal(char: SavedCharacter, ev?: Event): void {
     if (ev) ev.stopPropagation();
@@ -283,6 +289,7 @@ export class App {
     this.editCharMarks.set(char.sheet.distinctive_marks || '');
     this.editCharOutfit.set(char.sheet.signature_outfit || '');
     this.editCharProps.set(char.sheet.signature_props || '');
+    this.editCharImage.set(char.imageDataUrl || char.sheet.image_data_url || '');
     this.showEditCharacterModal.set(true);
   }
 
@@ -321,12 +328,13 @@ export class App {
       distinctive_marks: this.editCharMarks(),
       signature_outfit: this.editCharOutfit(),
       signature_props: this.editCharProps(),
+      image_data_url: this.editCharImage(),
     };
 
     if (id && id !== 'char-current') {
       const existing = this.savedCharacters().find((c) => c.id === id);
       if (existing) {
-        const updated = this.svc.updateCharacter(id, { ...existing.sheet, ...partialSheet }, name);
+        const updated = this.svc.updateCharacter(id, { ...existing.sheet, ...partialSheet }, name, this.editCharImage());
         if (updated) {
           if (this.spec().character_sheet.character_name === existing.name || this.activeCharacterId() === id) {
             this.store.updateCharacterSheet(partialSheet);
@@ -336,7 +344,7 @@ export class App {
       }
     } else {
       const cs = this.spec().character_sheet;
-      const saved = this.svc.saveCharacter(name, { ...cs, ...partialSheet });
+      const saved = this.svc.saveCharacter(name, { ...cs, ...partialSheet }, this.editCharImage());
       this.activeCharacterId.set(saved.id);
       this.store.updateCharacterSheet(partialSheet);
       this.showToast(`Personaggio "${saved.name}" salvato nella libreria!`);
@@ -353,10 +361,10 @@ export class App {
     }
     const current = this.currentSavedCharacter();
     if (current) {
-      this.svc.updateCharacter(current.id, cs, cs.character_name);
+      this.svc.updateCharacter(current.id, cs, cs.character_name, cs.image_data_url);
       this.showToast(`Personaggio "${cs.character_name}" aggiornato nella libreria!`);
     } else {
-      const saved = this.svc.saveCharacter(cs.character_name, cs);
+      const saved = this.svc.saveCharacter(cs.character_name, cs, cs.image_data_url);
       this.activeCharacterId.set(saved.id);
       this.showToast(`Personaggio "${saved.name}" salvato nella libreria!`);
     }
@@ -368,7 +376,7 @@ export class App {
     const newName = prompt('Nome per la nuova copia del personaggio:', `${baseName} (Nuovo)`);
     if (!newName || !newName.trim()) return;
 
-    const saved = this.svc.saveCharacter(newName.trim(), { ...cs, character_name: newName.trim() });
+    const saved = this.svc.saveCharacter(newName.trim(), { ...cs, character_name: newName.trim() }, cs.image_data_url);
     this.activeCharacterId.set(saved.id);
     this.store.updateCharacterSheet({ character_name: newName.trim() });
     this.showToast(`Nuovo personaggio "${saved.name}" salvato nella libreria!`);
@@ -376,8 +384,10 @@ export class App {
 
   loadSavedCharacter(c: SavedCharacter): void {
     this.activeCharacterId.set(c.id);
+    const img = c.imageDataUrl || c.sheet.image_data_url || '';
     this.store.updateCharacterSheet({
       ...c.sheet,
+      image_data_url: img,
       enabled: true,
     });
     this.sectionCharacterOpen.set(true);
@@ -599,7 +609,21 @@ export class App {
     try {
       const res = await this.svc.generateImage(this.spec());
       this.generatedImage.set(res);
-      this.showToast(`🎨 Immagine generata con successo (${(res.timeMs / 1000).toFixed(1)}s)`);
+      if (this.isSheetMode() || this.spec().character_sheet.mode === 'sheet_generation') {
+        const charName = this.spec().character_sheet.character_name.trim();
+        const optimized = await this.optimizeImageDataUrl(res.dataUrl);
+        this.store.updateCharacterSheet({ image_data_url: optimized });
+        const existing = this.currentSavedCharacter();
+        if (existing) {
+          this.svc.updateCharacter(existing.id, this.spec().character_sheet, charName || existing.name, optimized);
+        } else if (charName) {
+          const saved = this.svc.saveCharacter(charName, this.spec().character_sheet, optimized);
+          this.activeCharacterId.set(saved.id);
+        }
+        this.showToast(`🎨 Scheda generata e associata a "${charName || 'Personaggio'}"!`);
+      } else {
+        this.showToast(`🎨 Immagine generata con successo (${(res.timeMs / 1000).toFixed(1)}s)`);
+      }
     } catch (err: any) {
       console.error('Image generation error:', err);
       const msg = err?.message || 'Errore imprevisto durante la generazione';
@@ -660,6 +684,178 @@ export class App {
 
   openImageLightbox(): void {
     this.showImageLightbox.set(true);
+  }
+
+  // ============ CHARACTER SHEET IMAGE ATTACHMENT METHODS ============
+
+  async optimizeImageDataUrl(dataUrl: string, maxDim = 1024, quality = 0.85): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  async onUploadSheetImage(ev: Event): Promise<void> {
+    const target = ev.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+      const file = target.files[0];
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const rawUrl = reader.result as string;
+        const optimized = await this.optimizeImageDataUrl(rawUrl);
+        this.store.updateCharacterSheet({ image_data_url: optimized });
+        const charName = this.spec().character_sheet.character_name.trim();
+        const existing = this.currentSavedCharacter();
+        if (existing) {
+          this.svc.updateCharacter(existing.id, this.spec().character_sheet, charName || existing.name, optimized);
+        } else if (charName) {
+          const saved = this.svc.saveCharacter(charName, this.spec().character_sheet, optimized);
+          this.activeCharacterId.set(saved.id);
+        }
+        this.showToast(`📸 Immagine scheda associata a "${charName || 'Personaggio'}"!`);
+      };
+      reader.readAsDataURL(file);
+      target.value = '';
+    }
+  }
+
+  async onSheetImageDrop(ev: DragEvent): Promise<void> {
+    ev.preventDefault();
+    if (ev.dataTransfer?.files && ev.dataTransfer.files[0]) {
+      const file = ev.dataTransfer.files[0];
+      if (!file.type.startsWith('image/')) {
+        this.showToast('Il file rilasciato non è un\'immagine valida');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const rawUrl = reader.result as string;
+        const optimized = await this.optimizeImageDataUrl(rawUrl);
+        this.store.updateCharacterSheet({ image_data_url: optimized });
+        const charName = this.spec().character_sheet.character_name.trim();
+        const existing = this.currentSavedCharacter();
+        if (existing) {
+          this.svc.updateCharacter(existing.id, this.spec().character_sheet, charName || existing.name, optimized);
+        } else if (charName) {
+          const saved = this.svc.saveCharacter(charName, this.spec().character_sheet, optimized);
+          this.activeCharacterId.set(saved.id);
+        }
+        this.showToast(`📸 Immagine scheda associata a "${charName || 'Personaggio'}"!`);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  async copyBoundSheetImage(): Promise<void> {
+    const imgUrl = this.spec().character_sheet.image_data_url;
+    if (!imgUrl) return;
+    try {
+      const res = await fetch(imgUrl);
+      const blob = await res.blob();
+      if (blob.type === 'image/png') {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      } else {
+        const canvas = document.createElement('canvas');
+        const img = new Image();
+        img.src = imgUrl;
+        await new Promise((r) => { img.onload = r; });
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext('2d')?.drawImage(img, 0, 0);
+        canvas.toBlob(async (b) => {
+          if (b) await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]);
+        }, 'image/png');
+      }
+      this.showToast('📋 Immagine scheda copiata negli appunti!');
+    } catch {
+      this.showToast('❌ Impossibile copiare l\'immagine negli appunti');
+    }
+  }
+
+  downloadBoundSheetImage(): void {
+    const imgUrl = this.spec().character_sheet.image_data_url;
+    if (!imgUrl) return;
+    const a = document.createElement('a');
+    a.href = imgUrl;
+    const charName = (this.spec().character_sheet.character_name || 'character').toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+    a.download = `${charName}-model-sheet.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    this.showToast('💾 Download scheda avviato');
+  }
+
+  removeBoundSheetImage(): void {
+    this.store.updateCharacterSheet({ image_data_url: '' });
+    const existing = this.currentSavedCharacter();
+    if (existing) {
+      this.svc.updateCharacter(existing.id, this.spec().character_sheet, undefined, '');
+    }
+    this.showToast('Immagine scheda rimossa');
+  }
+
+  openBoundSheetLightbox(): void {
+    const imgUrl = this.spec().character_sheet.image_data_url;
+    if (!imgUrl) return;
+    this.generatedImage.set({
+      dataUrl: imgUrl,
+      mimeType: 'image/jpeg',
+      model: `Scheda: ${this.spec().character_sheet.character_name || 'Personaggio'}`,
+      prompt: `Model Sheet di riferimento per ${this.spec().character_sheet.character_name || 'Personaggio'}`,
+      aspectRatio: this.spec().character_sheet.layout_mode === 'expressions_grid' ? '1:1' : '16:9',
+      timeMs: 0,
+      timestamp: Date.now(),
+    });
+    this.showImageLightbox.set(true);
+  }
+
+  async saveGeneratedAsSheetImage(dataUrl: string): Promise<void> {
+    const charName = this.spec().character_sheet.character_name.trim();
+    const optimized = await this.optimizeImageDataUrl(dataUrl);
+    this.store.updateCharacterSheet({ image_data_url: optimized });
+    const existing = this.currentSavedCharacter();
+    if (existing) {
+      this.svc.updateCharacter(existing.id, this.spec().character_sheet, charName || existing.name, optimized);
+    } else if (charName) {
+      const saved = this.svc.saveCharacter(charName, this.spec().character_sheet, optimized);
+      this.activeCharacterId.set(saved.id);
+    }
+    this.showToast(`📌 Immagine salvata come scheda ufficiale di "${charName || 'Personaggio'}"!`);
+  }
+
+  async onUploadEditCharImage(ev: Event): Promise<void> {
+    const target = ev.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+      const file = target.files[0];
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const rawUrl = reader.result as string;
+        const optimized = await this.optimizeImageDataUrl(rawUrl);
+        this.editCharImage.set(optimized);
+        this.showToast('📸 Nuova immagine caricata');
+      };
+      reader.readAsDataURL(file);
+      target.value = '';
+    }
   }
 
   // ============ REVERSE IMAGE TO PROMPT METHODS ============
@@ -865,8 +1061,10 @@ export class App {
         this.charPhotoContext(),
         cfg
       );
-      this.store.updateCharacterSheet({ ...extracted, enabled: true });
-      const saved = this.svc.saveCharacter(extracted.character_name, extracted);
+      const imgFirst = photos[0]?.dataUrl || '';
+      const optimizedImg = imgFirst ? await this.optimizeImageDataUrl(imgFirst) : '';
+      this.store.updateCharacterSheet({ ...extracted, enabled: true, image_data_url: optimizedImg });
+      const saved = this.svc.saveCharacter(extracted.character_name, extracted, optimizedImg);
       this.activeCharacterId.set(saved.id);
       this.sectionCharacterOpen.set(true);
       this.showCharPhotoModal.set(false);

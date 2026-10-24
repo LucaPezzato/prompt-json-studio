@@ -145,6 +145,7 @@ export interface CharacterSheetBlock {
   background_style: string;
   cref_url?: string;
   cref_weight?: number;
+  image_data_url?: string;
 }
 
 export interface SavedCharacter {
@@ -152,6 +153,7 @@ export interface SavedCharacter {
   name: string;
   summary: string;
   sheet: CharacterSheetBlock;
+  imageDataUrl?: string;
   createdAt: number;
 }
 

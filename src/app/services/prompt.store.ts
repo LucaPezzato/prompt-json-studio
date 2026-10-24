@@ -440,6 +440,9 @@ export class PromptStore {
       if (out.character_sheet.cref_weight === undefined) {
         out.character_sheet.cref_weight = 100;
       }
+      if (obj['character_sheet'].image_data_url) {
+        out.character_sheet.image_data_url = obj['character_sheet'].image_data_url;
+      }
     }
 
     const tech = obj['technical_parameters'];

@@ -2619,6 +2619,567 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
+/* =========================================================
+   CHARACTER SHEET IMAGE ATTACHMENTS & PERSISTENCE
+   ========================================================= */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Character Library Pills Avatar */
+.char-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.char-pill-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--purple, #bd93f9);
+  flex-shrink: 0;
+}
+
+.char-pill-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.char-pill-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Visual Sheet Box in Character Studio */
+.char-sheet-image-box {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.char-sheet-image-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cs-img-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.cs-img-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.cs-img-badge.has-img {
+  background: rgba(80, 250, 123, 0.15);
+  color: var(--green, #50fa7b);
+  border-color: rgba(80, 250, 123, 0.35);
+}
+
+.cs-img-preview-card {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.cs-img-thumb-container {
+  position: relative;
+  width: 130px;
+  height: 85px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #111217;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cs-img-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cs-img-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 16, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.cs-img-thumb-container:hover .cs-img-hover-overlay {
+  opacity: 1;
+}
+
+.cs-img-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cs-img-desc {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.cs-img-desc b {
+  color: var(--purple, #bd93f9);
+}
+
+.cs-img-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-sheet-mini {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-sheet-mini:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--purple, #bd93f9);
+  color: var(--purple, #bd93f9);
+}
+
+.btn-sheet-mini.accent {
+  background: rgba(189, 147, 249, 0.15);
+  border-color: var(--purple, #bd93f9);
+  color: var(--purple, #bd93f9);
+}
+
+.btn-sheet-mini.danger:hover {
+  border-color: var(--red, #ff5555);
+  color: var(--red, #ff5555);
+}
+
+.btn-sheet-mini.ghost {
+  background: transparent;
+  color: var(--comment);
+}
+
+.upload-label {
+  cursor: pointer;
+}
+
+.cs-img-dropzone {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.cs-drop-icon {
+  font-size: 26px;
+  opacity: 0.75;
+}
+
+.cs-drop-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11.5px;
+}
+
+.cs-drop-text strong {
+  color: var(--fg);
+}
+
+.cs-drop-text span {
+  color: var(--muted);
+}
+
+/* Bound Sheet in Scene Studio */
+.bound-sheet-media-row {
+  margin: 10px 0 6px 0;
+}
+
+.bound-sheet-card {
+  display: flex;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(189, 147, 249, 0.3);
+  border-radius: 8px;
+  padding: 10px;
+  align-items: center;
+}
+
+.bound-sheet-thumb-wrap {
+  position: relative;
+  width: 90px;
+  height: 60px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: #111217;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.bound-sheet-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bound-sheet-zoom-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 16, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.bound-sheet-thumb-wrap:hover .bound-sheet-zoom-overlay {
+  opacity: 1;
+}
+
+.bound-sheet-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bound-sheet-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--pink, #ff79c6);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.bound-sheet-hint {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.bound-sheet-btns {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.bound-sheet-empty-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.empty-sheet-icon {
+  font-size: 22px;
+  opacity: 0.6;
+}
+
+.empty-sheet-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.empty-sheet-text strong {
+  color: var(--fg);
+}
+
+.empty-sheet-text span {
+  color: var(--muted);
+}
+
+.empty-sheet-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Edit Character Modal Image */
+.edit-char-img-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.edit-char-img-wrap {
+  width: 70px;
+  height: 70px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #111217;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.edit-char-img-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-char-img-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-char-img-empty {
+  display: flex;
+  flex-direction: column;
+}
+
+/* OutputPanel Attached Strip & Gemini Alert */
+:host ::ng-deep .output .attached-sheet-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(189, 147, 249, 0.1);
+  border: 1px solid rgba(189, 147, 249, 0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+}
+
+:host ::ng-deep .output .sheet-strip-thumb-wrap {
+  position: relative;
+  width: 44px;
+  height: 34px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #111217;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1px solid rgba(189, 147, 249, 0.4);
+}
+
+:host ::ng-deep .output .sheet-strip-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+:host ::ng-deep .output .sheet-strip-badge {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  background: rgba(10, 10, 16, 0.85);
+  font-size: 8px;
+  text-align: center;
+  color: var(--pink, #ff79c6);
+  font-weight: 700;
+}
+
+:host ::ng-deep .output .sheet-strip-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+:host ::ng-deep .output .sheet-strip-title {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+:host ::ng-deep .output .sheet-strip-name {
+  font-size: 12px;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:host ::ng-deep .output .sheet-strip-actions {
+  display: flex;
+  gap: 4px;
+}
+
+:host ::ng-deep .output .btn-sheet-strip-action {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+:host ::ng-deep .output .btn-sheet-strip-action:hover {
+  border-color: var(--purple, #bd93f9);
+  color: var(--purple, #bd93f9);
+}
+
+:host ::ng-deep .output .sheet-save-prompt-bar {
+  margin-top: 6px;
+}
+
+:host ::ng-deep .output .btn-save-as-sheet {
+  width: 100%;
+  background: rgba(80, 250, 123, 0.12);
+  border: 1px solid rgba(80, 250, 123, 0.35);
+  color: var(--green, #50fa7b);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+:host ::ng-deep .output .btn-save-as-sheet:hover {
+  background: var(--green, #50fa7b);
+  color: var(--bg);
+}
+
+:host ::ng-deep .output .gemini-sheet-alert {
+  background: rgba(255, 121, 198, 0.1);
+  border: 1px solid rgba(255, 121, 198, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+:host ::ng-deep .output .alert-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+:host ::ng-deep .output .alert-icon {
+  font-size: 14px;
+}
+
+:host ::ng-deep .output .alert-title {
+  font-size: 12px;
+  color: var(--pink, #ff79c6);
+}
+
+:host ::ng-deep .output .alert-desc {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+:host ::ng-deep .output .alert-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+:host ::ng-deep .output .btn-copy-sheet-alert {
+  background: var(--bg-2);
+  border: 1px solid var(--pink, #ff79c6);
+  color: var(--pink, #ff79c6);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+:host ::ng-deep .output .btn-copy-sheet-alert:hover {
+  background: var(--pink, #ff79c6);
+  color: var(--bg);
+}
+
+:host ::ng-deep .output .btn-view-sheet-alert {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+:host ::ng-deep .output .btn-view-sheet-alert:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
 @media (max-width: 980px) {
   :host { height: auto; overflow: visible; }
   .layout { display: block; }
