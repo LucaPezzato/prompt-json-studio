@@ -541,7 +541,12 @@
 
           <!-- Multi-view selector chips -->
           <div class="field-group span-2">
-            <label class="field-label">Viste / Espressioni Incluse nel Frame</label>
+            <div class="field-label-row">
+              <label class="field-label">Viste / Espressioni Incluse nel Frame</label>
+              <span class="views-count-pill" [class.warning]="isCrowdedSheet()">
+                {{ spec().character_sheet.views.length }} viste selezionate
+              </span>
+            </div>
             <div class="char-views-chips">
               @for (v of availableViews(); track v) {
                 <button
@@ -554,6 +559,29 @@
                 </button>
               }
             </div>
+
+            @if (isCrowdedSheet()) {
+              <div class="views-crowded-alert">
+                <div class="vca-header">
+                  <span class="vca-icon">💡</span>
+                  <div class="vca-title-group">
+                    <strong class="vca-title">Densità Viste Elevata per formato 16:9 (5 elementi con Primo Piano Viso)</strong>
+                    <span class="vca-badge">Suggerimento Geometria Frame</span>
+                  </div>
+                </div>
+                <p class="vca-desc">
+                  Nel formato <strong>16:9 (1.77:1)</strong>, affiancare 4 corpi in piedi + 1 ritratto viso comprime la larghezza disponibile a soli ~0.35 per figura. Poiché un ritratto del viso è naturalmente più largo/quadrato (1:1), l'ultimo riquadro a destra rischia di essere tagliato a metà al bordo. Abbiamo inserito direttive anti-crop tassative nel prompt, ma per un equilibrio visivo ideale puoi ottimizzare la disposizione con 1 click:
+                </p>
+                <div class="vca-actions">
+                  <button type="button" class="btn-vca-opt" (click)="optimizeToThreeViewsAndFace()">
+                    🎯 3 Viste Corpo + 1 Viso (4 elementi ideali per 16:9)
+                  </button>
+                  <button type="button" class="btn-vca-opt secondary" (click)="switchToFullBodyAndPortraits()">
+                    📐 Usa Layout "Figura Intera + Ritratti"
+                  </button>
+                </div>
+              </div>
+            }
           </div>
 
           <!-- FIXED WHITE STUDIO BACKDROP (LOCKED PER USER SPEC) -->

@@ -327,6 +327,32 @@ export class PromptStore {
     }));
   }
 
+  setCharacterViews(views: string[]): void {
+    this.spec.update((s) => {
+      let subjectDesc = s.subject.description;
+      if (s.character_sheet.layout_mode === 'expressions_grid') {
+        subjectDesc = `Facial expression sheet showing a grid of headshots of the exact same character with distinct emotions: ${views.join(', ')}`;
+      } else if (s.character_sheet.layout_mode.startsWith('turnaround')) {
+        subjectDesc = `Turnaround character model sheet showing the same character from simultaneous angles in a single frame: ${views.join(', ')}`;
+      } else if (s.character_sheet.layout_mode === 'outfit_study') {
+        subjectDesc = `Character costume and wardrobe study sheet showing the same character in multiple outfits in a single frame: ${views.join(', ')}`;
+      } else if (s.character_sheet.layout_mode === 'full_body_and_portraits') {
+        subjectDesc = `Character model reference sheet combining full-body lineup alongside close-up facial portrait studies: ${views.join(', ')}`;
+      }
+      return {
+        ...s,
+        character_sheet: {
+          ...s.character_sheet,
+          views,
+        },
+        subject: {
+          ...s.subject,
+          description: subjectDesc,
+        },
+      };
+    });
+  }
+
   toggleCharacterView(view: string): void {
     const current = this.spec().character_sheet.views || [];
     const next = current.includes(view) ? current.filter((v) => v !== view) : [...current, view];

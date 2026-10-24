@@ -1777,7 +1777,12 @@ export class PromptService {
         layoutIntro = `Professional studio casting photographic composite of ${cs.character_name}. The image displays multiple simultaneous photographic angles of the same real human person in a single clean contact sheet: ${views}.`;
       }
 
-      return `${layoutIntro} Character Somatic DNA: ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, distinctive features: ${cs.distinctive_marks}, physique: ${cs.body_build}. Signature attire: ${cs.signature_outfit}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}. Studio setting: ${cs.background_style}, even shadowless high-key studio softbox lighting. Style: ${spec.style_and_rendering.medium} (${spec.style_and_rendering.aesthetic}), authentic human skin micro-texture, visible pores, Hasselblad medium format camera optics. Strict constraints: 100% authentic raw photography of a real human being. No 3D render, no video game asset, no CGI, no digital illustration.`;
+      const hasFaceCloseUp = cs.views.some((v) => /close-?up|face|portrait|vis[oa]|primo\s*piano|macro/i.test(v));
+      const marginClause = hasFaceCloseUp
+        ? 'Safe canvas margins: every pose and the facial close-up portrait must be 100% completely contained within the frame with generous padding margins from all canvas borders. Absolutely no cropped faces, no half faces at the edge, no figures bleeding off canvas.'
+        : 'Safe canvas margins: all figures must be 100% completely visible inside the frame with comfortable safe margins from the borders, zero cropping at edges.';
+
+      return `${layoutIntro} Character Somatic DNA: ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, distinctive features: ${cs.distinctive_marks}, physique: ${cs.body_build}. Signature attire: ${cs.signature_outfit}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}. Studio setting: ${cs.background_style}, even shadowless high-key studio softbox lighting. ${marginClause} Style: ${spec.style_and_rendering.medium} (${spec.style_and_rendering.aesthetic}), authentic human skin micro-texture, visible pores, Hasselblad medium format camera optics. Strict constraints: 100% authentic raw photography of a real human being. No 3D render, no video game asset, no CGI, no digital illustration, no cropped heads or truncated faces.`;
     }
 
     const parts: string[] = [];
@@ -1928,6 +1933,9 @@ export class PromptService {
         layoutToken,
         cs.background_style,
         'editorial studio casting photography composite of a real human being, Hasselblad medium format portraiture, realistic human skin pores, authentic natural textures',
+        cs.views.some((v) => /close-?up|face|portrait|vis[oa]|primo\s*piano|macro/i.test(v))
+          ? 'generous outer margins, fully contained frame composition, complete uncropped facial portrait, safe border padding'
+          : 'generous outer margins, fully contained frame composition, safe border padding',
         spec.style_and_rendering.medium,
         spec.style_and_rendering.aesthetic,
         spec.style_and_rendering.color_grading,
@@ -1943,7 +1951,10 @@ export class PromptService {
         const cw = cs.cref_weight !== undefined ? cs.cref_weight : 100;
         flags.push(`--cref ${cs.cref_url.trim()} --cw ${cw}`);
       }
-      if (spec.technical_parameters.negative_prompt.trim()) flags.push(`--no ${spec.technical_parameters.negative_prompt.trim()}`);
+      const antiCropTokens = 'cropped face, half face at border, cut off head, out of frame, figure bleeding off canvas';
+      const existingNeg = spec.technical_parameters.negative_prompt.trim();
+      const combinedNeg = existingNeg ? `${existingNeg}, ${antiCropTokens}` : antiCropTokens;
+      flags.push(`--no ${combinedNeg}`);
       return `${body} ${flags.join(' ')}`;
     }
 
@@ -2052,6 +2063,11 @@ export class PromptService {
     ) {
       const cs = spec.character_sheet;
       const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side profile view, Back view';
+      const hasFaceCloseUp = cs.views.some((v) => /close-?up|face|portrait|vis[oa]|primo\s*piano|macro/i.test(v));
+      const faceMarginNote = hasFaceCloseUp
+        ? ' The facial close-up / portrait panel must be rendered as an uncropped, 100% complete headshot fully contained within the frame, with generous clear white space separating it from the right border.'
+        : '';
+
       return (
         `[EDITORIAL STUDIO PHOTOGRAPHY REFERENCE - AUTHENTIC HUMAN CASTING COMPOSITE / CHARACTER MODEL SHEET]\n` +
         `High-end editorial studio portraiture and full-body multi-angle casting composite of an authentic, real living human person: "${cs.character_name}".\n` +
@@ -2060,8 +2076,9 @@ export class PromptService {
         `1. BACKDROP: Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor contact shadow, high-key even studio softbox lighting, zero scene clutter, 100% visual isolation.\n` +
         `2. SOMATIC CONTINUITY: Identical facial bone structure, eyes (${cs.eye_details || 'as specified in brief'}), hair (${cs.hair_details || 'as specified in brief'}), skin tone (${cs.ethnicity_and_skin || 'as specified in brief'}), and physique across all angles.\n` +
         `3. ATTIRE & WARDROBE: ${cs.signature_outfit || 'Neutral minimalist athletic basics'}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}.\n` +
-        `4. FRAME LAYOUT: ${views} captured simultaneously of the same person displayed in a single clean editorial studio contact sheet.\n` +
-        `5. STRICT ANTI-CGI / ANTI-VIDEOGAME DIRECTIVE: 100% authentic raw photography of a real human being. ABSOLUTELY NO 3D render, NO video game graphics, NO Unreal Engine / Unity 3D asset, NO CGI, NO digital painting, NO plastic or airbrushed skin, NO cartoon, NO anime, NO stylized concept art. The subject must look undeniably like an authentic human model photographed in a real studio.\n\n` +
+        `4. FRAME COMPOSITION & SAFE CANVAS MARGINS: Multi-view studio contact sheet showing: ${views}. Every figure and portrait panel must be 100% completely visible inside the canvas with generous safe padding margins from all canvas edges (left, right, top, bottom).${faceMarginNote} ABSOLUTELY ZERO figures or faces cut in half, truncated, or bleeding off the canvas border.\n` +
+        `5. STRICT ANTI-CGI / ANTI-VIDEOGAME DIRECTIVE: 100% authentic raw photography of a real human being. ABSOLUTELY NO 3D render, NO video game graphics, NO Unreal Engine / Unity 3D asset, NO CGI, NO digital painting, NO plastic or airbrushed skin, NO cartoon, NO anime, NO stylized concept art. The subject must look undeniably like an authentic human model photographed in a real studio.\n` +
+        `6. STRICT ANTI-CROPPING & SAFE BOUNDARIES: No cropped faces, no half-heads at edges, no partial portraits, no figures bleeding off-frame, no clipped limbs, no cutoff anatomy.\n\n` +
         `[PRODUCTION SPECIFICATION JSON]\n` +
         '```json\n' +
         jsonStr +
@@ -2135,9 +2152,19 @@ export class PromptService {
       } else if (cs.layout_mode === 'full_body_and_portraits') {
         modeTag = '(character model sheet, full body and close-up portraits:1.35)';
       }
+      const hasFaceCloseUp = cs.views.some((v) => /close-?up|face|portrait|vis[oa]|primo\s*piano|macro/i.test(v));
+      const marginPos = hasFaceCloseUp
+        ? '(fully contained in frame:1.3), (complete uncropped face portrait:1.3), (wide safe studio padding margins:1.2)'
+        : '(fully contained in frame:1.2), (wide safe studio padding margins:1.2)';
+      const antiCropNeg = 'cropped face, half face at border, cut-off head, partial portrait, figure bleeding off canvas, out of frame';
+      const baseNeg = spec.technical_parameters.negative_prompt.trim();
+      const finalNeg = baseNeg
+        ? `${baseNeg}, ${antiCropNeg}`
+        : `bad anatomy, inconsistent character, different faces, ${antiCropNeg}, cropped, blurry, dark background, complex background, text, watermark, signature, jpeg artifacts`;
+
       return {
-        positive: `${modeTag}, (${views}:1.2), (${cs.character_name}:1.2), ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, (${cs.eye_details}:1.1), (${cs.hair_details}:1.1), ${cs.distinctive_marks}, ${cs.body_build}, ${cs.signature_outfit}, ${cs.background_style}, even studio lighting, high resolution, 8k, best quality`,
-        negative: `bad anatomy, inconsistent character, different faces, cropped, blurry, dark background, complex background, text, watermark, signature, jpeg artifacts`,
+        positive: `${modeTag}, (${views}:1.2), (${cs.character_name}:1.2), ${marginPos}, ${cs.gender_and_age}, ${cs.ethnicity_and_skin}, (${cs.eye_details}:1.1), (${cs.hair_details}:1.1), ${cs.distinctive_marks}, ${cs.body_build}, ${cs.signature_outfit}, ${cs.background_style}, even studio lighting, high resolution, 8k, best quality`,
+        negative: finalNeg,
       };
     }
 
@@ -2615,7 +2642,7 @@ Output ONLY a JSON object strictly adhering to this schema:
   "signature_outfit": "Signature cohesive clothing style synthesized from the photos (garments, fabrics, colors, textures)",
   "signature_props": "Recurring accessories, jewelry, glasses, or items (or empty if none)",
   "layout_mode": "turnaround_4_views",
-  "views": ["Front view", "3/4 Profile view", "Side profile view", "Back view", "Close-up face"],
+  "views": ["Front view", "3/4 Profile view", "Side profile view", "Back view"],
   "background_style": "Neutral light-grey seamless studio backdrop with soft floor shadow",
   "cref_url": ""
 }

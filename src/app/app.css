@@ -1461,6 +1461,128 @@ app-output-panel {
   font-weight: 600;
 }
 
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.views-count-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.views-count-pill.warning {
+  color: var(--orange, #ffb86c);
+  border-color: color-mix(in srgb, var(--orange, #ffb86c) 40%, transparent);
+  background: color-mix(in srgb, var(--orange, #ffb86c) 12%, var(--bg));
+}
+
+.views-crowded-alert {
+  margin-top: 10px;
+  background: linear-gradient(135deg, rgba(255, 184, 108, 0.08) 0%, rgba(189, 147, 249, 0.05) 100%);
+  border: 1px solid color-mix(in srgb, var(--orange, #ffb86c) 35%, var(--line));
+  border-left: 3px solid var(--orange, #ffb86c);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.vca-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vca-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.vca-title-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vca-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--orange, #ffb86c);
+}
+
+.vca-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 184, 108, 0.18);
+  color: var(--orange, #ffb86c);
+  border: 1px solid rgba(255, 184, 108, 0.3);
+}
+
+.vca-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg);
+  opacity: 0.9;
+}
+
+.vca-desc strong {
+  color: #fff;
+}
+
+.vca-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-vca-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--orange, #ffb86c);
+  color: #282a36;
+  border: none;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-vca-opt:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-vca-opt.secondary {
+  background: var(--bg-2);
+  color: var(--purple, #bd93f9);
+  border: 1px solid color-mix(in srgb, var(--purple, #bd93f9) 40%, var(--line));
+}
+
+.btn-vca-opt.secondary:hover {
+  background: color-mix(in srgb, var(--purple, #bd93f9) 15%, var(--bg-2));
+  border-color: var(--purple, #bd93f9);
+}
+
 /* Character Photo Extraction Gallery */
 .char-thumbs-section {
   display: flex;

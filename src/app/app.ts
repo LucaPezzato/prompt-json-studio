@@ -184,6 +184,24 @@ export class App {
     return this.spec().character_sheet.enabled && this.spec().character_sheet.mode !== 'scene_with_character';
   });
 
+  readonly isCrowdedSheet = computed<boolean>(() => {
+    if (!this.isSheetMode()) return false;
+    const views = this.spec().character_sheet.views || [];
+    const hasFace = views.some((v) => /close-?up|face|portrait|vis[oa]|primo\s*piano|macro/i.test(v));
+    return views.length >= 5 && hasFace;
+  });
+
+  optimizeToThreeViewsAndFace(): void {
+    this.store.setLayoutMode('turnaround_3_views');
+    this.store.setCharacterViews(['Front view', 'Side profile view', 'Back view', 'Close-up face']);
+    this.showToast('✨ Ottimizzato a 4 elementi: 3 viste corpo + 1 primo piano viso (proporzioni ideali 16:9)!');
+  }
+
+  switchToFullBodyAndPortraits(): void {
+    this.store.setLayoutMode('full_body_and_portraits');
+    this.showToast('✨ Layout "Figura Intera + Ritratti" attivato!');
+  }
+
   readonly studioMode = computed<'scene' | 'character'>(() => {
     return this.isSheetMode() ? 'character' : 'scene';
   });
