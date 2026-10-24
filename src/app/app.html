@@ -1170,23 +1170,103 @@
     </app-section-block>
   </section>
 
-  <!-- ============ OUTPUT PANEL ============ -->
+  <!-- ============ OUTPUT PANEL & DIRECT IMAGE GENERATOR ============ -->
   <app-output-panel
     [class.hidden-mobile]="mobileView() !== 'output'"
     [outputs]="compiledOutputs()"
     [(tab)]="activeOutputTab"
+    [defaultModel]="svc.defaultOutputModel()"
+    [generating]="generatingImage()"
+    [generatedImage]="generatedImage()"
+    [imageGenConfig]="svc.imageGenConfig()"
+    (setDefault)="setDefaultOutputModel($event)"
     (copy)="copyText($event)"
+    (generate)="runGenerateImage()"
+    (openSettings)="openImageGenSettings()"
+    (openLightbox)="openImageLightbox()"
+    (download)="downloadGeneratedImage()"
+    (copyImage)="copyGeneratedImage()"
   />
 </main>
 
 <!-- ============ MODALS ============ -->
+<!-- AI Image Generator Settings Modal -->
+<app-modal title="🎨 Configurazione Generatore Immagini AI" [(open)]="showImageGenSettings">
+  <p class="muted">
+    Genera rendering direttamente dalla spalla destra dello studio. Puoi utilizzare <b>Google Imagen 3</b> (tramite API Gemini), <b>OpenAI DALL-E 3</b>, oppure un endpoint locale/custom come <b>ComfyUI</b> o <b>SD WebUI</b>.
+  </p>
+
+  <label>Provider Motore Immagini</label>
+  <select [value]="imgProvider()" (change)="onImgProviderChange($any($event.target).value)">
+    <option value="gemini_imagen">Google Imagen 3 (imagen-3.0-generate-002)</option>
+    <option value="openai_dalle">OpenAI DALL-E 3</option>
+    <option value="comfyui">ComfyUI / Stable Diffusion WebUI (Locale)</option>
+    <option value="custom">Endpoint HTTP Custom</option>
+  </select>
+
+  <label>Modello</label>
+  <input
+    type="text"
+    [value]="imgModel()"
+    (input)="imgModel.set($any($event.target).value)"
+    placeholder="es. imagen-3.0-generate-002 o dall-e-3"
+  />
+
+  @if (imgProvider() === 'gemini_imagen') {
+    <p class="muted" style="font-size: 11.5px; margin-top: -4px;">
+      💡 Se hai già configurato <code>GEMINI_API_KEY</code> nel file <code>env.json</code>, puoi lasciare il campo API Key vuoto: verrà riutilizzata in automatico senza configurazione manuale.
+    </p>
+  }
+
+  @if (imgProvider() === 'gemini_imagen' || imgProvider() === 'openai_dalle' || imgProvider() === 'custom') {
+    <label>API Key</label>
+    <input
+      type="password"
+      [value]="imgApiKey()"
+      (input)="imgApiKey.set($any($event.target).value)"
+      placeholder="Incolla la tua API Key..."
+    />
+  }
+
+  @if (imgProvider() === 'comfyui' || imgProvider() === 'custom') {
+    <label>URL Endpoint HTTP</label>
+    <input
+      type="text"
+      [value]="imgEndpointUrl()"
+      (input)="imgEndpointUrl.set($any($event.target).value)"
+      placeholder="http://127.0.0.1:7860/sdapi/v1/txt2img"
+    />
+    <p class="muted" style="font-size: 11.5px; margin-top: -4px;">
+      Per ComfyUI o Automatic1111 assicurati che il server locale sia avviato abilitando le chiamate API e CORS.
+    </p>
+  }
+
+  <div class="modal-actions" style="margin-top: 16px;">
+    <button type="button" class="btn secondary" (click)="showImageGenSettings.set(false)">Annulla</button>
+    <button type="button" class="btn primary" (click)="saveImageGenSettings()">Salva Configurazione</button>
+  </div>
+</app-modal>
 <!-- AI Settings Modal -->
-<app-modal title="⚙ Impostazioni Assistente AI" [(open)]="showSettings">
+<app-modal title="⚙ Impostazioni &amp; Formato Predefinito" [(open)]="showSettings">
+  <label>📋 Modello / Formato di Output Predefinito per la Copia</label>
+  <p class="muted" style="margin-top: 2px; margin-bottom: 6px; font-size: 12px; line-height: 1.35;">
+    Scegli quale formato viene aperto di default e copiato negli appunti (tramite pulsante Copia o tasto rapido <b>Ctrl+Shift+C</b>):
+  </p>
+  <select [value]="selectedDefaultModel()" (change)="selectedDefaultModel.set($any($event.target).value)">
+    <option value="gpt">✨ Google Gemini / GPT-4o (Istruzione con Grounding sheet)</option>
+    <option value="json">{{ '{ }' }} JSON Strutturato Puro</option>
+    <option value="flux">FLUX.1 / FLUX.2 (Prompt Narrativo T5)</option>
+    <option value="midjourney">Midjourney v6 (--ar, parametri nativi)</option>
+    <option value="sdxl">Stable Diffusion XL (SDXL Positive + Negative)</option>
+  </select>
+
+  <hr style="border: none; border-top: 1px solid var(--line); margin: 18px 0 14px 0;" />
+
   <p class="muted">
     Senza API key, <b>Magic Expand</b> usa un analizzatore euristico offline. Se inserisci una chiave,
     le chiamate partono direttamente dal tuo browser (salvata solo in <code>localStorage</code>).
   </p>
-  <label>Provider</label>
+  <label>Provider AI</label>
   <select [value]="aiProvider()" (change)="aiProvider.set($any($event.target).value)">
     <option value="gemini">Google Gemini</option>
     <option value="openai">OpenAI</option>
@@ -1621,6 +1701,29 @@
     </div>
   </div>
 </app-modal>
+
+<!-- Modal: Lightbox Immagine Generata a Schermo Intero -->
+@if (showImageLightbox() && generatedImage()) {
+  <div class="lightbox-overlay" (click)="showImageLightbox.set(false)">
+    <div class="lightbox-content" (click)="$event.stopPropagation()">
+      <div class="lightbox-header">
+        <div class="lightbox-title">
+          <span class="lightbox-badge">{{ generatedImage()!.model }}</span>
+          <span>📐 {{ generatedImage()!.aspectRatio }}</span>
+          <span>⚡ {{ (generatedImage()!.timeMs / 1000).toFixed(1) }}s</span>
+        </div>
+        <div class="lightbox-actions">
+          <button type="button" class="btn secondary sm" (click)="downloadGeneratedImage()">💾 Scarica</button>
+          <button type="button" class="btn secondary sm" (click)="copyGeneratedImage()">📋 Copia</button>
+          <button type="button" class="btn-close-lightbox" (click)="showImageLightbox.set(false)">✕</button>
+        </div>
+      </div>
+      <div class="lightbox-image-wrap">
+        <img [src]="generatedImage()!.dataUrl" alt="Immagine generata a risoluzione intera" class="lightbox-full-img" />
+      </div>
+    </div>
+  </div>
+}
 
 <!-- Toast notification -->
 @if (toastMessage()) {

@@ -12,7 +12,7 @@ import { TemplateSidebar } from './components/template-sidebar/template-sidebar'
 import { OutputPanel, OutputTab, CompiledOutputs } from './components/output-panel/output-panel';
 import { PromptStore } from './services/prompt.store';
 import { PromptService } from './services/prompt.service';
-import { CharacterLayoutMode, CharacterPhotoItem, CharacterSheetBlock, CharacterWorkflowMode, CustomProperty, LAYOUT_MODE_VIEWS, PromptTemplate, SavedCharacter } from './models/prompt.model';
+import { CharacterLayoutMode, CharacterPhotoItem, CharacterSheetBlock, CharacterWorkflowMode, CustomProperty, GeneratedImageResult, ImageGenConfig, ImageGenProvider, LAYOUT_MODE_VIEWS, PromptTemplate, SavedCharacter } from './models/prompt.model';
 
 @Component({
   selector: 'app-root',
@@ -39,7 +39,8 @@ export class App {
   readonly templates = this.svc.allTemplates;
 
   // View state signals
-  readonly activeOutputTab = signal<OutputTab>('json');
+  readonly activeOutputTab = signal<OutputTab>(this.svc.defaultOutputModel());
+  readonly selectedDefaultModel = signal<OutputTab>(this.svc.defaultOutputModel());
   readonly mobileView = signal<'builder' | 'output'>('builder');
   readonly toastMessage = signal<string>('');
 
@@ -48,6 +49,16 @@ export class App {
   readonly showSavePreset = signal(false);
   readonly showImport = signal(false);
   readonly showTemplatesModal = signal(false);
+
+  // Direct Image Generation signals
+  readonly generatingImage = signal<boolean>(false);
+  readonly generatedImage = signal<GeneratedImageResult | null>(null);
+  readonly showImageGenSettings = signal<boolean>(false);
+  readonly showImageLightbox = signal<boolean>(false);
+  readonly imgProvider = signal<ImageGenProvider>('gemini_imagen');
+  readonly imgModel = signal<string>('imagen-3.0-generate-002');
+  readonly imgApiKey = signal<string>('');
+  readonly imgEndpointUrl = signal<string>('');
 
   // Reverse Image to Prompt signals
   readonly showReverseModal = signal(false);
@@ -500,6 +511,7 @@ export class App {
     this.aiModel.set(cfg.model);
     this.aiApiKey.set(cfg.apiKey);
     this.aiOllamaUrl.set(cfg.ollamaUrl);
+    this.selectedDefaultModel.set(this.svc.defaultOutputModel());
     this.showSettings.set(true);
   }
 
@@ -510,8 +522,22 @@ export class App {
       apiKey: this.aiApiKey().trim(),
       ollamaUrl: this.aiOllamaUrl().trim() || 'http://localhost:11434',
     });
+    this.svc.setDefaultOutputModel(this.selectedDefaultModel());
+    this.activeOutputTab.set(this.selectedDefaultModel());
     this.showSettings.set(false);
-    this.showToast('⚙ Configurazione AI salvata');
+    this.showToast('⚙ Impostazioni salvate (Formato predefinito aggiornato)');
+  }
+
+  setDefaultOutputModel(tab: OutputTab): void {
+    this.svc.setDefaultOutputModel(tab);
+    const labels: Record<OutputTab, string> = {
+      gpt: '✨ Gemini / GPT-4o',
+      json: '{ } JSON',
+      flux: 'FLUX',
+      midjourney: 'Midjourney',
+      sdxl: 'SDXL',
+    };
+    this.showToast(`★ Formato predefinito per la copia impostato su: ${labels[tab]}`);
   }
 
   randomizeSeed(): void {
@@ -532,6 +558,108 @@ export class App {
     setTimeout(() => {
       if (this.toastMessage() === msg) this.toastMessage.set('');
     }, 2800);
+  }
+
+  // ============ DIRECT IMAGE GENERATION METHODS ============
+
+  openImageGenSettings(): void {
+    const cfg = this.svc.imageGenConfig();
+    this.imgProvider.set(cfg.provider);
+    this.imgModel.set(cfg.model);
+    this.imgApiKey.set(cfg.apiKey);
+    this.imgEndpointUrl.set(cfg.endpointUrl);
+    this.showImageGenSettings.set(true);
+  }
+
+  onImgProviderChange(prov: ImageGenProvider): void {
+    this.imgProvider.set(prov);
+    if (prov === 'gemini_imagen' && (!this.imgModel() || this.imgModel() === 'dall-e-3')) {
+      this.imgModel.set('imagen-3.0-generate-002');
+    } else if (prov === 'openai_dalle' && (!this.imgModel() || this.imgModel() === 'imagen-3.0-generate-002')) {
+      this.imgModel.set('dall-e-3');
+    } else if (prov === 'comfyui' && !this.imgEndpointUrl()) {
+      this.imgEndpointUrl.set('http://127.0.0.1:7860/sdapi/v1/txt2img');
+    }
+  }
+
+  saveImageGenSettings(): void {
+    this.svc.setImageGenConfig({
+      provider: this.imgProvider(),
+      model: this.imgModel().trim(),
+      apiKey: this.imgApiKey().trim(),
+      endpointUrl: this.imgEndpointUrl().trim(),
+    });
+    this.showImageGenSettings.set(false);
+    this.showToast('⚙ Configurazione motore di generazione salvata');
+  }
+
+  async runGenerateImage(): Promise<void> {
+    if (this.generatingImage()) return;
+    this.generatingImage.set(true);
+    try {
+      const res = await this.svc.generateImage(this.spec());
+      this.generatedImage.set(res);
+      this.showToast(`🎨 Immagine generata con successo (${(res.timeMs / 1000).toFixed(1)}s)`);
+    } catch (err: any) {
+      console.error('Image generation error:', err);
+      const msg = err?.message || 'Errore imprevisto durante la generazione';
+      this.showToast(`❌ ${msg}`);
+    } finally {
+      this.generatingImage.set(false);
+    }
+  }
+
+  downloadGeneratedImage(): void {
+    const img = this.generatedImage();
+    if (!img) return;
+    const a = document.createElement('a');
+    a.href = img.dataUrl;
+    const ext = img.mimeType.includes('png') ? 'png' : 'jpg';
+    const slug = (this.spec().character_sheet?.character_name || this.spec().meta?.title || 'generated-image').toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 32);
+    a.download = `${slug}-${Date.now()}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    this.showToast('💾 Download immagine avviato');
+  }
+
+  async copyGeneratedImage(): Promise<void> {
+    const img = this.generatedImage();
+    if (!img) return;
+    try {
+      const res = await fetch(img.dataUrl);
+      const blob = await res.blob();
+      if (blob.type === 'image/png') {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ]);
+        this.showToast('📋 Immagine copiata negli appunti!');
+      } else {
+        const canvas = document.createElement('canvas');
+        const image = new Image();
+        image.src = img.dataUrl;
+        await new Promise((resolve) => { image.onload = resolve; });
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(image, 0, 0);
+        canvas.toBlob(async (pngBlob) => {
+          if (pngBlob) {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': pngBlob })
+            ]);
+            this.showToast('📋 Immagine copiata negli appunti!');
+          }
+        }, 'image/png');
+      }
+    } catch {
+      await navigator.clipboard.writeText(img.prompt);
+      this.showToast('📋 Prompt immagine copiato negli appunti');
+    }
+  }
+
+  openImageLightbox(): void {
+    this.showImageLightbox.set(true);
   }
 
   // ============ REVERSE IMAGE TO PROMPT METHODS ============

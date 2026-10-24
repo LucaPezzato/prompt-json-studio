@@ -257,3 +257,25 @@ export interface AiAssistantConfig {
   model: string;
   ollamaUrl: string;
 }
+
+export type OutputTab = 'gpt' | 'json' | 'flux' | 'midjourney' | 'sdxl';
+export type CompiledOutputs = Record<OutputTab, string>;
+
+export type ImageGenProvider = 'gemini_imagen' | 'openai_dalle' | 'comfyui' | 'custom';
+
+export interface ImageGenConfig {
+  provider: ImageGenProvider;
+  model: string;
+  apiKey: string;
+  endpointUrl: string;
+}
+
+export interface GeneratedImageResult {
+  dataUrl: string;
+  mimeType: string;
+  model: string;
+  prompt: string;
+  aspectRatio: string;
+  timeMs: number;
+  timestamp: number;
+}

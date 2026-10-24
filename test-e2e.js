@@ -112,7 +112,11 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   const titleInput = page.locator('.title-input');
   await titleInput.fill('Cyberpunk Detective in Rain - Special Edition');
   await page.waitForTimeout(200);
-  
+
+  // Switch to Prompt & Codice mode to inspect code
+  await page.locator('.mode-btn:has-text("Prompt & Codice")').click();
+  await page.waitForTimeout(200);
+
   // Verify output JSON updates
   let jsonPreview = await page.locator('pre.code').innerText();
   if (!jsonPreview.includes('Cyberpunk Detective in Rain - Special Edition')) {
@@ -536,6 +540,144 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   const boundBannerAfterCta = page.locator('.char-bound-banner');
   await boundBannerAfterCta.waitFor({ state: 'visible', timeout: 5000 });
   console.log('✔ Hero CTA transitioned smoothly into Scene Studio with locked character banner!');
+
+  // ========================================================
+  // 16. TEST DIRECT AI IMAGE GENERATION & CONFIGURATION MODAL
+  // ========================================================
+  console.log('👉 Testing Step 16: Direct AI Image Generation from Sidebar...');
+
+  // 16.1 Switch to "Immagine" view mode
+  const imgModeBtn = page.locator('.mode-btn:has-text("Immagine")');
+  await imgModeBtn.waitFor({ state: 'visible', timeout: 5000 });
+  await imgModeBtn.click();
+  await page.waitForTimeout(200);
+
+  // Verify empty state is displayed
+  const emptyTitle = page.locator('.empty-title:has-text("Pronto per Generare")');
+  await emptyTitle.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Direct Image Generation workspace active with clean empty state card!');
+
+  // 16.2 Open Image Generation Engine Settings modal
+  const engineCfgBtn = page.locator('.btn-config-engine');
+  await engineCfgBtn.click();
+  await page.waitForTimeout(300);
+
+  const imgModalTitle = page.locator('app-modal[title*="Generatore Immagini AI"]');
+  await imgModalTitle.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Image Generator configuration modal opened successfully!');
+
+  // 16.3 Test provider select options
+  const providerSelect = imgModalTitle.locator('select');
+  const providerOptions = await providerSelect.locator('option').allInnerTexts();
+  console.log(`  Available engine providers: ${providerOptions.join(' | ')}`);
+  if (!providerOptions.some(o => o.includes('Google Imagen 3')) || !providerOptions.some(o => o.includes('OpenAI DALL-E 3'))) {
+    throw new Error('Expected Google Imagen 3 and OpenAI DALL-E 3 in provider options!');
+  }
+
+  // Switch to OpenAI DALL-E 3
+  await providerSelect.selectOption('openai_dalle');
+  await page.waitForTimeout(200);
+  let modelInputVal = await imgModalTitle.locator('input[type="text"]').first().inputValue();
+  console.log(`  Model name after switching to DALL-E: "${modelInputVal}"`);
+  if (modelInputVal !== 'dall-e-3') {
+    throw new Error(`Expected model auto-populate to 'dall-e-3', got: ${modelInputVal}`);
+  }
+
+  // Switch to ComfyUI
+  await providerSelect.selectOption('comfyui');
+  await page.waitForTimeout(200);
+  const endpointInputs = await imgModalTitle.locator('input[placeholder*="127.0.0.1"]').all();
+  if (endpointInputs.length === 0) {
+    throw new Error('ComfyUI local endpoint input not displayed!');
+  }
+  console.log('✔ ComfyUI local endpoint configuration dynamically revealed!');
+
+  // Switch back to Google Imagen 3 and save
+  await providerSelect.selectOption('gemini_imagen');
+  await page.waitForTimeout(200);
+  const saveImgCfgBtn = imgModalTitle.locator('button.btn.primary:has-text("Salva Configurazione")');
+  await saveImgCfgBtn.click();
+  await page.waitForTimeout(300);
+  console.log('✔ Configuration saved with Google Imagen 3!');
+
+  // 16.4 Test Image Generation with Mock API
+  console.log('👉 Testing mock image generation and result display...');
+  await page.route('**/models/imagen-3.0-generate-002:predict*', async route => {
+    // 1x1 transparent PNG data base64
+    const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        predictions: [{
+          bytesBase64Encoded: mockBase64,
+          mimeType: 'image/png'
+        }]
+      })
+    });
+  });
+
+  // Click hero generate button
+  const heroGenBtn = page.locator('.btn-generate-hero');
+  await heroGenBtn.click();
+
+  // Wait for result card
+  const resultCard = page.locator('.image-result-card');
+  await resultCard.waitFor({ state: 'visible', timeout: 8000 });
+  console.log('✔ Generated image result card rendered!');
+
+  // Verify metadata tags
+  const modelTag = await page.locator('.meta-tag.model-tag').innerText();
+  const aspectTag = await page.locator('.meta-tag.aspect-tag').innerText();
+  console.log(`  Result tags: ${modelTag} | ${aspectTag}`);
+  if (!modelTag.includes('imagen-3.0-generate-002')) {
+    throw new Error(`Unexpected model tag: ${modelTag}`);
+  }
+
+  // Verify action buttons
+  const actionBtns = await page.locator('.img-action-btn').allInnerTexts();
+  console.log(`  Action buttons available: ${actionBtns.join(', ')}`);
+  if (!actionBtns.some(b => b.includes('Ingrandisci')) || !actionBtns.some(b => b.includes('Scarica')) || !actionBtns.some(b => b.includes('Rigenera'))) {
+    throw new Error('Missing essential image action buttons!');
+  }
+
+  // 16.5 Test Lightbox Modal
+  console.log('👉 Testing Lightbox full-resolution inspection...');
+  const zoomBtn = page.locator('.img-action-btn:has-text("Ingrandisci")');
+  await zoomBtn.click();
+  await page.waitForTimeout(200);
+
+  const lightbox = page.locator('.lightbox-overlay');
+  await lightbox.waitFor({ state: 'visible', timeout: 5000 });
+  const lightboxImg = lightbox.locator('.lightbox-full-img');
+  await lightboxImg.waitFor({ state: 'visible', timeout: 5000 });
+  console.log('✔ Full-screen Lightbox overlay opened with high-res image and actions!');
+
+  // Close Lightbox
+  await page.locator('.btn-close-lightbox').click();
+  await page.waitForTimeout(200);
+  const isLightboxVisible = await lightbox.isVisible();
+  if (isLightboxVisible) {
+    throw new Error('Lightbox did not close!');
+  }
+  console.log('✔ Lightbox closed cleanly!');
+
+  // 16.6 Test Prompt Disclosure toggle
+  console.log('👉 Testing prompt disclosure beneath generated image...');
+  const togglePromptBtn = page.locator('.btn-toggle-prompt');
+  await togglePromptBtn.click();
+  await page.waitForTimeout(200);
+
+  const promptTextSnippet = await page.locator('.prompt-snippet-box .prompt-text').innerText();
+  console.log('  Generated prompt snippet length:', promptTextSnippet.length, 'characters');
+  if (promptTextSnippet.length < 20) {
+    throw new Error('Prompt snippet is empty or too short!');
+  }
+  console.log('✔ Prompt disclosure reveals full descriptive English prompt used for image generation!');
+
+  // Capture screenshot of Image Generation Studio
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e-image-generation-studio.png'), fullPage: false });
+  console.log('📸 Captured e2e-image-generation-studio.png');
 
   if (errors.length > 0) {
     throw new Error(`Browser encountered ${errors.length} errors: ${errors.join('; ')}`);

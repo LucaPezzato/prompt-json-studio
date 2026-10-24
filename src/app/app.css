@@ -367,6 +367,53 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .output .out-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .output .default-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(241, 250, 140, 0.16);
+  color: var(--yellow, #f1fa8c);
+  border: 1px solid rgba(241, 250, 140, 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  user-select: none;
+}
+
+:host ::ng-deep .output .btn-make-default {
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  color: var(--muted, #6272a4);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.15s ease;
+}
+
+:host ::ng-deep .output .btn-make-default:hover {
+  color: var(--yellow, #f1fa8c);
+  border-color: var(--yellow, #f1fa8c);
+  background: rgba(241, 250, 140, 0.1);
+}
+
+:host ::ng-deep .output .tab-star {
+  color: var(--yellow, #f1fa8c);
+  font-size: 11px;
+  margin-left: 3px;
 }
 
 :host ::ng-deep .tok-key { color: var(--pink); font-weight: 600; }
@@ -2011,6 +2058,565 @@
 
 .palette-summary:hover {
   color: var(--yellow, #f1fa8c);
+}
+
+/* =========================================================
+   OUTPUT PANEL: DIRECT AI IMAGE GENERATION & VIEWER
+   ========================================================= */
+
+:host ::ng-deep .output .panel-mode-switcher {
+  display: flex;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+
+:host ::ng-deep .output .mode-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+:host ::ng-deep .output .mode-btn:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:host ::ng-deep .output .mode-btn.active {
+  color: var(--fg);
+  background: var(--bg-2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+:host ::ng-deep .output .active-badge-dot {
+  color: var(--green, #50fa7b);
+  font-size: 9px;
+  line-height: 1;
+}
+
+:host ::ng-deep .output .gen-action-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: stretch;
+}
+
+:host ::ng-deep .output .btn-generate-hero {
+  flex: 1;
+  background: linear-gradient(135deg, #ff79c6 0%, #bd93f9 100%);
+  color: #282a36;
+  border: none;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 3px 12px rgba(189, 147, 249, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:host ::ng-deep .output .btn-generate-hero:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 18px rgba(189, 147, 249, 0.55);
+  filter: brightness(1.08);
+}
+
+:host ::ng-deep .output .btn-generate-hero:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+:host ::ng-deep .output .btn-generate-hero:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+:host ::ng-deep .output .btn-config-engine {
+  background: var(--bg-2, #282a36);
+  border: 1px solid var(--line, #44475a);
+  color: var(--fg, #f8f8f2);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .output .btn-config-engine:hover {
+  border-color: var(--purple, #bd93f9);
+  color: var(--purple, #bd93f9);
+  background: rgba(189, 147, 249, 0.12);
+}
+
+:host ::ng-deep .output .spinner-dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(40, 42, 54, 0.3);
+  border-top-color: #282a36;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+:host ::ng-deep .output .image-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:host ::ng-deep .output .image-empty-card {
+  flex: 1;
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  min-height: 280px;
+}
+
+:host ::ng-deep .output .empty-icon-wrap {
+  font-size: 38px;
+  opacity: 0.85;
+}
+
+:host ::ng-deep .output .empty-title {
+  margin: 0;
+  font-size: 15px;
+  color: var(--fg);
+  font-weight: 700;
+}
+
+:host ::ng-deep .output .empty-desc {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+:host ::ng-deep .output .empty-provider-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--comment);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:host ::ng-deep .output .empty-provider-info b {
+  color: var(--purple, #bd93f9);
+}
+
+:host ::ng-deep .output .btn-link {
+  background: none;
+  border: none;
+  color: var(--cyan, #8be9fd);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+:host ::ng-deep .output .btn-empty-generate {
+  margin-top: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--purple, #bd93f9);
+  color: var(--purple, #bd93f9);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+:host ::ng-deep .output .btn-empty-generate:hover {
+  background: var(--purple, #bd93f9);
+  color: var(--bg);
+}
+
+:host ::ng-deep .output .image-loading-card {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  min-height: 280px;
+}
+
+:host ::ng-deep .output .loading-pulse-ring {
+  width: 58px;
+  height: 58px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:host ::ng-deep .output .spinner-radar {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(189, 147, 249, 0.2);
+  border-top-color: var(--pink, #ff79c6);
+  border-right-color: var(--purple, #bd93f9);
+  border-radius: 50%;
+  animation: spin 1s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+}
+
+:host ::ng-deep .output .loading-title {
+  margin: 0;
+  font-size: 15px;
+  color: var(--fg);
+  font-weight: 700;
+}
+
+:host ::ng-deep .output .loading-desc {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+:host ::ng-deep .output .loading-desc b {
+  color: var(--pink, #ff79c6);
+}
+
+:host ::ng-deep .output .loading-bar-track {
+  width: 200px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+:host ::ng-deep .output .loading-bar-progress {
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--purple, #bd93f9), var(--pink, #ff79c6));
+  border-radius: 2px;
+  animation: loadingSlide 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes loadingSlide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+:host ::ng-deep .output .image-result-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+:host ::ng-deep .output .img-preview-container {
+  position: relative;
+  border-radius: 9px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #111217;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.15s ease;
+}
+
+:host ::ng-deep .output .img-preview-container:hover {
+  border-color: var(--purple, #bd93f9);
+}
+
+:host ::ng-deep .output .result-img {
+  width: 100%;
+  height: auto;
+  max-height: 360px;
+  object-fit: contain;
+  display: block;
+}
+
+:host ::ng-deep .output .img-zoom-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(10, 10, 16, 0.78);
+  backdrop-filter: blur(4px);
+  color: var(--fg);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+:host ::ng-deep .output .img-preview-container:hover .img-zoom-hint {
+  opacity: 1;
+}
+
+:host ::ng-deep .output .img-meta-strip {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .output .meta-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+:host ::ng-deep .output .meta-tag.model-tag {
+  color: var(--purple, #bd93f9);
+  border-color: rgba(189, 147, 249, 0.3);
+}
+
+:host ::ng-deep .output .meta-tag.aspect-tag {
+  color: var(--yellow, #f1fa8c);
+}
+
+:host ::ng-deep .output .meta-tag.time-tag {
+  color: var(--green, #50fa7b);
+}
+
+:host ::ng-deep .output .img-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+:host ::ng-deep .output .img-action-btn {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 7px 6px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+:host ::ng-deep .output .img-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--purple, #bd93f9);
+  color: var(--purple, #bd93f9);
+}
+
+:host ::ng-deep .output .img-action-btn.regen-btn {
+  color: var(--pink, #ff79c6);
+  border-color: rgba(255, 121, 198, 0.3);
+}
+
+:host ::ng-deep .output .img-action-btn.regen-btn:hover {
+  background: rgba(255, 121, 198, 0.15);
+  border-color: var(--pink, #ff79c6);
+}
+
+:host ::ng-deep .output .img-prompt-disclosure {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+:host ::ng-deep .output .btn-toggle-prompt {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+:host ::ng-deep .output .btn-toggle-prompt:hover {
+  color: var(--yellow, #f1fa8c);
+}
+
+:host ::ng-deep .output .prompt-snippet-box {
+  margin-top: 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+:host ::ng-deep .output .prompt-text {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--comment);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+:host ::ng-deep .output .btn-copy-snippet {
+  align-self: flex-end;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+:host ::ng-deep .output .btn-copy-snippet:hover {
+  color: var(--fg);
+  border-color: var(--yellow, #f1fa8c);
+}
+
+/* Lightbox Modal */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 16, 0.88);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.lightbox-content {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.lightbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #191a21;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.lightbox-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.lightbox-badge {
+  background: rgba(189, 147, 249, 0.2);
+  color: var(--purple, #bd93f9);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(189, 147, 249, 0.35);
+}
+
+.lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-close-lightbox {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.btn-close-lightbox:hover {
+  color: var(--pink, #ff79c6);
+  background: rgba(255, 121, 198, 0.15);
+}
+
+.lightbox-image-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: auto;
+  background: #101116;
+}
+
+.lightbox-full-img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 @media (max-width: 980px) {

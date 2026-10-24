@@ -3,7 +3,10 @@ import {
   AiAssistantConfig,
   CharacterSheetBlock,
   CustomOptionsMap,
+  GeneratedImageResult,
+  ImageGenConfig,
   ImagePromptSpec,
+  OutputTab,
   PresetCategoryKey,
   PromptTemplate,
   SavedCharacter,
@@ -13,6 +16,8 @@ const USER_PRESETS_STORAGE_KEY = 'prompt_json_studio_user_presets_v1';
 const CUSTOM_OPTIONS_STORAGE_KEY = 'prompt_json_studio_custom_options_v1';
 const AI_CONFIG_STORAGE_KEY = 'prompt_json_studio_ai_config_v1';
 const SAVED_CHARACTERS_STORAGE_KEY = 'prompt_json_studio_saved_characters_v1';
+const DEFAULT_OUTPUT_MODEL_STORAGE_KEY = 'prompt_json_studio_default_output_model_v1';
+const IMAGE_GEN_CONFIG_STORAGE_KEY = 'prompt_json_studio_image_gen_config_v1';
 
 export const DEFAULT_CHARACTER_SHEET: CharacterSheetBlock = {
   enabled: false,
@@ -1385,6 +1390,8 @@ export class PromptService {
   readonly userPresets = signal<PromptTemplate[]>(this.loadUserPresets());
   readonly savedCharacters = signal<SavedCharacter[]>(this.loadSavedCharacters());
   readonly aiConfig = signal<AiAssistantConfig>(this.loadAiConfig());
+  readonly defaultOutputModel = signal<OutputTab>(this.loadDefaultOutputModel());
+  readonly imageGenConfig = signal<ImageGenConfig>(this.loadImageGenConfig());
 
   readonly allTemplates = computed<PromptTemplate[]>(() => [...this.builtInTemplates, ...this.userPresets()]);
 
@@ -1393,21 +1400,30 @@ export class PromptService {
     effect(() => this.persist(USER_PRESETS_STORAGE_KEY, this.userPresets()));
     effect(() => this.persist(SAVED_CHARACTERS_STORAGE_KEY, this.savedCharacters()));
     effect(() => this.persist(AI_CONFIG_STORAGE_KEY, this.aiConfig()));
+    effect(() => this.persist(DEFAULT_OUTPUT_MODEL_STORAGE_KEY, this.defaultOutputModel()));
+    effect(() => this.persist(IMAGE_GEN_CONFIG_STORAGE_KEY, this.imageGenConfig()));
     this.tryLoadEnvConfig();
   }
 
   private async tryLoadEnvConfig(): Promise<void> {
-    if (this.aiConfig().apiKey) return;
     try {
       const res = await fetch('/env.json');
       if (res.ok) {
         const data = await res.json();
-        if (data.GEMINI_API_KEY && !this.aiConfig().apiKey) {
-          this.aiConfig.update((c) => ({
-            ...c,
-            apiKey: data.GEMINI_API_KEY,
-            model: data.DEFAULT_MODEL || c.model || 'gemini-3.8-flash',
-          }));
+        if (data.GEMINI_API_KEY) {
+          if (!this.aiConfig().apiKey) {
+            this.aiConfig.update((c) => ({
+              ...c,
+              apiKey: data.GEMINI_API_KEY,
+              model: data.DEFAULT_MODEL || c.model || 'gemini-3.8-flash',
+            }));
+          }
+          if (!this.imageGenConfig().apiKey) {
+            this.imageGenConfig.update((c) => ({
+              ...c,
+              apiKey: data.GEMINI_API_KEY,
+            }));
+          }
         }
       }
     } catch {}
@@ -2665,6 +2681,25 @@ Instructions:
     return empty;
   }
 
+  setDefaultOutputModel(model: OutputTab): void {
+    if (['gpt', 'json', 'flux', 'midjourney', 'sdxl'].includes(model)) {
+      this.defaultOutputModel.set(model);
+    }
+  }
+
+  private loadDefaultOutputModel(): OutputTab {
+    try {
+      const raw = localStorage.getItem(DEFAULT_OUTPUT_MODEL_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (['gpt', 'json', 'flux', 'midjourney', 'sdxl'].includes(parsed)) {
+          return parsed as OutputTab;
+        }
+      }
+    } catch {}
+    return 'gpt';
+  }
+
   private loadUserPresets(): PromptTemplate[] {
     try {
       const raw = localStorage.getItem(USER_PRESETS_STORAGE_KEY);
@@ -2726,5 +2761,244 @@ Instructions:
         createdAt: 1700000001000,
       },
     ];
+  }
+
+  setImageGenConfig(cfg: ImageGenConfig): void {
+    this.imageGenConfig.set(cfg);
+  }
+
+  private loadImageGenConfig(): ImageGenConfig {
+    try {
+      const raw = localStorage.getItem(IMAGE_GEN_CONFIG_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return {
+      provider: 'gemini_imagen',
+      model: 'imagen-3.0-generate-002',
+      apiKey: '',
+      endpointUrl: 'http://127.0.0.1:7860/sdapi/v1/txt2img',
+    };
+  }
+
+  getImageGenerationPrompt(spec: ImagePromptSpec): string {
+    if (
+      spec.character_sheet?.enabled &&
+      spec.character_sheet.character_name.trim() &&
+      spec.character_sheet.mode === 'sheet_generation'
+    ) {
+      const cs = spec.character_sheet;
+      const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side view, Back view';
+      return (
+        `Character design turnaround model sheet of ${cs.character_name}, ${cs.gender_and_age}, ` +
+        `${cs.ethnicity_and_skin}, eye details: ${cs.eye_details || 'as shown'}, hair details: ${cs.hair_details || 'as shown'}, ` +
+        `${cs.distinctive_marks || ''}, body build: ${cs.body_build || 'athletic'}. ` +
+        `Wearing signature attire: ${cs.signature_outfit || 'Neutral minimalist athletic basics'}. ` +
+        `Displaying simultaneous multi-angle views in a single frame: ${views}. ` +
+        `Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even studio lighting, 8k resolution, photorealistic character concept sheet.`
+      );
+    }
+
+    if (
+      spec.character_sheet?.enabled &&
+      spec.character_sheet.character_name.trim() &&
+      spec.character_sheet.mode === 'scene_with_character'
+    ) {
+      const cs = spec.character_sheet;
+      const attire = spec.subject.clothing_or_materials.trim() || cs.signature_outfit;
+      const parts: string[] = [
+        `${spec.style_and_rendering.medium || 'Photorealistic photography'} of ${cs.character_name}, a ${cs.gender_and_age} with ${cs.ethnicity_and_skin}, eyes: ${cs.eye_details}, hair: ${cs.hair_details}, ${cs.distinctive_marks || ''}, build: ${cs.body_build}.`,
+        `Wearing ${attire}.`,
+      ];
+      if (spec.subject.pose_or_action) parts.push(`Action and pose: ${spec.subject.pose_or_action}.`);
+      if (spec.subject.expression_or_mood) parts.push(`Expression: ${spec.subject.expression_or_mood}.`);
+      if (spec.scene.environment) parts.push(`Setting and location: ${spec.scene.environment}.`);
+      if (spec.scene.time_of_day) parts.push(`Time of day: ${spec.scene.time_of_day}.`);
+      if (spec.scene.atmosphere_weather) parts.push(`Atmosphere: ${spec.scene.atmosphere_weather}.`);
+      if (spec.camera.shot_type) parts.push(`Framing: ${spec.camera.shot_type}, ${spec.camera.angle || 'eye-level'}.`);
+      if (spec.camera.lens_focal_length) parts.push(`Lens: ${spec.camera.lens_focal_length}.`);
+      if (spec.lighting.key_light) parts.push(`Lighting: ${spec.lighting.key_light}, ${spec.lighting.color_temperature || ''}.`);
+      if (spec.style_and_rendering.aesthetic) parts.push(`Style: ${spec.style_and_rendering.aesthetic}.`);
+      parts.push('masterpiece, 8k, sharp focus, ultra-detailed.');
+      return parts.join(' ');
+    }
+
+    // Free scene
+    const parts: string[] = [
+      `${spec.style_and_rendering.medium || 'Photograph'} of ${spec.subject.primary_entity || 'a cinematic scene'}.`,
+    ];
+    if (spec.subject.description) parts.push(spec.subject.description + '.');
+    if (spec.subject.clothing_or_materials) parts.push(`Wearing ${spec.subject.clothing_or_materials}.`);
+    if (spec.subject.pose_or_action) parts.push(`Action: ${spec.subject.pose_or_action}.`);
+    if (spec.subject.expression_or_mood) parts.push(`Expression: ${spec.subject.expression_or_mood}.`);
+    if (spec.scene.environment) parts.push(`Environment: ${spec.scene.environment}.`);
+    if (spec.scene.time_of_day) parts.push(`Time: ${spec.scene.time_of_day}.`);
+    if (spec.scene.atmosphere_weather) parts.push(`Weather: ${spec.scene.atmosphere_weather}.`);
+    if (spec.camera.shot_type) parts.push(`Shot: ${spec.camera.shot_type}, ${spec.camera.angle || ''}.`);
+    if (spec.lighting.key_light) parts.push(`Lighting: ${spec.lighting.key_light}.`);
+    if (spec.style_and_rendering.aesthetic) parts.push(`Aesthetic: ${spec.style_and_rendering.aesthetic}.`);
+    parts.push('8k, photorealistic, cinematic masterpiece.');
+    return parts.join(' ');
+  }
+
+  async generateImage(spec: ImagePromptSpec, customConfig?: ImageGenConfig): Promise<GeneratedImageResult> {
+    const config = customConfig || this.imageGenConfig();
+    const prompt = this.getImageGenerationPrompt(spec);
+    const aspect = spec.technical_parameters.aspect_ratio || '16:9';
+    const startTime = Date.now();
+
+    if (config.provider === 'gemini_imagen') {
+      const apiKey = config.apiKey || this.aiConfig().apiKey;
+      if (!apiKey) {
+        throw new Error('API Key mancante per Google Imagen. Inseriscila nelle impostazioni (icona ⚙).');
+      }
+
+      const model = config.model.trim() || 'imagen-3.0-generate-002';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:predict?key=${encodeURIComponent(apiKey)}`;
+
+      // Map aspect ratio for Imagen 3: valid values are "1:1", "3:4", "4:3", "9:16", "16:9"
+      let imagenAspect = '16:9';
+      if (aspect === '1:1') imagenAspect = '1:1';
+      else if (aspect === '9:16' || aspect === '2:3') imagenAspect = '9:16';
+      else if (aspect === '4:3') imagenAspect = '4:3';
+      else if (aspect === '3:4' || aspect === '4:5') imagenAspect = '3:4';
+      else imagenAspect = '16:9';
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instances: [{ prompt }],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: imagenAspect,
+            personGeneration: 'ALLOW_ADULT',
+            outputMimeType: 'image/jpeg',
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        let message = `Errore generazione Imagen 3 (${res.status})`;
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.error?.message) message = parsed.error.message;
+        } catch {}
+        throw new Error(message);
+      }
+
+      const data = await res.json();
+      const prediction = data?.predictions?.[0];
+      if (!prediction?.bytesBase64Encoded) {
+        throw new Error('Nessuna immagine restituita dal modello Imagen 3.');
+      }
+
+      const mime = prediction.mimeType || 'image/jpeg';
+      const dataUrl = `data:${mime};base64,${prediction.bytesBase64Encoded}`;
+
+      return {
+        dataUrl,
+        mimeType: mime,
+        model,
+        prompt,
+        aspectRatio: imagenAspect,
+        timeMs: Date.now() - startTime,
+        timestamp: Date.now(),
+      };
+    } else if (config.provider === 'openai_dalle') {
+      const apiKey = config.apiKey;
+      if (!apiKey) {
+        throw new Error('API Key OpenAI mancante per DALL-E 3. Inseriscila nelle impostazioni.');
+      }
+
+      const model = config.model.trim() || 'dall-e-3';
+      let size = '1792x1024';
+      if (aspect === '1:1') size = '1024x1024';
+      else if (aspect === '9:16' || aspect === '2:3' || aspect === '4:5') size = '1024x1792';
+      else size = '1792x1024';
+
+      const res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          prompt,
+          n: 1,
+          size,
+          response_format: 'b64_json',
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        let message = `Errore generazione DALL-E 3 (${res.status})`;
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.error?.message) message = parsed.error.message;
+        } catch {}
+        throw new Error(message);
+      }
+
+      const data = await res.json();
+      const b64 = data?.data?.[0]?.b64_json;
+      if (!b64) throw new Error('Nessuna immagine restituita da DALL-E 3.');
+
+      return {
+        dataUrl: `data:image/png;base64,${b64}`,
+        mimeType: 'image/png',
+        model,
+        prompt,
+        aspectRatio: size,
+        timeMs: Date.now() - startTime,
+        timestamp: Date.now(),
+      };
+    } else if (config.provider === 'comfyui' || config.provider === 'custom') {
+      const endpoint = config.endpointUrl.trim() || 'http://127.0.0.1:7860/sdapi/v1/txt2img';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (config.apiKey.trim()) {
+        headers['Authorization'] = `Bearer ${config.apiKey.trim()}`;
+      }
+
+      let width = 1024;
+      let height = 576;
+      if (aspect === '1:1') { width = 1024; height = 1024; }
+      else if (aspect === '9:16') { width = 576; height = 1024; }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          prompt,
+          negative_prompt: spec.technical_parameters.negative_prompt || '',
+          steps: 25,
+          width,
+          height,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Errore endpoint locale (${res.status}): ${await res.text()}`);
+      }
+
+      const data = await res.json();
+      const imgB64 = data?.images?.[0] || data?.image || data?.output;
+      if (!imgB64) throw new Error('Nessuna immagine nel payload di risposta.');
+
+      const dataUrl = imgB64.startsWith('data:') ? imgB64 : `data:image/png;base64,${imgB64}`;
+      return {
+        dataUrl,
+        mimeType: 'image/png',
+        model: config.model || 'local-sd',
+        prompt,
+        aspectRatio: `${width}x${height}`,
+        timeMs: Date.now() - startTime,
+        timestamp: Date.now(),
+      };
+    }
+
+    throw new Error(`Provider di generazione non supportato: ${config.provider}`);
   }
 }

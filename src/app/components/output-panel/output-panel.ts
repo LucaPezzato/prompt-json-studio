@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, model, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, model, output, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { CompiledOutputs, GeneratedImageResult, ImageGenConfig, OutputTab } from '../../models/prompt.model';
 
-export type OutputTab = 'json' | 'flux' | 'midjourney' | 'gpt' | 'sdxl';
-export type CompiledOutputs = Record<OutputTab, string>;
+export type { OutputTab, CompiledOutputs };
 
 const TABS: { key: OutputTab; label: string; hint: string }[] = [
   { key: 'gpt', label: '✨ Gemini / GPT-4o', hint: 'Istruzione in inglese con grounding su sheet allegato + brief JSON: ottimizzato per Google Gemini e ChatGPT.' },
@@ -12,62 +12,277 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
   { key: 'sdxl', label: 'SDXL', hint: 'Prompt positivo con pesi + prompt negativo per Stable Diffusion XL / Automatic1111 / ComfyUI.' },
 ];
 
-/** Live multi-model output viewer with Dracula syntax highlighting. */
+/** Live multi-model output viewer & direct AI image generator with Dracula palette. */
 @Component({
   selector: 'app-output-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'output' },
   template: `
-    <div class="tabs" role="tablist">
+    <!-- Top Mode Switcher (Image vs Prompt) -->
+    <div class="panel-mode-switcher" role="tablist">
       <button
         type="button"
         role="tab"
-        class="tab tab-primary"
-        [class.active]="tab() === 'gpt'"
-        (click)="tab.set('gpt')"
+        class="mode-btn"
+        [class.active]="viewMode() === 'image'"
+        (click)="viewMode.set('image')"
       >
-        ✨ Gemini / GPT-4o
+        <span class="mode-icon">🎨</span>
+        <span>Immagine</span>
+        @if (generatedImage()) {
+          <span class="active-badge-dot" title="Rendering generato presente">●</span>
+        }
       </button>
 
       <button
         type="button"
         role="tab"
-        class="tab"
-        [class.active]="tab() === 'json'"
-        (click)="tab.set('json')"
+        class="mode-btn"
+        [class.active]="viewMode() === 'prompt'"
+        (click)="viewMode.set('prompt')"
       >
-        {{ '{ }' }} JSON
+        <span class="mode-icon">📝</span>
+        <span>Prompt &amp; Codice</span>
+      </button>
+    </div>
+
+    <!-- Hero Action Bar for Direct Image Generation -->
+    <div class="gen-action-bar">
+      <button
+        type="button"
+        class="btn-generate-hero"
+        [disabled]="generating()"
+        (click)="onGenerateClick()"
+        [title]="generating() ? 'Generazione in corso...' : 'Lancia generazione immagine con ' + activeProviderLabel()"
+      >
+        @if (generating()) {
+          <span class="spinner-dot"></span>
+          <span>Generazione in corso…</span>
+        } @else {
+          <span class="hero-icon">🎨</span>
+          <span class="hero-text">Genera Immagine</span>
+        }
       </button>
 
-      <div class="other-models-wrap">
-        <select
-          class="other-models-select"
-          [class.active]="isOtherActive()"
-          (change)="onOtherModelChange($any($event.target).value)"
-        >
-          <option value="" disabled [selected]="!isOtherActive()">Altri modelli ▾</option>
-          <option value="flux" [selected]="tab() === 'flux'">FLUX.1 / FLUX.2</option>
-          <option value="midjourney" [selected]="tab() === 'midjourney'">Midjourney v6</option>
-          <option value="sdxl" [selected]="tab() === 'sdxl'">SDXL</option>
-        </select>
+      <button
+        type="button"
+        class="btn-config-engine"
+        (click)="openSettings.emit()"
+        [title]="'Configura motore AI, API key e parametri (' + activeProviderLabel() + ')'"
+      >
+        <span class="cfg-icon">⚙</span>
+        <span class="cfg-text">{{ activeEngineLabel() }}</span>
+      </button>
+    </div>
+
+    <!-- VIEW MODE: IMAGE WORKSPACE -->
+    @if (viewMode() === 'image') {
+      <div class="image-workspace">
+        @if (generating()) {
+          <div class="image-loading-card">
+            <div class="loading-pulse-ring">
+              <div class="spinner-radar"></div>
+            </div>
+            <h4 class="loading-title">Creazione rendering in corso…</h4>
+            <p class="loading-desc">
+              Interrogazione di <b>{{ activeEngineLabel() }}</b> con applicazione dei tratti somatici, schema luci e staging scenico.
+            </p>
+            <div class="loading-bar-track">
+              <div class="loading-bar-progress"></div>
+            </div>
+          </div>
+        } @else if (generatedImage()) {
+          <div class="image-result-card">
+            <div
+              class="img-preview-container"
+              (click)="openLightbox.emit()"
+              title="Clicca per ingrandire a schermo intero"
+            >
+              <img
+                [src]="generatedImage()!.dataUrl"
+                alt="Immagine generata dall'AI"
+                class="result-img"
+              />
+              <div class="img-zoom-hint">
+                <span>🔍 Clicca per ingrandire</span>
+              </div>
+            </div>
+
+            <div class="img-meta-strip">
+              <span class="meta-tag model-tag">🤖 {{ generatedImage()!.model }}</span>
+              <span class="meta-tag aspect-tag">📐 {{ generatedImage()!.aspectRatio }}</span>
+              <span class="meta-tag time-tag">⚡ {{ (generatedImage()!.timeMs / 1000).toFixed(1) }}s</span>
+            </div>
+
+            <div class="img-actions-grid">
+              <button
+                type="button"
+                class="img-action-btn"
+                (click)="openLightbox.emit()"
+                title="Visualizza a schermo intero"
+              >
+                🔍 Ingrandisci
+              </button>
+              <button
+                type="button"
+                class="img-action-btn"
+                (click)="download.emit()"
+                title="Scarica file sul tuo disco"
+              >
+                💾 Scarica
+              </button>
+              <button
+                type="button"
+                class="img-action-btn"
+                (click)="copyImage.emit()"
+                title="Copia negli appunti"
+              >
+                📋 Copia
+              </button>
+              <button
+                type="button"
+                class="img-action-btn regen-btn"
+                (click)="onGenerateClick()"
+                title="Genera una nuova variazione"
+              >
+                🔄 Rigenera
+              </button>
+            </div>
+
+            <div class="img-prompt-disclosure">
+              <button
+                type="button"
+                class="btn-toggle-prompt"
+                (click)="showFullPrompt.set(!showFullPrompt())"
+              >
+                <span>{{ showFullPrompt() ? '▼ Nascondi Prompt Inviato' : '▶ Mostra Prompt Inviato al Modello' }}</span>
+              </button>
+              @if (showFullPrompt()) {
+                <div class="prompt-snippet-box">
+                  <p class="prompt-text">{{ generatedImage()!.prompt }}</p>
+                  <button
+                    type="button"
+                    class="btn-copy-snippet"
+                    (click)="copy.emit(generatedImage()!.prompt)"
+                  >
+                    📋 Copia Prompt
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        } @else {
+          <div class="image-empty-card">
+            <div class="empty-icon-wrap">🎨</div>
+            <h3 class="empty-title">Pronto per Generare</h3>
+            <p class="empty-desc">
+              Imposta il soggetto e la scena nell'editor a sinistra, poi clicca sul pulsante <b>Genera Immagine</b> in alto per visualizzare qui il rendering creato da <b>{{ activeEngineLabel() }}</b>.
+            </p>
+            <div class="empty-provider-info">
+              <span>Motore: <b>{{ activeProviderLabel() }}</b></span>
+              <button type="button" class="btn-link" (click)="openSettings.emit()">Modifica ⚙</button>
+            </div>
+            <button type="button" class="btn-empty-generate" (click)="onGenerateClick()">
+              ✨ Avvia Generazione con {{ activeEngineLabel() }}
+            </button>
+          </div>
+        }
       </div>
-    </div>
-    <p class="hint">{{ hint() }}</p>
-    <pre class="code" [innerHTML]="highlighted()"></pre>
-    <div class="out-footer">
-      <span class="muted">{{ stats() }}</span>
-      <button type="button" class="btn primary" (click)="copy.emit(current())">📋 Copia (Ctrl+Shift+C)</button>
-    </div>
+    } @else {
+      <!-- VIEW MODE: PROMPT & CODE INSPECTION -->
+      <div class="tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          class="tab tab-primary"
+          [class.active]="tab() === 'gpt'"
+          (click)="tab.set('gpt')"
+        >
+          ✨ Gemini / GPT-4o
+          @if (defaultModel() === 'gpt') {
+            <span class="tab-star" title="Formato predefinito">★</span>
+          }
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          class="tab"
+          [class.active]="tab() === 'json'"
+          (click)="tab.set('json')"
+        >
+          {{ '{ }' }} JSON
+          @if (defaultModel() === 'json') {
+            <span class="tab-star" title="Formato predefinito">★</span>
+          }
+        </button>
+
+        <div class="other-models-wrap">
+          <select
+            class="other-models-select"
+            [class.active]="isOtherActive()"
+            (change)="onOtherModelChange($any($event.target).value)"
+          >
+            <option value="" disabled [selected]="!isOtherActive()">Altri modelli ▾</option>
+            <option value="flux" [selected]="tab() === 'flux'">FLUX.1 / FLUX.2 {{ defaultModel() === 'flux' ? '★' : '' }}</option>
+            <option value="midjourney" [selected]="tab() === 'midjourney'">Midjourney v6 {{ defaultModel() === 'midjourney' ? '★' : '' }}</option>
+            <option value="sdxl" [selected]="tab() === 'sdxl'">SDXL {{ defaultModel() === 'sdxl' ? '★' : '' }}</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">{{ hint() }}</p>
+      <pre class="code" [innerHTML]="highlighted()"></pre>
+      <div class="out-footer">
+        <div class="out-footer-left">
+          <span class="muted">{{ stats() }}</span>
+          @if (defaultModel()) {
+            @if (tab() === defaultModel()) {
+              <span class="default-badge" title="Questo formato è impostato come predefinito per la copia rapida">
+                ★ Predefinito
+              </span>
+            } @else {
+              <button
+                type="button"
+                class="btn-make-default"
+                [title]="'Imposta ' + currentTabShortLabel() + ' come formato predefinito all’avvio e per la copia'"
+                (click)="setDefault.emit(tab())"
+              >
+                ☆ Rendi predefinito
+              </button>
+            }
+          }
+        </div>
+        <button type="button" class="btn primary copy-btn" (click)="copy.emit(current())">
+          📋 Copia {{ currentTabShortLabel() }} (Ctrl+Shift+C)
+        </button>
+      </div>
+    }
   `,
 })
 export class OutputPanel {
   protected readonly tabs = TABS;
   private readonly sanitizer = inject(DomSanitizer);
 
+  // Inputs
   readonly outputs = input.required<CompiledOutputs>();
-  /** Primary default tab is Gemini / GPT-4o. */
   readonly tab = model<OutputTab>('gpt');
+  readonly defaultModel = input<OutputTab>('gpt');
+  readonly generating = input<boolean>(false);
+  readonly generatedImage = input<GeneratedImageResult | null>(null);
+  readonly imageGenConfig = input<ImageGenConfig | null>(null);
+
+  // Outputs
+  readonly setDefault = output<OutputTab>();
   readonly copy = output<string>();
+  readonly generate = output<void>();
+  readonly openSettings = output<void>();
+  readonly openLightbox = output<void>();
+  readonly download = output<void>();
+  readonly copyImage = output<void>();
+
+  // Internal state
+  readonly viewMode = signal<'image' | 'prompt'>('image');
+  readonly showFullPrompt = signal<boolean>(false);
 
   readonly current = computed(() => this.outputs()[this.tab()]);
   readonly hint = computed(() => TABS.find((t) => t.key === this.tab())?.hint ?? '');
@@ -77,6 +292,43 @@ export class OutputPanel {
     return `${out.length} caratteri · ${out.split(/\s+/).filter(Boolean).length} parole`;
   });
 
+  readonly currentTabShortLabel = computed(() => {
+    switch (this.tab()) {
+      case 'gpt': return 'Gemini';
+      case 'json': return 'JSON';
+      case 'flux': return 'FLUX';
+      case 'midjourney': return 'Midjourney';
+      case 'sdxl': return 'SDXL';
+      default: return '';
+    }
+  });
+
+  readonly activeProviderLabel = computed(() => {
+    const cfg = this.imageGenConfig();
+    if (!cfg) return 'Google Imagen 3';
+    switch (cfg.provider) {
+      case 'gemini_imagen': return 'Google Imagen 3';
+      case 'openai_dalle': return 'OpenAI DALL-E 3';
+      case 'comfyui': return 'ComfyUI / Local WebUI';
+      case 'custom': return 'Endpoint Personalizzato';
+      default: return 'AI Generator';
+    }
+  });
+
+  readonly activeEngineLabel = computed(() => {
+    const cfg = this.imageGenConfig();
+    if (!cfg) return 'Imagen 3';
+    if (cfg.provider === 'gemini_imagen') return 'Imagen 3';
+    if (cfg.provider === 'openai_dalle') return 'DALL-E 3';
+    if (cfg.provider === 'comfyui') return 'ComfyUI';
+    return cfg.model || 'Custom';
+  });
+
+  onGenerateClick(): void {
+    this.viewMode.set('image');
+    this.generate.emit();
+  }
+
   onOtherModelChange(val: string): void {
     if (val && ['flux', 'midjourney', 'sdxl'].includes(val)) {
       this.tab.set(val as OutputTab);
@@ -85,8 +337,6 @@ export class OutputPanel {
 
   /**
    * Lightweight JSON / CLI-flag syntax highlighter (Dracula palette).
-   * Input is fully HTML-escaped first and swatch colors are regex-validated HEX values,
-   * so bypassing the sanitizer (needed to keep inline swatch styles) is safe.
    */
   readonly highlighted = computed<SafeHtml>(() => this.sanitizer.bypassSecurityTrustHtml(this.highlight()));
 
