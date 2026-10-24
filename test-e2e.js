@@ -255,7 +255,7 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await injectBtn.click();
   await page.waitForTimeout(300);
 
-  const subjectEntityInput = page.locator('app-section-block:has-text("Soggetto principale") app-smart-field[label="Entità principale"] input');
+  const subjectEntityInput = page.locator('app-section-block:has-text("Soggetto") app-smart-field[label="Entità principale"] input');
   const injectedEntity = await subjectEntityInput.inputValue();
   console.log(`  Subject primary entity after injection: "${injectedEntity}"`);
   if (!injectedEntity.includes('Ren Takahashi')) {
@@ -267,9 +267,8 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await crefInput.fill('https://cdn.example.com/ren-turnaround.jpg');
   await page.waitForTimeout(200);
 
-  // Switch to Midjourney tab
-  const mjTabBtn = page.locator('button.tab:has-text("Midjourney")');
-  await mjTabBtn.click();
+  // Switch to Midjourney tab via other-models dropdown
+  await page.locator('.other-models-select').selectOption('midjourney');
   await page.waitForTimeout(300);
 
   const mjPromptText = await page.locator('pre.code').innerText();
@@ -395,22 +394,31 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   console.log('✔ Subject section displays the locked character banner with biometric DNA summary!');
 
   // Fill scene-specific pose and clothing in the Subject section
-  const poseInput = page.locator('app-section-block:has-text("Soggetto principale") app-smart-field[label="Posa / Azione"] input');
+  const poseInput = page.locator('app-section-block:has-text("Soggetto") app-smart-field[label*="Azione"] input');
   await poseInput.fill('Sitting candidly on a wooden pier dangling feet over azure water');
   await page.waitForTimeout(200);
 
-  const attireInput = page.locator('app-section-block:has-text("Soggetto principale") app-smart-field[label="Abbigliamento / Materiali"] input');
+  const attireInput = page.locator('app-section-block:has-text("Soggetto") app-smart-field[label*="Abito"] input');
   await attireInput.fill('Oversized navy wool knit sweater and rolled-up denim jeans');
   await page.waitForTimeout(200);
 
-  // Provide cref URL directly in the locked character banner
-  const crefInputScene = page.locator('.bound-cref-input').first();
-  await crefInputScene.fill('https://cdn.example.com/maya-model-sheet.jpg');
+  // Verify Gemini prompt is active and correctly contains the critical visual grounding instruction & scene attire
+  const geminiTabBtn = page.locator('button.tab:has-text("Gemini")');
+  await geminiTabBtn.click();
   await page.waitForTimeout(200);
 
-  // Check Midjourney compiled prompt
-  const sceneMjTab = page.locator('button.tab:has-text("Midjourney")');
-  await sceneMjTab.click();
+  const sceneGeminiText = await page.locator('pre.code').innerText();
+  console.log('  Scene Gemini output sample:', sceneGeminiText.slice(0, 180));
+  if (!sceneGeminiText.includes('[CRITICAL VISUAL GROUNDING INSTRUCTION FOR GEMINI') || !sceneGeminiText.includes('Maya Lin')) {
+    throw new Error('Gemini output in scene mode does not contain grounding instruction for Maya Lin!');
+  }
+  if (!sceneGeminiText.includes('Sitting candidly on a wooden pier') || !sceneGeminiText.includes('Oversized navy wool knit sweater')) {
+    throw new Error('Gemini output does not contain scene-specific pose or attire!');
+  }
+  console.log('✔ Gemini output correctly binds Maya Lin with scene-specific pose and attire!');
+
+  // Check Midjourney compiled prompt via other-models dropdown
+  await page.locator('.other-models-select').selectOption('midjourney');
   await page.waitForTimeout(300);
 
   const sceneMjText = await page.locator('pre.code').innerText();
@@ -418,27 +426,10 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   if (!sceneMjText.includes('Oversized navy wool knit sweater') || !sceneMjText.includes('Sitting candidly on a wooden pier')) {
     throw new Error('Midjourney output does not contain the scene-specific attire or pose!');
   }
-  if (!sceneMjText.includes('--cref https://cdn.example.com/maya-model-sheet.jpg') || !sceneMjText.includes('--cw 100')) {
-    throw new Error('Midjourney output in scene mode does not contain --cref or --cw!');
-  }
   console.log('✔ Midjourney compiled output correctly placed the locked character into the scene with custom attire!');
 
-  // Test altering the --cw slider directly in the banner
-  console.log('👉 Testing --cw weight slider (e.g. Setting weight to 20 for face-only consistency)...');
-  const cwSlider = page.locator('.bound-cw-box .cw-slider').first();
-  await cwSlider.fill('20');
-  await cwSlider.dispatchEvent('input');
-  await page.waitForTimeout(300);
-
-  const cwUpdatedMjText = await page.locator('pre.code').innerText();
-  if (!cwUpdatedMjText.includes('--cw 20')) {
-    throw new Error(`Expected --cw 20 in Midjourney output, but got: ${cwUpdatedMjText}`);
-  }
-  console.log('✔ --cw weight slider reactively updated Midjourney output to --cw 20!');
-
-  // Check FLUX compiled prompt
-  const fluxTab = page.locator('button.tab:has-text("FLUX")');
-  await fluxTab.click();
+  // Check FLUX compiled prompt via other-models dropdown
+  await page.locator('.other-models-select').selectOption('flux');
   await page.waitForTimeout(300);
   const fluxSceneText = await page.locator('pre.code').innerText();
   console.log('  FLUX Scene output:', fluxSceneText.slice(0, 180));
@@ -494,7 +485,7 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
 
   // 14. Test Dedicated Character Studio with Fixed White Studio Backdrop
   console.log('👉 Testing Dedicated Character Studio with Fixed White Studio Backdrop...');
-  const charStudioBtn = page.locator('.studio-workspace-bar .sw-btn:has-text("Studio Schede Personaggio")');
+  const charStudioBtn = page.locator('.studio-workspace-bar .sw-btn:has-text("Scheda Personaggio")');
   await charStudioBtn.click();
   await page.waitForTimeout(300);
 
@@ -507,6 +498,10 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
     throw new Error('Expected fixed white studio cyclorama backdrop card in Character Studio!');
   }
   console.log('✔ Fixed White Studio Backdrop card confirmed in Character Studio!');
+
+  // Ensure Gemini tab is selected
+  await page.locator('button.tab:has-text("Gemini")').click();
+  await page.waitForTimeout(200);
 
   // Verify Gemini prompt in Character Studio mode has the directive and white studio backdrop
   const charGeminiText = await page.locator('pre.code').innerText();

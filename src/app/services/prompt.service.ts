@@ -1503,6 +1503,36 @@ export class PromptService {
   /**
    * Builds a clean, structured JSON object ready for AI image generators.
    */
+  private stripEmptyValues(obj: unknown): unknown {
+    if (obj === null || obj === undefined) return undefined;
+    if (typeof obj === 'string') {
+      const trimmed = obj.trim();
+      return trimmed === '' ? undefined : trimmed;
+    }
+    if (typeof obj === 'number' || typeof obj === 'boolean') {
+      return obj;
+    }
+    if (Array.isArray(obj)) {
+      const cleaned = obj.map((i) => this.stripEmptyValues(i)).filter((item) => item !== undefined);
+      return cleaned.length > 0 ? cleaned : undefined;
+    }
+    if (typeof obj === 'object') {
+      const cleaned: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+        const val = this.stripEmptyValues(v);
+        if (val !== undefined) {
+          cleaned[k] = val;
+        }
+      }
+      return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+    }
+    return obj;
+  }
+
+  /**
+   * Builds the clean JSON representation of the prompt.
+   * Empty strings, nulls, empty arrays, and unpopulated sections are stripped cleanly.
+   */
   buildCleanJsonObject(spec: ImagePromptSpec): Record<string, unknown> {
     const customBySection = (sec: string): Record<string, string> => {
       const out: Record<string, string> = {};
@@ -1514,9 +1544,8 @@ export class PromptService {
       return out;
     };
 
-    const result: Record<string, unknown> = {
+    const raw: Record<string, unknown> = {
       meta: {
-        version: spec.meta.version || '2.0',
         title: spec.meta.title || 'Untitled Prompt',
         aspect_ratio: spec.technical_parameters.aspect_ratio,
       },
@@ -1526,9 +1555,9 @@ export class PromptService {
         pose_or_action: spec.subject.pose_or_action,
         expression_or_mood: spec.subject.expression_or_mood,
         clothing_or_materials:
-          spec.character_sheet?.enabled && spec.character_sheet.signature_outfit
+          spec.character_sheet?.enabled && spec.character_sheet.mode === 'sheet_generation'
             ? spec.character_sheet.signature_outfit
-            : spec.subject.clothing_or_materials,
+            : (spec.subject.clothing_or_materials?.trim() || spec.character_sheet?.signature_outfit || ''),
         placement: spec.subject.placement,
         ...customBySection('subject'),
       },
@@ -1541,13 +1570,18 @@ export class PromptService {
             })),
           }
         : {}),
-      scene: {
-        environment: spec.scene.environment,
-        background_details: spec.scene.background_details,
-        time_of_day: spec.scene.time_of_day,
-        atmosphere_weather: spec.scene.atmosphere_weather,
-        ...customBySection('scene'),
-      },
+      scene:
+        spec.character_sheet?.enabled && spec.character_sheet.mode === 'sheet_generation'
+          ? {
+              environment: 'Solid clean white seamless photo studio cyclorama backdrop',
+              background_details: 'Clean high-key studio void, soft diffuse floor contact shadow, zero scene clutter, 100% visual isolation',
+            }
+          : {
+              environment: spec.scene.environment,
+              time_of_day: spec.scene.time_of_day,
+              atmosphere_weather: spec.scene.atmosphere_weather,
+              ...customBySection('scene'),
+            },
       camera: {
         shot_type: spec.camera.shot_type,
         angle: spec.camera.angle,
@@ -1645,16 +1679,11 @@ export class PromptService {
           ? { negative_prompt: spec.technical_parameters.negative_prompt }
           : {}),
         ...(spec.technical_parameters.seed !== null ? { seed: spec.technical_parameters.seed } : {}),
-        model_hints: {
-          stylize: spec.technical_parameters.stylize,
-          chaos: spec.technical_parameters.chaos,
-          raw_mode: spec.technical_parameters.raw_mode,
-        },
       },
       ...customBySection('root'),
     };
 
-    return result;
+    return (this.stripEmptyValues(raw) as Record<string, unknown>) || {};
   }
 
   /**

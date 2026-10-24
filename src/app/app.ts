@@ -70,11 +70,27 @@ export class App {
   // Form input signals for modals / tools
   readonly magicIdea = signal('');
   readonly magicLoading = signal(false);
+  readonly showMagicModal = signal(false);
+  readonly showProjectMenu = signal(false);
   readonly importText = signal('');
   readonly newCustomTag = signal('');
   readonly presetName = signal('');
   readonly presetCategory = signal('Personali');
   readonly presetDescription = signal('');
+
+  readonly aspectRatios: string[] = ['16:9', '1:1', '9:16', '4:5', '3:2', '21:9', '2:3'];
+
+  setAspectRatio(ar: string): void {
+    this.store.set('technical_parameters', 'aspect_ratio', ar);
+  }
+
+  toggleProjectMenu(): void {
+    this.showProjectMenu.update((v) => !v);
+  }
+
+  closeProjectMenu(): void {
+    this.showProjectMenu.set(false);
+  }
 
   // Sections collapse state
   readonly sectionCharacterOpen = signal(false);
@@ -85,7 +101,8 @@ export class App {
   readonly sectionCompositionOpen = signal(false);
   readonly sectionStyleOpen = signal(true);
   readonly sectionTypographyOpen = signal(false);
-  readonly sectionTechnicalOpen = signal(true);
+  readonly sectionTechnicalOpen = signal(false);
+  readonly sectionNegativeOpen = signal(false);
   readonly sectionCustomOpen = signal(false);
 
   // Compiled outputs bundle for OutputPanel
@@ -195,6 +212,7 @@ export class App {
     this.sectionStyleOpen.set(false);
     this.sectionTypographyOpen.set(false);
     this.sectionTechnicalOpen.set(false);
+    this.sectionNegativeOpen.set(false);
     this.sectionCustomOpen.set(false);
   }
 
@@ -208,6 +226,7 @@ export class App {
     this.sectionStyleOpen.set(true);
     this.sectionTypographyOpen.set(true);
     this.sectionTechnicalOpen.set(true);
+    this.sectionNegativeOpen.set(true);
     this.sectionCustomOpen.set(true);
   }
 

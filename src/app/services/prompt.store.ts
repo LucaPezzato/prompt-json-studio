@@ -215,6 +215,16 @@ export class PromptStore {
             mode: 'sheet_generation',
             background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
           },
+          scene: {
+            environment: 'Solid clean white seamless photo studio cyclorama backdrop',
+            background_details: 'Clean high-key studio void, soft diffuse floor contact shadow, zero scene clutter, 100% visual isolation',
+            time_of_day: '',
+            atmosphere_weather: '',
+          },
+          technical_parameters: {
+            ...s.technical_parameters,
+            aspect_ratio: cs.layout_mode === 'expressions_grid' ? '1:1' : '16:9',
+          },
         };
       }
     });
@@ -295,6 +305,16 @@ export class PromptStore {
         camera: {
           ...s.camera,
           shot_type: cameraShot,
+        },
+        scene: {
+          environment: 'Solid clean white seamless photo studio cyclorama backdrop',
+          background_details: 'Clean high-key studio void, soft diffuse floor contact shadow, zero scene clutter, 100% visual isolation',
+          time_of_day: '',
+          atmosphere_weather: '',
+        },
+        technical_parameters: {
+          ...s.technical_parameters,
+          aspect_ratio: mode === 'expressions_grid' ? '1:1' : '16:9',
         },
       };
     });

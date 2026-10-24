@@ -5,10 +5,10 @@ export type OutputTab = 'json' | 'flux' | 'midjourney' | 'gpt' | 'sdxl';
 export type CompiledOutputs = Record<OutputTab, string>;
 
 const TABS: { key: OutputTab; label: string; hint: string }[] = [
+  { key: 'gpt', label: '✨ Gemini / GPT-4o', hint: 'Istruzione in inglese con grounding su sheet allegato + brief JSON: ottimizzato per Google Gemini e ChatGPT.' },
   { key: 'json', label: '{ } JSON', hint: 'JSON strutturato puro — incollalo in GPT-4o, Gemini, FLUX.2 o in pipeline ComfyUI.' },
   { key: 'flux', label: 'FLUX', hint: 'Prompt narrativo gerarchico ottimizzato per l’encoder T5 di FLUX.1 / FLUX.2.' },
   { key: 'midjourney', label: 'Midjourney', hint: 'Sintassi a token + parametri nativi (--ar, --s, --c, --seed, --no, --style raw).' },
-  { key: 'gpt', label: 'Gemini / GPT-4o', hint: 'Istruzione in inglese con grounding su sheet allegato + brief JSON: ottimizzato per Google Gemini e ChatGPT.' },
   { key: 'sdxl', label: 'SDXL', hint: 'Prompt positivo con pesi + prompt negativo per Stable Diffusion XL / Automatic1111 / ComfyUI.' },
 ];
 
@@ -19,9 +19,38 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
   host: { class: 'output' },
   template: `
     <div class="tabs" role="tablist">
-      @for (t of tabs; track t.key) {
-        <button type="button" role="tab" class="tab" [class.active]="tab() === t.key" (click)="tab.set(t.key)">{{ t.label }}</button>
-      }
+      <button
+        type="button"
+        role="tab"
+        class="tab tab-primary"
+        [class.active]="tab() === 'gpt'"
+        (click)="tab.set('gpt')"
+      >
+        ✨ Gemini / GPT-4o
+      </button>
+
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.active]="tab() === 'json'"
+        (click)="tab.set('json')"
+      >
+        {{ '{ }' }} JSON
+      </button>
+
+      <div class="other-models-wrap">
+        <select
+          class="other-models-select"
+          [class.active]="isOtherActive()"
+          (change)="onOtherModelChange($any($event.target).value)"
+        >
+          <option value="" disabled [selected]="!isOtherActive()">Altri modelli ▾</option>
+          <option value="flux" [selected]="tab() === 'flux'">FLUX.1 / FLUX.2</option>
+          <option value="midjourney" [selected]="tab() === 'midjourney'">Midjourney v6</option>
+          <option value="sdxl" [selected]="tab() === 'sdxl'">SDXL</option>
+        </select>
+      </div>
     </div>
     <p class="hint">{{ hint() }}</p>
     <pre class="code" [innerHTML]="highlighted()"></pre>
@@ -36,15 +65,23 @@ export class OutputPanel {
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly outputs = input.required<CompiledOutputs>();
-  readonly tab = model<OutputTab>('json');
+  /** Primary default tab is Gemini / GPT-4o. */
+  readonly tab = model<OutputTab>('gpt');
   readonly copy = output<string>();
 
   readonly current = computed(() => this.outputs()[this.tab()]);
   readonly hint = computed(() => TABS.find((t) => t.key === this.tab())?.hint ?? '');
+  readonly isOtherActive = computed(() => ['flux', 'midjourney', 'sdxl'].includes(this.tab()));
   readonly stats = computed(() => {
     const out = this.current();
     return `${out.length} caratteri · ${out.split(/\s+/).filter(Boolean).length} parole`;
   });
+
+  onOtherModelChange(val: string): void {
+    if (val && ['flux', 'midjourney', 'sdxl'].includes(val)) {
+      this.tab.set(val as OutputTab);
+    }
+  }
 
   /**
    * Lightweight JSON / CLI-flag syntax highlighter (Dracula palette).

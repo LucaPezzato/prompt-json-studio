@@ -7,32 +7,18 @@
     </div>
   </div>
 
-  <div class="magic-bar">
-    <span class="magic-icon">✨</span>
-    <input
-      type="text"
-      placeholder="Magic Expand: scrivi un'idea sintetica e premi Invio…"
-      [value]="magicIdea()"
-      (input)="magicIdea.set($any($event.target).value)"
-      (keydown.enter)="runMagicExpand()"
-    />
-    <button
-      type="button"
-      class="btn primary"
-      [disabled]="magicLoading() || !magicIdea().trim()"
-      (click)="runMagicExpand()"
-    >
-      {{ magicLoading() ? 'Generazione…' : 'Espandi' }}
-    </button>
-    <button
-      type="button"
-      class="btn icon"
-      title="Impostazioni Assistente AI"
-      (click)="openAiSettings()"
-    >⚙</button>
-  </div>
-
   <div class="top-actions">
+    <!-- Magic Expand Button (Compact) -->
+    <button
+      type="button"
+      class="btn ghost magic-open-btn"
+      (click)="showMagicModal.set(true)"
+      title="Magic Expand con AI: espandi un'idea rapida in un prompt completo"
+    >
+      ✨ Magic Expand
+    </button>
+
+    <!-- Template Library Button -->
     <button
       type="button"
       class="btn ghost template-modal-btn"
@@ -41,18 +27,53 @@
     >
       📚 Template
     </button>
-    <button
-      type="button"
-      class="btn primary reverse-btn"
-      (click)="openReverseModal()"
-      title="Carica una foto per estrarre il prompt completo e modificarlo"
-    >
-      📷 Reverse da Foto
-    </button>
-    <button type="button" class="btn ghost" (click)="resetPrompt()" title="Nuovo prompt vuoto">＋ Nuovo</button>
-    <button type="button" class="btn ghost" (click)="showImport.set(true)" title="Importa JSON">📥 Importa</button>
-    <button type="button" class="btn ghost" (click)="exportJsonFile()" title="Esporta JSON (Ctrl+S)">💾 Esporta</button>
-    <button type="button" class="btn accent" (click)="showSavePreset.set(true)">★ Salva preset</button>
+
+    <!-- Contextual Photo Button: in Scene mode, show Reverse Scena da Foto -->
+    @if (!isSheetMode()) {
+      <button
+        type="button"
+        class="btn ghost reverse-btn"
+        (click)="openReverseModal()"
+        title="Carica una foto per estrarre l'atmosfera e la composizione della scena"
+      >
+        📷 Reverse Scena da Foto
+      </button>
+    }
+
+    <!-- Compact Project Menu Dropdown -->
+    <div class="project-dropdown-wrap">
+      <button
+        type="button"
+        class="btn primary project-dropdown-btn"
+        (click)="toggleProjectMenu()"
+        title="Menu Progetto e File"
+      >
+        📁 Progetto ▾
+      </button>
+
+      @if (showProjectMenu()) {
+        <div class="project-menu-backdrop" (click)="closeProjectMenu()"></div>
+        <div class="project-dropdown-menu">
+          <button type="button" class="proj-menu-item" (click)="resetPrompt(); closeProjectMenu()">
+            ＋ Nuovo Prompt
+          </button>
+          <button type="button" class="proj-menu-item" (click)="showImport.set(true); closeProjectMenu()">
+            📥 Importa JSON…
+          </button>
+          <button type="button" class="proj-menu-item" (click)="exportJsonFile(); closeProjectMenu()">
+            💾 Esporta JSON (Ctrl+S)
+          </button>
+          <div class="proj-menu-divider"></div>
+          <button type="button" class="proj-menu-item accent" (click)="showSavePreset.set(true); closeProjectMenu()">
+            ★ Salva come Preset…
+          </button>
+          <div class="proj-menu-divider"></div>
+          <button type="button" class="proj-menu-item" (click)="openAiSettings(); closeProjectMenu()">
+            ⚙ Impostazioni AI…
+          </button>
+        </div>
+      }
+    </div>
   </div>
 </header>
 
@@ -99,41 +120,41 @@
       </div>
     }
 
-    <!-- STUDIO WORKSPACE SWITCHER (SCENE VS CHARACTER SHEET) -->
+    <!-- STUDIO WORKSPACE SWITCHER (2 SOLE MODALITÀ PULITE) -->
     <div class="studio-workspace-bar">
       <button
         type="button"
         class="sw-btn"
-        [class.active]="!isSheetMode()"
-        (click)="switchToSceneStudio()"
-        title="Studio Scene: per comporre scene con o senza personaggi ricorrenti (ambiente, camera, luci, stile)"
+        [class.active]="isSheetMode()"
+        (click)="switchToCharacterStudio()"
+        title="Crea Scheda Personaggio: genera turnaround 360° o griglie espressioni su sfondo bianco puro"
       >
-        <span class="sw-icon">🎬</span>
+        <span class="sw-icon">📐</span>
         <div class="sw-info">
           <div class="sw-title-row">
-            <span class="sw-title">Studio Scene</span>
-            @if (spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character') {
-              <span class="sw-pill active">🔒 {{ spec().character_sheet.character_name || 'Personaggio' }} vincolato</span>
-            }
+            <span class="sw-title">1. Crea Scheda Personaggio</span>
+            <span class="sw-pill white">⚪ Sfondo Bianco Fisso</span>
           </div>
-          <span class="sw-sub">Composizione scene, camera, luci e ambiente</span>
+          <span class="sw-sub">Turnaround 360° &amp; DNA Somatico · Studio isolato</span>
         </div>
       </button>
 
       <button
         type="button"
         class="sw-btn"
-        [class.active]="isSheetMode()"
-        (click)="switchToCharacterStudio()"
-        title="Studio Schede Personaggio: per generare turnaround multi-angolo o griglie espressioni su sfondo bianco puro"
+        [class.active]="!isSheetMode()"
+        (click)="switchToSceneStudio()"
+        title="Componi Scena: ambienta il personaggio salvato in una nuova scena con abiti, posa, luci e camera"
       >
-        <span class="sw-icon">📐</span>
+        <span class="sw-icon">🎬</span>
         <div class="sw-info">
           <div class="sw-title-row">
-            <span class="sw-title">Studio Schede Personaggio</span>
-            <span class="sw-pill white">⚪ Sfondo Bianco Fisso</span>
+            <span class="sw-title">2. Componi Scena</span>
+            @if (spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character') {
+              <span class="sw-pill active">🔒 {{ spec().character_sheet.character_name || 'Personaggio' }} vincolato</span>
+            }
           </div>
-          <span class="sw-sub">Turnaround 360° & Espressioni · Meno opzioni · Isolamento visivo</span>
+          <span class="sw-sub">Ambiente, Azione, Luci, Camera &amp; Outfit di Scena</span>
         </div>
       </button>
     </div>
@@ -163,52 +184,25 @@
           (input)="store.set('meta', 'title', $any($event.target).value)"
         />
       </div>
-      <div class="title-card-badges">
-        <span class="meta-tag">📐 {{ spec().technical_parameters.aspect_ratio }}</span>
-        @if (spec().style_and_rendering.medium) {
-          <span class="meta-tag">🎨 {{ spec().style_and_rendering.medium }}</span>
-        }
-        @if (spec().camera.lens_focal_length) {
-          <span class="meta-tag">📷 {{ spec().camera.lens_focal_length.split(' ')[0] }}</span>
-        }
-        @if (spec().typography.enabled && spec().typography.exact_text) {
-          <span class="meta-tag text">🔤 "{{ spec().typography.exact_text }}"</span>
-        }
-      </div>
 
-      <!-- PROMPT WORKFLOW SELECTOR BAR -->
-      <div class="workflow-selector-bar">
-        <span class="ws-label">Flusso Operativo:</span>
-        <div class="ws-tabs">
-          <button
-            type="button"
-            class="ws-tab"
-            [class.active]="store.promptKind() === 'scene'"
-            (click)="setWorkflowMode('scene_with_character')"
-            title="Soggetto vincolato al DNA del personaggio. Il prompt finale è autosufficiente."
-          >
-            🎬 Scena con Personaggio
-          </button>
-          <button
-            type="button"
-            class="ws-tab"
-            [class.active]="store.promptKind() === 'sheet'"
-            (click)="setWorkflowMode('sheet_generation')"
-            title="Genera foglio modello turnaround multi-angolo o griglia espressioni."
-          >
-            📐 Scheda Turnaround
-          </button>
-          <button
-            type="button"
-            class="ws-tab"
-            [class.active]="store.promptKind() === 'free'"
-            (click)="store.setPromptKind('free')"
-            title="Scena standard senza vincoli di personaggio."
-          >
-            🌐 Scena Libera
-          </button>
+      <!-- QUICK ASPECT RATIO SELECTOR (VISIBILE SOLO IN STUDIO SCENE) -->
+      @if (!isSheetMode()) {
+        <div class="quick-aspect-ratio-bar">
+          <span class="qar-label">📐 Formato Immagine (Aspect Ratio):</span>
+          <div class="qar-pills">
+            @for (ar of aspectRatios; track ar) {
+              <button
+                type="button"
+                class="qar-pill"
+                [class.active]="spec().technical_parameters.aspect_ratio === ar"
+                (click)="setAspectRatio(ar)"
+              >
+                {{ ar }}
+              </button>
+            }
+          </div>
         </div>
-      </div>
+      }
     </div>
 
     <!-- CHARACTER SHEET & CONSISTENCY -->
@@ -591,12 +585,12 @@
       </div>
     </app-section-block>
 
-    <!-- SUBJECT -->
+    <!-- SUBJECT, ACTION & SCENE OUTFIT -->
     <app-section-block
-      title="Soggetto principale"
+      title="Soggetto, Azione &amp; Outfit di Scena"
       icon="👤"
       accent="#ff79c6"
-      [summary]="spec().subject.primary_entity || 'Nessun soggetto specificato'"
+      [summary]="spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character' ? (spec().character_sheet.character_name + ' • ' + (spec().subject.pose_or_action || 'Posa da definire')) : (spec().subject.primary_entity || 'Nessun soggetto specificato')"
       [(open)]="sectionSubjectOpen"
     >
       @if (spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character') {
@@ -614,137 +608,107 @@
                 (click)="openEditCurrentCharacter()"
                 title="Modifica lineamenti, tratti somatici o abito iconico di questo personaggio"
               >
-                ✏️ Modifica Personaggio
+                ✏️ Modifica DNA Personaggio
               </button>
               <button
                 type="button"
                 class="btn-micro"
-                (click)="setWorkflowMode('sheet_generation')"
+                (click)="switchToCharacterStudio()"
                 title="Passa alla modalità creazione scheda turnaround"
               >
-                📐 Modalità Scheda
+                📐 Scheda Turnaround
               </button>
             </div>
-          </div>
-          <div class="bound-consistency-bar">
-            <span class="cs-label">Metodo Consistenza:</span>
-            <div class="cs-tabs">
-              <button
-                type="button"
-                class="cs-tab"
-                [class.active]="(spec().character_sheet.consistency_method || 'multimodal_attached_sheet') === 'multimodal_attached_sheet'"
-                (click)="store.updateCharacterSheet({ consistency_method: 'multimodal_attached_sheet' })"
-                title="Genera il prompt in inglese con istruzioni di ancoraggio visivo per Gemini con l'immagine dello sheet allegata"
-              >
-                📎 Gemini / LLM (Sheet allegato)
-              </button>
-              <button
-                type="button"
-                class="cs-tab"
-                [class.active]="spec().character_sheet.consistency_method === 'text_biometrics_only'"
-                (click)="store.updateCharacterSheet({ consistency_method: 'text_biometrics_only' })"
-                title="Genera prompt basato unicamente sul DNA descritto in testo, senza foglio allegato"
-              >
-                📝 Solo Testo
-              </button>
-            </div>
-          </div>
-          <p class="bound-desc">
-            @if ((spec().character_sheet.consistency_method || 'multimodal_attached_sheet') === 'multimodal_attached_sheet') {
-              <span>📎 <strong>Workflow Gemini con Sheet allegato:</strong> Il prompt generato in lingua inglese istruisce espressamente Gemini a considerare l'immagine dello sheet allegata come visual anchor assoluto per lineamenti e volto. Configura qui sotto posa, espressione e abito per la nuova scena.</span>
-            } @else {
-              <span>📝 <strong>Descrizione Testuale Pura:</strong> Il prompt descrive dettagliatamente il DNA biometrico in testo senza foto allegata. Configura qui sotto posa, espressione e abito per la scena.</span>
-            }
-          </p>
-          <div class="bound-dna-summary">
-            <span>🧬 <strong>Tratti Fissi:</strong> {{ spec().character_sheet.gender_and_age }} · {{ spec().character_sheet.ethnicity_and_skin }} · {{ spec().character_sheet.hair_details }} · {{ spec().character_sheet.eye_details }} · {{ spec().character_sheet.body_build }}</span>
           </div>
 
-          <!-- Quick cref URL & --cw weight input directly in scene mode (facoltativo) -->
-          <details class="bound-cref-details" open>
-            <summary class="bound-cref-summary">
-              <span>🔗 Parametro facoltativo Midjourney --cref URL / --cw</span>
-              <span class="bound-cref-hint">(Solo per utenti Midjourney con URL immagine online)</span>
-            </summary>
-            <div class="bound-cref-row">
-              <div class="bound-cref-url-box">
-                <label class="field-label mini">Midjourney --cref URL (Facoltativo)</label>
-                <input
-                  type="text"
-                  class="bound-cref-input"
-                  placeholder="https://... Incolla URL immagine di riferimento del personaggio (facoltativo)"
-                  [value]="spec().character_sheet.cref_url || ''"
-                  (input)="store.set('character_sheet', 'cref_url', $any($event.target).value)"
-                />
-              </div>
-              <div class="bound-cw-box">
-                <div class="bound-cw-header">
-                  <span class="field-label mini">Peso Referenza Midjourney (--cw)</span>
-                  <span class="cw-badge">{{ spec().character_sheet.cref_weight ?? 100 }}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="5"
-                  class="cw-slider"
-                  [value]="spec().character_sheet.cref_weight ?? 100"
-                  (input)="store.set('character_sheet', 'cref_weight', +$any($event.target).value)"
-                />
-                <span class="cw-hint mini">{{ (spec().character_sheet.cref_weight ?? 100) <= 20 ? '0-20: Solo viso (abiti liberi per la scena)' : '100: Viso & abiti originali fedeli' }}</span>
-              </div>
-            </div>
-          </details>
+          <div class="bound-dna-summary">
+            <span>🧬 <strong>DNA Somatico Ereditato:</strong> {{ spec().character_sheet.gender_and_age }} · {{ spec().character_sheet.ethnicity_and_skin }} · {{ spec().character_sheet.hair_details }} · {{ spec().character_sheet.eye_details }} · {{ spec().character_sheet.body_build }}</span>
+          </div>
+
+          <p class="bound-desc">
+            <span>📎 <strong>Istruzione Gemini con Sheet allegato:</strong> I lineamenti, i capelli e i tratti del viso sono vincolati all'immagine modello allegata. Configura qui sotto esclusivamente cosa fa in questa scena e come è vestito.</span>
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <app-smart-field
+            class="span-2"
+            label="Azione / Posa nella scena"
+            category="pose_or_action"
+            placeholder="Cosa sta facendo il personaggio nella scena? (es. corre sotto la pioggia, seduta a un caffè parigino…)"
+            [value]="spec().subject.pose_or_action"
+            (valueChange)="store.set('subject', 'pose_or_action', $event)"
+          />
+          <app-smart-field
+            label="Espressione / Mood"
+            category="expression_or_mood"
+            placeholder="Intenso, sorridente, concentrato, misterioso, malinconico…"
+            [value]="spec().subject.expression_or_mood"
+            (valueChange)="store.set('subject', 'expression_or_mood', $event)"
+          />
+          <app-smart-field
+            label="Abito di Scena (Outfit per questa scena)"
+            category="clothing_or_materials"
+            placeholder="Lascia vuoto per l'abito iconico, oppure es. Trench coat scuro, abito da sera…"
+            [value]="spec().subject.clothing_or_materials"
+            (valueChange)="store.set('subject', 'clothing_or_materials', $event)"
+          />
+          <app-smart-field
+            class="span-2"
+            label="Posizione nel frame"
+            category="placement"
+            [value]="spec().subject.placement"
+            (valueChange)="store.set('subject', 'placement', $event)"
+          />
+        </div>
+      } @else {
+        <div class="grid-2">
+          <app-smart-field
+            class="span-2"
+            label="Entità principale"
+            category="primary_entity"
+            placeholder="Es. anziano artigiano con tratti segnati, leopardo delle nevi, flacone di profumo…"
+            [value]="spec().subject.primary_entity"
+            (valueChange)="store.set('subject', 'primary_entity', $event)"
+          />
+          <app-smart-field
+            class="span-2"
+            label="Descrizione dettagliata"
+            category="subject_description"
+            [multiline]="true"
+            placeholder="Tratti fisici, espressioni, rughe, pori della pelle, dettagli unici…"
+            [value]="spec().subject.description"
+            (valueChange)="store.set('subject', 'description', $event)"
+          />
+          <app-smart-field
+            label="Posa / Azione"
+            category="pose_or_action"
+            placeholder="Cosa sta facendo il soggetto nella scena?"
+            [value]="spec().subject.pose_or_action"
+            (valueChange)="store.set('subject', 'pose_or_action', $event)"
+          />
+          <app-smart-field
+            label="Espressione / Mood"
+            category="expression_or_mood"
+            placeholder="Calmo, autentico, intenso, fiero…"
+            [value]="spec().subject.expression_or_mood"
+            (valueChange)="store.set('subject', 'expression_or_mood', $event)"
+          />
+          <app-smart-field
+            label="Abbigliamento / Materiali"
+            category="clothing_or_materials"
+            placeholder="Giacca in lino, abito in seta, armatura metallica…"
+            [value]="spec().subject.clothing_or_materials"
+            (valueChange)="store.set('subject', 'clothing_or_materials', $event)"
+          />
+          <app-smart-field
+            label="Posizione nel frame"
+            category="placement"
+            [value]="spec().subject.placement"
+            (valueChange)="store.set('subject', 'placement', $event)"
+          />
         </div>
       }
-      <div class="grid-2">
-        <app-smart-field
-          class="span-2"
-          label="Entità principale"
-          category="primary_entity"
-          [disabled]="spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character'"
-          placeholder="Es. anziano artigiano con tratti segnati, leopardo delle nevi, flacone di profumo…"
-          [value]="spec().subject.primary_entity"
-          (valueChange)="store.set('subject', 'primary_entity', $event)"
-        />
-        <app-smart-field
-          class="span-2"
-          label="Descrizione dettagliata"
-          category="subject_description"
-          [multiline]="true"
-          [disabled]="spec().character_sheet.enabled && spec().character_sheet.mode === 'scene_with_character'"
-          placeholder="Tratti fisici, espressioni, rughe, pori della pelle, dettagli unici…"
-          [value]="spec().subject.description"
-          (valueChange)="store.set('subject', 'description', $event)"
-        />
-        <app-smart-field
-          label="Posa / Azione"
-          category="pose_or_action"
-          placeholder="Cosa sta facendo il soggetto nella scena?"
-          [value]="spec().subject.pose_or_action"
-          (valueChange)="store.set('subject', 'pose_or_action', $event)"
-        />
-        <app-smart-field
-          label="Espressione / Mood"
-          category="expression_or_mood"
-          placeholder="Calmo, autentico, intenso, fiero…"
-          [value]="spec().subject.expression_or_mood"
-          (valueChange)="store.set('subject', 'expression_or_mood', $event)"
-        />
-        <app-smart-field
-          label="Abbigliamento / Materiali"
-          category="clothing_or_materials"
-          placeholder="Lascia vuoto per l'abito iconico del personaggio, o specifica es. Giacca in lino..."
-          [value]="spec().subject.clothing_or_materials"
-          (valueChange)="store.set('subject', 'clothing_or_materials', $event)"
-        />
-        <app-smart-field
-          label="Posizione nel frame"
-          category="placement"
-          [value]="spec().subject.placement"
-          (valueChange)="store.set('subject', 'placement', $event)"
-        />
-      </div>
 
       <!-- Additional subjects -->
       <div class="sub-list">
@@ -811,16 +775,7 @@
           (valueChange)="store.set('scene', 'environment', $event)"
         />
         <app-smart-field
-          class="span-2"
-          label="Dettagli sfondo"
-          category="background_details"
-          [multiline]="true"
-          placeholder="Muri in terracotta, panni stesi, vette montuose, lago a specchio…"
-          [value]="spec().scene.background_details"
-          (valueChange)="store.set('scene', 'background_details', $event)"
-        />
-        <app-smart-field
-          label="Momento del giorno"
+          label="Momento del giorno / Luce naturale"
           category="time_of_day"
           [value]="spec().scene.time_of_day"
           (valueChange)="store.set('scene', 'time_of_day', $event)"
@@ -909,73 +864,81 @@
       }
       <div class="grid-2" [class.section-dimmed-sheet]="isSheetMode()">
         <app-smart-field
-          label="Luce principale (Key Light)"
+          label="Stile / Setup Illuminazione"
           category="key_light"
+          placeholder="Luce naturale morbida, studio high-key, chiaroscuro cinematografico, neon cyberpunk…"
           [value]="spec().lighting.key_light"
           (valueChange)="store.set('lighting', 'key_light', $event)"
         />
         <app-smart-field
-          label="Luce secondaria / Ambientale (Fill)"
-          category="fill_or_ambient"
-          placeholder="Rimbalzo caldo da pietre, riverberi blu, pannello riflettente…"
-          [value]="spec().lighting.fill_or_ambient"
-          (valueChange)="store.set('lighting', 'fill_or_ambient', $event)"
-        />
-        <app-smart-field
-          label="Temperatura colore"
+          label="Tonalità / Temperatura Colore"
           category="color_temperature"
+          placeholder="Calda dorata, fredda bluastra, neutra bilanciata…"
           [value]="spec().lighting.color_temperature"
           (valueChange)="store.set('lighting', 'color_temperature', $event)"
         />
-        <app-smart-field
-          label="Qualità delle ombre"
-          category="shadow_quality"
-          [value]="spec().lighting.shadow_quality"
-          (valueChange)="store.set('lighting', 'shadow_quality', $event)"
-        />
 
-        <div class="span-2 palette-box">
-          <label>Palette Colori (HEX)</label>
-          <div class="palette-row">
-            @for (c of spec().lighting.color_palette; track $index; let i = $index) {
-              <div class="color-item">
-                <input
-                  type="color"
-                  [value]="c"
-                  (input)="store.setColor(i, $any($event.target).value)"
-                />
-                <input
-                  type="text"
-                  class="hex"
-                  [value]="c"
-                  (input)="store.setColor(i, $any($event.target).value)"
-                />
-                <button
-                  type="button"
-                  class="chip-x"
-                  title="Rimuovi colore"
-                  (click)="store.removeColor(i)"
-                >×</button>
-              </div>
-            }
-            <button type="button" class="btn dashed small" (click)="store.addColor()">＋ Colore</button>
-          </div>
-          <div class="palette-presets">
-            @for (p of svc.colorPalettePresets; track p.name) {
-              <button
-                type="button"
-                class="palette-preset"
-                [title]="p.name"
-                (click)="store.setPalette(p.colors)"
-              >
-                @for (c of p.colors; track $index) {
-                  <span [style.background]="c"></span>
+        <details class="palette-details span-2">
+          <summary class="palette-summary">🎨 Opzioni avanzate luci &amp; palette HEX (facoltative)</summary>
+          <div class="grid-2" style="margin-top: 12px;">
+            <app-smart-field
+              label="Luce secondaria / Ambientale (Fill)"
+              category="fill_or_ambient"
+              placeholder="Rimbalzo caldo da pietre, riverberi blu, pannello riflettente…"
+              [value]="spec().lighting.fill_or_ambient"
+              (valueChange)="store.set('lighting', 'fill_or_ambient', $event)"
+            />
+            <app-smart-field
+              label="Qualità delle ombre"
+              category="shadow_quality"
+              [value]="spec().lighting.shadow_quality"
+              (valueChange)="store.set('lighting', 'shadow_quality', $event)"
+            />
+
+            <div class="span-2 palette-box">
+              <label>Palette Colori (HEX)</label>
+              <div class="palette-row">
+                @for (c of spec().lighting.color_palette; track $index; let i = $index) {
+                  <div class="color-item">
+                    <input
+                      type="color"
+                      [value]="c"
+                      (input)="store.setColor(i, $any($event.target).value)"
+                    />
+                    <input
+                      type="text"
+                      class="hex"
+                      [value]="c"
+                      (input)="store.setColor(i, $any($event.target).value)"
+                    />
+                    <button
+                      type="button"
+                      class="chip-x"
+                      title="Rimuovi colore"
+                      (click)="store.removeColor(i)"
+                    >×</button>
+                  </div>
                 }
-                <em>{{ p.name }}</em>
-              </button>
-            }
+                <button type="button" class="btn dashed small" (click)="store.addColor()">＋ Colore</button>
+              </div>
+              <div class="palette-presets">
+                @for (p of svc.colorPalettePresets; track p.name) {
+                  <button
+                    type="button"
+                    class="palette-preset"
+                    [title]="p.name"
+                    (click)="store.setPalette(p.colors)"
+                  >
+                    @for (c of p.colors; track $index) {
+                      <span [style.background]="c"></span>
+                    }
+                    <em>{{ p.name }}</em>
+                  </button>
+                }
+              </div>
+            </div>
           </div>
-        </div>
+        </details>
       </div>
     </app-section-block>
 
@@ -1137,71 +1100,24 @@
       </div>
     </app-section-block>
 
-    <!-- TECHNICAL -->
+    <!-- NEGATIVE PROMPT (ESCLUSIONI) -->
     <app-section-block
-      title="Parametri Tecnici"
-      icon="⚙️"
-      accent="#6272a4"
-      [summary]="spec().technical_parameters.aspect_ratio + (spec().technical_parameters.raw_mode ? ' • Raw' : '')"
-      [(open)]="sectionTechnicalOpen"
+      title="Prompt Negativo (Esclusioni)"
+      icon="🚫"
+      accent="#ff5555"
+      [summary]="spec().technical_parameters.negative_prompt ? (spec().technical_parameters.negative_prompt.slice(0, 50) + '…') : 'Nessuna esclusione specificata'"
+      [(open)]="sectionNegativeOpen"
     >
       <div class="grid-2">
         <app-smart-field
-          label="Aspect Ratio"
-          category="aspect_ratio"
-          [value]="spec().technical_parameters.aspect_ratio"
-          (valueChange)="store.set('technical_parameters', 'aspect_ratio', $event)"
-        />
-        <div>
-          <label>Seed</label>
-          <div class="inline-add">
-            <input
-              type="number"
-              placeholder="Casuale (nessun seed)"
-              [value]="spec().technical_parameters.seed ?? ''"
-              (input)="store.set('technical_parameters', 'seed', $any($event.target).value ? +$any($event.target).value : null)"
-            />
-            <button type="button" class="btn small" title="Genera seed casuale" (click)="randomizeSeed()">🎲</button>
-            <button type="button" class="btn small" title="Rimuovi seed" (click)="store.set('technical_parameters', 'seed', null)">∅</button>
-          </div>
-        </div>
-        <app-smart-field
           class="span-2"
-          label="Negative Prompt (cosa escludere)"
+          label="Cosa escludere (Negative Prompt)"
           category="negative_prompt"
           [multiline]="true"
           placeholder="cartoon, anime, blurry, low resolution, bad anatomy, extra fingers, watermark…"
           [value]="spec().technical_parameters.negative_prompt"
           (valueChange)="store.set('technical_parameters', 'negative_prompt', $event)"
         />
-        <div>
-          <label>Stylize (Midjourney --s): <b>{{ spec().technical_parameters.stylize }}</b></label>
-          <input
-            type="range"
-            min="0"
-            max="1000"
-            step="10"
-            [value]="spec().technical_parameters.stylize"
-            (input)="store.set('technical_parameters', 'stylize', +$any($event.target).value)"
-          />
-        </div>
-        <div>
-          <label>Chaos (Midjourney --c): <b>{{ spec().technical_parameters.chaos }}</b></label>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            [value]="spec().technical_parameters.chaos"
-            (input)="store.set('technical_parameters', 'chaos', +$any($event.target).value)"
-          />
-        </div>
-        <label class="toggle span-2">
-          <input
-            type="checkbox"
-            [checked]="spec().technical_parameters.raw_mode"
-            (change)="store.set('technical_parameters', 'raw_mode', $any($event.target).checked)"
-          /> Raw Mode (--style raw per Midjourney, stile meno elaborato e più realistico)
-        </label>
       </div>
     </app-section-block>
 
@@ -1668,6 +1584,40 @@
     <div class="modal-actions" style="margin-top: 18px;">
       <button type="button" class="btn ghost" (click)="showEditCharacterModal.set(false)">Annulla</button>
       <button type="button" class="btn primary" (click)="saveEditedCharacterModal()">💾 Salva Modifiche</button>
+    </div>
+  </div>
+</app-modal>
+
+<!-- MAGIC EXPAND MODAL -->
+<app-modal
+  title="✨ Magic Expand con AI"
+  [wide]="true"
+  [(open)]="showMagicModal"
+>
+  <div class="magic-modal-body">
+    <p class="muted" style="margin-bottom: 14px; font-size: 13px; line-height: 1.4;">
+      Scrivi un'idea sintetica o una descrizione grezza: l'AI analizzerà la tua richiesta e compilerà automaticamente i parametri (soggetto, luce, atmosfera, ottica e stile) ottimizzandoli per la massima qualità visiva.
+    </p>
+    <div class="magic-modal-input-wrap">
+      <input
+        type="text"
+        class="magic-modal-input"
+        placeholder="Es. Guerriera vichinga all'alba sulle coste dei fiordi con corvo sulla spalla…"
+        [value]="magicIdea()"
+        (input)="magicIdea.set($any($event.target).value)"
+        (keydown.enter)="runMagicExpand(); showMagicModal.set(false)"
+      />
+    </div>
+    <div class="modal-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px;">
+      <button type="button" class="btn ghost" (click)="showMagicModal.set(false)">Annulla</button>
+      <button
+        type="button"
+        class="btn primary"
+        [disabled]="magicLoading() || !magicIdea().trim()"
+        (click)="runMagicExpand(); showMagicModal.set(false)"
+      >
+        {{ magicLoading() ? 'Generazione in corso…' : '✨ Espandi in Prompt' }}
+      </button>
     </div>
   </div>
 </app-modal>

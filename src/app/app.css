@@ -1819,6 +1819,200 @@
   opacity: 0.95;
 }
 
+/* COMPACT PROJECT MENU DROPDOWN */
+.project-dropdown-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.project-menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background: transparent;
+}
+
+.project-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-1, #1e1f29);
+  border: 1px solid var(--line, #44475a);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  min-width: 190px;
+  padding: 6px 0;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+}
+
+.proj-menu-item {
+  background: transparent;
+  border: none;
+  color: var(--fg, #f8f8f2);
+  text-align: left;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-family: var(--font);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.proj-menu-item:hover {
+  background: var(--bg-2, #282a36);
+  color: var(--cyan, #8be9fd);
+}
+
+.proj-menu-item.accent:hover {
+  color: var(--pink, #ff79c6);
+}
+
+.proj-menu-divider {
+  height: 1px;
+  background: var(--line, #44475a);
+  margin: 4px 0;
+}
+
+/* QUICK ASPECT RATIO SELECTOR */
+.quick-aspect-ratio-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.qar-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted, #6272a4);
+}
+
+.qar-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.qar-pill {
+  background: var(--bg-2, #282a36);
+  border: 1px solid var(--line, #44475a);
+  color: var(--muted, #6272a4);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.qar-pill:hover {
+  color: var(--fg, #f8f8f2);
+  border-color: var(--comment, #6272a4);
+  background: var(--bg-1, #1e1f29);
+}
+
+.qar-pill.active {
+  background: rgba(139, 233, 253, 0.18);
+  border-color: var(--cyan, #8be9fd);
+  color: var(--cyan, #8be9fd);
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(139, 233, 253, 0.15);
+}
+
+/* MAGIC MODAL */
+.magic-modal-input-wrap {
+  display: flex;
+  margin-top: 8px;
+}
+
+.magic-modal-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-2, #282a36);
+  border: 1px solid var(--line, #44475a);
+  border-radius: 8px;
+  color: var(--fg, #f8f8f2);
+  font-size: 14px;
+  font-family: var(--font);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.magic-modal-input:focus {
+  border-color: var(--purple, #bd93f9);
+  box-shadow: 0 0 0 2px rgba(189, 147, 249, 0.25);
+}
+
+/* OUTPUT PANEL OTHER MODELS SELECT */
+:host ::ng-deep .output .other-models-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+:host ::ng-deep .output .other-models-select {
+  background: var(--bg-2, #282a36);
+  border: 1px solid var(--line, #44475a);
+  color: var(--muted, #6272a4);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font);
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+:host ::ng-deep .output .other-models-select:hover {
+  color: var(--fg, #f8f8f2);
+  border-color: var(--comment, #6272a4);
+}
+
+:host ::ng-deep .output .other-models-select.active {
+  color: var(--purple, #bd93f9);
+  border-color: var(--purple, #bd93f9);
+  background: rgba(189, 147, 249, 0.15);
+}
+
+:host ::ng-deep .output .other-models-select option {
+  background: var(--bg, #282a36);
+  color: var(--fg, #f8f8f2);
+}
+
+.palette-details {
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px dashed rgba(241, 250, 140, 0.3);
+  margin-top: 10px;
+  padding: 4px;
+}
+
+.palette-summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted, #6272a4);
+  user-select: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.palette-summary:hover {
+  color: var(--yellow, #f1fa8c);
+}
+
 @media (max-width: 980px) {
   :host { height: auto; overflow: visible; }
   .layout { display: block; }
