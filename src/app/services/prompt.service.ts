@@ -2298,11 +2298,22 @@ Modify and enrich the CURRENT SPECIFICATION according to the user's idea ("${ide
 Preserve existing detailed camera, lighting, and style choices unless the user's idea modifies them.`;
     }
 
+    // Sanitize spec for LLM: strip large base64 image data URLs to avoid blowing up the token context window (>1M tokens)
+    const specForLlm = structuredClone(base);
+    if (specForLlm.character_sheet?.image_data_url) {
+      delete specForLlm.character_sheet.image_data_url;
+    }
+    if (specForLlm.custom_properties) {
+      specForLlm.custom_properties = specForLlm.custom_properties.filter(
+        (p) => !p.value.startsWith('data:image') && p.value.length < 5000
+      );
+    }
+
     const systemPrompt = `You are an elite Computer Vision Director and AI Prompt Engineer.
 ${contextInstruction}
 
 CURRENT SPECIFICATION (JSON):
-${JSON.stringify(base, null, 2)}
+${JSON.stringify(specForLlm, null, 2)}
 
 USER IDEA / MODIFICATION REQUEST:
 "${idea}"
