@@ -1711,6 +1711,11 @@ export class App {
     }
   }
 
+  restoreWebData(): void {
+    this.svc.reimportWebData();
+    this.showToast('🌐 Soggetti (Blonde Model, Eleonora), schede personaggio e modelli fal.ai ripristinati!');
+  }
+
   formatDate(ts: number): string {
     const d = new Date(ts);
     return `${d.toLocaleDateString('it-IT')} ${d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;

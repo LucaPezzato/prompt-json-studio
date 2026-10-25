@@ -16,13 +16,22 @@ import {
   SavedCharacter,
 } from '../models/prompt.model';
 
+import {
+  IMPORTED_CHARACTERS,
+  IMPORTED_DEFAULT_FAL_KEY,
+  IMPORTED_DEFAULT_GEMINI_KEY,
+  IMPORTED_IMAGE_GEN_PROFILES,
+  IMPORTED_PROVIDER_KEYS,
+  IMPORTED_USER_PRESETS,
+} from '../data/imported-subjects.data';
+
 const USER_PRESETS_STORAGE_KEY = 'prompt_json_studio_user_presets_v1';
 const CUSTOM_OPTIONS_STORAGE_KEY = 'prompt_json_studio_custom_options_v1';
 const AI_CONFIG_STORAGE_KEY = 'prompt_json_studio_ai_config_v1';
 const SAVED_CHARACTERS_STORAGE_KEY = 'prompt_json_studio_saved_characters_v1';
 const DEFAULT_OUTPUT_MODEL_STORAGE_KEY = 'prompt_json_studio_default_output_model_v1';
 const IMAGE_GEN_CONFIG_STORAGE_KEY = 'prompt_json_studio_image_gen_config_v1';
-export const DEFAULT_FAL_KEY = 'fal_sk_f426dd68780e4165b106fac05bbb4e67:796cab5f4471c3717777c10a5ae52eb7';
+export const DEFAULT_FAL_KEY = IMPORTED_DEFAULT_FAL_KEY;
 
 export const DEFAULT_CHARACTER_SHEET: CharacterSheetBlock = {
   enabled: false,
@@ -1519,6 +1528,7 @@ export class PromptService {
       if (res.ok) {
         const data = await res.json();
         const geminiKey = data.GEMINI_API_KEY || '';
+        const falKey = data.FAL_KEY || '';
         if (geminiKey) {
           this.aiConfig.update((c) => ({
             ...c,
@@ -1527,17 +1537,21 @@ export class PromptService {
               ? (data.DEFAULT_MODEL || 'gemini-3.8-flash')
               : c.model,
           }));
+        }
+        if (geminiKey || falKey) {
           this.imageGenConfig.update((c) => {
             const providerApiKeys: ProviderApiKeys = {
               ...(c.providerApiKeys || {}),
               gemini_imagen: c.providerApiKeys?.gemini_imagen || geminiKey,
-              fal_ai: c.providerApiKeys?.fal_ai || DEFAULT_FAL_KEY,
+              fal_ai: c.providerApiKeys?.fal_ai || falKey,
             };
             return {
               ...c,
               providerApiKeys,
-              apiKey: (c.provider === 'gemini_imagen' && !c.apiKey) ? geminiKey : c.apiKey,
-              model: (c.model === 'imagen-3.0-generate-002' || !c.model) ? 'gemini-2.5-flash-image' : c.model,
+              apiKey: (c.provider === 'gemini_imagen' && !c.apiKey)
+                ? geminiKey
+                : ((c.provider === 'fal_ai' && !c.apiKey) ? falKey : c.apiKey),
+              model: (c.model === 'imagen-3.0-generate-002' || !c.model) ? 'fal-ai/nano-banana-pro' : c.model,
             };
           });
         }
@@ -2880,11 +2894,17 @@ Instructions:
   private loadAiConfig(): AiAssistantConfig {
     try {
       const raw = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (!parsed.apiKey) {
+          parsed.apiKey = IMPORTED_DEFAULT_GEMINI_KEY;
+        }
+        return parsed;
+      }
     } catch {}
     return {
       provider: 'gemini',
-      apiKey: '',
+      apiKey: IMPORTED_DEFAULT_GEMINI_KEY,
       model: 'gemini-3.8-flash',
       ollamaUrl: 'http://localhost:11434',
     };
@@ -2968,64 +2988,35 @@ Instructions:
   private loadUserPresets(): PromptTemplate[] {
     try {
       const raw = localStorage.getItem(USER_PRESETS_STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed: PromptTemplate[] = JSON.parse(raw);
+        const existingIds = new Set(parsed.map((p) => p.id));
+        for (const imp of IMPORTED_USER_PRESETS) {
+          if (!existingIds.has(imp.id)) {
+            parsed.unshift(imp);
+          }
+        }
+        return parsed;
+      }
     } catch {}
-    return [];
+    return [...IMPORTED_USER_PRESETS];
   }
 
   private loadSavedCharacters(): SavedCharacter[] {
     try {
       const raw = localStorage.getItem(SAVED_CHARACTERS_STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed: SavedCharacter[] = JSON.parse(raw);
+        const existingNames = new Set(parsed.map((c) => c.name.toLowerCase()));
+        for (const imp of IMPORTED_CHARACTERS) {
+          if (!existingNames.has(imp.name.toLowerCase())) {
+            parsed.unshift(imp);
+          }
+        }
+        return parsed;
+      }
     } catch {}
-    return [
-      {
-        id: 'char-default-1',
-        name: 'Elena Vance',
-        summary: 'Donna 26 anni · Occhi nocciola · Camicia in lino ecru',
-        sheet: {
-          enabled: true,
-          mode: 'sheet_generation',
-          character_name: 'Elena Vance',
-          gender_and_age: 'Young woman, 26 years old',
-          ethnicity_and_skin: 'Warm olive skin with natural subtle freckles across the bridge of the nose',
-          eye_details: 'Almond-shaped hazel eyes with amber gold flecks and dark lash line',
-          hair_details: 'Chestnut brown wavy shoulder-length hair parted slightly off-center',
-          distinctive_marks: 'Tiny faint beauty mark under the left eye, natural skin pores and micro-texture',
-          body_build: 'Athletic, slender build, upright posture',
-          signature_outfit: 'Textured ivory linen button-up shirt and high-waisted charcoal trousers',
-          signature_props: 'Delicate vintage gold signet ring on the right ring finger',
-          layout_mode: 'turnaround_4_views',
-          views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
-          background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
-          cref_url: '',
-        },
-        createdAt: 1700000000000,
-      },
-      {
-        id: 'char-default-2',
-        name: 'Ren Takahashi',
-        summary: 'Uomo 31 anni · Impianto neurale tempia · Giacca techwear',
-        sheet: {
-          enabled: true,
-          mode: 'sheet_generation',
-          character_name: 'Ren Takahashi',
-          gender_and_age: 'Man in early 30s, 31 years old',
-          ethnicity_and_skin: 'East Asian heritage, pale smooth complexion with sharp defined jawline',
-          eye_details: 'Sharp hooded dark amber eyes with intense focused gaze',
-          hair_details: 'Raven black textured undercut fade with loose strands over forehead',
-          distinctive_marks: 'Sleek subcutaneous chrome neural interface glow port at the left temple',
-          body_build: 'Lean athletic runner physique, broad shoulders',
-          signature_outfit: 'Matte black waterproof techwear bomber jacket with sealed seams and dark cargo pants',
-          signature_props: 'Titanium minimalist cuff bracelet on right wrist',
-          layout_mode: 'turnaround_4_views',
-          views: ['Front view', '3/4 Profile view', 'Side profile view', 'Back view'],
-          background_style: 'Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor shadow, high-key even lighting',
-          cref_url: '',
-        },
-        createdAt: 1700000001000,
-      },
-    ];
+    return [...IMPORTED_CHARACTERS];
   }
 
   setImageGenConfig(cfg: ImageGenConfig): void {
@@ -3033,10 +3024,10 @@ Instructions:
   }
 
   private loadImageGenConfig(): ImageGenConfig {
-    const defaultProfiles = [...DEFAULT_IMAGE_GEN_PROFILES];
-    const defaultGeminiKey = this.loadAiConfig()?.apiKey || '';
+    const defaultProfiles = [...IMPORTED_IMAGE_GEN_PROFILES];
+    const defaultGeminiKey = this.loadAiConfig()?.apiKey || IMPORTED_DEFAULT_GEMINI_KEY;
     const defaultProviderKeys: ProviderApiKeys = {
-      fal_ai: DEFAULT_FAL_KEY,
+      fal_ai: IMPORTED_DEFAULT_FAL_KEY,
       gemini_imagen: defaultGeminiKey,
       openai_dalle: '',
       custom: '',
@@ -3050,11 +3041,9 @@ Instructions:
           ...defaultProviderKeys,
           ...(parsed.providerApiKeys || {}),
         };
-        // Always ensure fal.ai key is available if user has not set a different one
         if (!providerApiKeys.fal_ai) {
-          providerApiKeys.fal_ai = DEFAULT_FAL_KEY;
+          providerApiKeys.fal_ai = IMPORTED_DEFAULT_FAL_KEY;
         }
-        // Always ensure gemini key is available if user has not set a different one
         if (!providerApiKeys.gemini_imagen) {
           providerApiKeys.gemini_imagen = defaultGeminiKey;
         }
@@ -3063,7 +3052,14 @@ Instructions:
           ? parsed.profiles
           : defaultProfiles;
 
-        const activeProfileId = parsed.activeProfileId || (parsed.provider === 'gemini_imagen' ? 'gemini-flash-image' : (savedProfiles[0]?.id || 'fal-flux-realism'));
+        const existingProfileIds = new Set(savedProfiles.map((p) => p.id));
+        for (const imp of IMPORTED_IMAGE_GEN_PROFILES) {
+          if (!existingProfileIds.has(imp.id)) {
+            savedProfiles.push(imp);
+          }
+        }
+
+        const activeProfileId = parsed.activeProfileId || 'custom-1792929838032';
         const activeProfile = savedProfiles.find((p) => p.id === activeProfileId) || savedProfiles[0] || defaultProfiles[0];
 
         return {
@@ -3080,18 +3076,73 @@ Instructions:
       }
     } catch {}
 
-    const first = defaultProfiles[0]; // fal-flux-realism
+    const nanoProfile = defaultProfiles.find((p) => p.id === 'custom-1792929838032') || defaultProfiles[0];
     return {
-      provider: first.provider,
-      model: first.model,
-      apiKey: DEFAULT_FAL_KEY,
+      provider: nanoProfile.provider,
+      model: nanoProfile.model,
+      apiKey: IMPORTED_DEFAULT_FAL_KEY,
       endpointUrl: 'http://127.0.0.1:7860/sdapi/v1/txt2img',
-      activeProfileId: first.id,
+      activeProfileId: nanoProfile.id,
       profiles: defaultProfiles,
       providerApiKeys: defaultProviderKeys,
       loraUrl: '',
       loraScale: 1.0,
     };
+  }
+
+  reimportWebData(): void {
+    // 1. Merge characters
+    const currentChars = [...this.savedCharacters()];
+    const existingNames = new Set(currentChars.map((c) => c.name.toLowerCase()));
+    for (const imp of IMPORTED_CHARACTERS) {
+      if (!existingNames.has(imp.name.toLowerCase())) {
+        currentChars.unshift(imp);
+      }
+    }
+    this.savedCharacters.set(currentChars);
+
+    // 2. Merge user presets
+    const currentPresets = [...this.userPresets()];
+    const existingPresetIds = new Set(currentPresets.map((p) => p.id));
+    for (const imp of IMPORTED_USER_PRESETS) {
+      if (!existingPresetIds.has(imp.id)) {
+        currentPresets.unshift(imp);
+      }
+    }
+    this.userPresets.set(currentPresets);
+
+    // 3. Update imageGenConfig
+    const curImg = this.imageGenConfig();
+    const existingProfileIds = new Set((curImg.profiles || []).map((p) => p.id));
+    const mergedProfiles = [...(curImg.profiles || [])];
+    for (const imp of IMPORTED_IMAGE_GEN_PROFILES) {
+      if (!existingProfileIds.has(imp.id)) {
+        mergedProfiles.push(imp);
+      }
+    }
+    const providerKeys: ProviderApiKeys = {
+      ...(curImg.providerApiKeys || {}),
+      fal_ai: IMPORTED_DEFAULT_FAL_KEY,
+      gemini_imagen: curImg.providerApiKeys?.gemini_imagen || IMPORTED_DEFAULT_GEMINI_KEY,
+    };
+    this.imageGenConfig.set({
+      ...curImg,
+      provider: 'fal_ai',
+      model: 'fal-ai/nano-banana-pro',
+      activeProfileId: 'custom-1792929838032',
+      profiles: mergedProfiles,
+      providerApiKeys: providerKeys,
+      apiKey: IMPORTED_DEFAULT_FAL_KEY,
+    });
+
+    // 4. Update aiConfig (Gemini)
+    const curAi = this.aiConfig();
+    if (!curAi.apiKey) {
+      this.aiConfig.set({
+        ...curAi,
+        apiKey: IMPORTED_DEFAULT_GEMINI_KEY,
+      });
+    }
   }
 
   switchActiveProfile(profileId: string): void {
