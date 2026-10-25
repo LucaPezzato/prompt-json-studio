@@ -1473,11 +1473,18 @@
                 Seleziona
               </button>
             }
-            @if (!p.isBuiltIn) {
-              <button type="button" class="btn small ghost" (click)="openEditProfile(p)" title="Modifica parametri">✏️</button>
-              <button type="button" class="btn small ghost danger" (click)="deleteCustomProfile(p.id)" title="Elimina profilo">🗑️</button>
-            } @else {
-              <button type="button" class="btn small ghost" (click)="openEditProfile(p)" title="Duplica come profilo personalizzato">📋 Clona</button>
+            <button type="button" class="btn small ghost" (click)="openEditProfile(p)" [title]="p.isBuiltIn ? 'Duplica come modello personalizzato' : 'Modifica parametri'">
+              {{ p.isBuiltIn ? '📋 Clona' : '✏️ Modifica' }}
+            </button>
+            @if (imageGenProfiles().length > 1) {
+              <button
+                type="button"
+                class="btn small ghost danger"
+                (click)="deleteProfile(p.id)"
+                title="Elimina questo modello dalla lista"
+              >
+                🗑️ Elimina
+              </button>
             }
           </div>
         </div>
@@ -1485,9 +1492,19 @@
     </div>
 
     <div class="profile-footer-actions">
-      <button type="button" class="btn secondary" (click)="openCreateProfile()">
-        ＋ Aggiungi Nuovo Modello / LoRA
-      </button>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn secondary" (click)="openCreateProfile()">
+          ＋ Aggiungi Nuovo Modello / LoRA
+        </button>
+        <button
+          type="button"
+          class="btn ghost"
+          (click)="resetDefaultProfiles()"
+          title="Ripristina l'elenco completo dei modelli predefiniti"
+        >
+          ↺ Ripristina Predefiniti
+        </button>
+      </div>
       <button type="button" class="btn primary" (click)="showImageGenSettings.set(false)">
         Chiudi
       </button>

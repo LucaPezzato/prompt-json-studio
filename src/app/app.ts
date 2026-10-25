@@ -871,9 +871,19 @@ export class App {
     this.showToast(`✨ Profilo "${name}" salvato e attivato!`);
   }
 
-  deleteCustomProfile(profileId: string): void {
+  deleteProfile(profileId: string): void {
+    const prof = this.imageGenProfiles().find((p) => p.id === profileId);
     this.svc.deleteProfile(profileId);
-    this.showToast('Profilo eliminato');
+    this.showToast(`🗑️ Modello "${prof?.name || 'Profilo'}" eliminato`);
+  }
+
+  deleteCustomProfile(profileId: string): void {
+    this.deleteProfile(profileId);
+  }
+
+  resetDefaultProfiles(): void {
+    this.svc.resetDefaultProfiles();
+    this.showToast('↺ Modelli predefiniti ripristinati');
   }
 
   onImgProviderChange(prov: ImageGenProvider): void {

@@ -3081,16 +3081,12 @@ Instructions:
           providerApiKeys.gemini_imagen = defaultGeminiKey;
         }
 
-        const savedProfiles: ImageGenProfile[] = Array.isArray(parsed.profiles) ? parsed.profiles : [];
-        const mergedProfiles: ImageGenProfile[] = [...defaultProfiles];
-        for (const sp of savedProfiles) {
-          if (!sp.isBuiltIn && !mergedProfiles.some((p) => p.id === sp.id)) {
-            mergedProfiles.push(sp);
-          }
-        }
+        const savedProfiles: ImageGenProfile[] = Array.isArray(parsed.profiles) && parsed.profiles.length > 0
+          ? parsed.profiles
+          : defaultProfiles;
 
-        const activeProfileId = parsed.activeProfileId || (parsed.provider === 'gemini_imagen' ? 'gemini-flash-image' : 'fal-flux-realism');
-        const activeProfile = mergedProfiles.find((p) => p.id === activeProfileId) || mergedProfiles[0];
+        const activeProfileId = parsed.activeProfileId || (parsed.provider === 'gemini_imagen' ? 'gemini-flash-image' : (savedProfiles[0]?.id || 'fal-flux-realism'));
+        const activeProfile = savedProfiles.find((p) => p.id === activeProfileId) || savedProfiles[0] || defaultProfiles[0];
 
         return {
           provider: parsed.provider || activeProfile.provider,
@@ -3098,7 +3094,7 @@ Instructions:
           apiKey: parsed.apiKey || providerApiKeys[parsed.provider as keyof ProviderApiKeys] || activeProfile.apiKey || '',
           endpointUrl: parsed.endpointUrl || activeProfile.endpointUrl || 'http://127.0.0.1:7860/sdapi/v1/txt2img',
           activeProfileId,
-          profiles: mergedProfiles,
+          profiles: savedProfiles,
           providerApiKeys,
           loraUrl: parsed.loraUrl || activeProfile.loraUrl || '',
           loraScale: parsed.loraScale ?? activeProfile.loraScale ?? 1.0,
@@ -3166,10 +3162,14 @@ Instructions:
 
   deleteProfile(profileId: string): void {
     const cur = this.imageGenConfig();
-    const profiles = (cur.profiles || DEFAULT_IMAGE_GEN_PROFILES).filter((p) => p.id !== profileId || p.isBuiltIn);
+    const existing = cur.profiles && cur.profiles.length > 0 ? cur.profiles : [...DEFAULT_IMAGE_GEN_PROFILES];
+    const profiles = existing.filter((p) => p.id !== profileId);
+    if (profiles.length === 0) {
+      profiles.push(DEFAULT_IMAGE_GEN_PROFILES[0]);
+    }
     let nextActiveId = cur.activeProfileId;
     if (cur.activeProfileId === profileId) {
-      nextActiveId = profiles[0]?.id || 'fal-flux-realism';
+      nextActiveId = profiles[0].id;
     }
     this.imageGenConfig.set({
       ...cur,
@@ -3179,6 +3179,16 @@ Instructions:
     if (nextActiveId) {
       this.switchActiveProfile(nextActiveId);
     }
+  }
+
+  resetDefaultProfiles(): void {
+    const cur = this.imageGenConfig();
+    this.imageGenConfig.set({
+      ...cur,
+      profiles: [...DEFAULT_IMAGE_GEN_PROFILES],
+      activeProfileId: DEFAULT_IMAGE_GEN_PROFILES[0].id,
+    });
+    this.switchActiveProfile(DEFAULT_IMAGE_GEN_PROFILES[0].id);
   }
 
   setProviderApiKey(provider: ImageGenProvider, key: string): void {
