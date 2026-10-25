@@ -5,9 +5,9 @@ import { CompiledOutputs, GeneratedImageResult, ImageGenConfig, ImageGenProfile,
 export type { OutputTab, CompiledOutputs };
 
 const TABS: { key: OutputTab; label: string; hint: string }[] = [
-  { key: 'gpt', label: '✨ Gemini / GPT-4o', hint: 'Istruzione in inglese con grounding su sheet allegato + brief JSON: ottimizzato per Google Gemini e ChatGPT.' },
-  { key: 'json', label: '{ } JSON', hint: 'JSON strutturato puro — incollalo in GPT-4o, Gemini, FLUX.2 o in pipeline ComfyUI.' },
-  { key: 'flux', label: 'FLUX', hint: 'Prompt narrativo gerarchico ottimizzato per l’encoder T5 di FLUX.1 / FLUX.2.' },
+  { key: 'gpt', label: '✨ Prompt Universale (FLUX & Gemini)', hint: 'Prompt narrativo naturale ad alta risoluzione con grounding: ideale per Google Gemini, FLUX.1/2, ChatGPT e DALL-E 3.' },
+  { key: 'json', label: '{ } JSON', hint: 'JSON strutturato puro — incollalo in ComfyUI o usalo per integrazioni API programmatiche.' },
+  { key: 'flux', label: 'FLUX.1 / FLUX.2', hint: 'Prompt narrativo gerarchico ottimizzato per l’encoder T5 di FLUX.1 / FLUX.2.' },
   { key: 'midjourney', label: 'Midjourney', hint: 'Sintassi a token + parametri nativi (--ar, --s, --c, --seed, --no, --style raw).' },
   { key: 'sdxl', label: 'SDXL', hint: 'Prompt positivo con pesi + prompt negativo per Stable Diffusion XL / Automatic1111 / ComfyUI.' },
 ];
@@ -362,7 +362,7 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
           [class.active]="tab() === 'gpt'"
           (click)="tab.set('gpt')"
         >
-          ✨ Gemini / GPT-4o
+          ✨ Prompt Universale (FLUX &amp; Gemini)
           @if (defaultModel() === 'gpt') {
             <span class="tab-star" title="Formato predefinito">★</span>
           }
@@ -493,7 +493,7 @@ export class OutputPanel {
 
   readonly currentTabShortLabel = computed(() => {
     switch (this.tab()) {
-      case 'gpt': return 'Gemini';
+      case 'gpt': return 'Universale';
       case 'json': return 'JSON';
       case 'flux': return 'FLUX';
       case 'midjourney': return 'Midjourney';

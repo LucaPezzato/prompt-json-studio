@@ -1763,7 +1763,7 @@
     Scegli quale formato viene aperto di default e copiato negli appunti (tramite pulsante Copia o tasto rapido <b>Ctrl+Shift+C</b>):
   </p>
   <select [value]="selectedDefaultModel()" (change)="selectedDefaultModel.set($any($event.target).value)">
-    <option value="gpt">✨ Google Gemini / GPT-4o (Istruzione con Grounding sheet)</option>
+    <option value="gpt">✨ Prompt Universale (FLUX, Gemini &amp; GPT-4o con Grounding)</option>
     <option value="json">{{ '{ }' }} JSON Strutturato Puro</option>
     <option value="flux">FLUX.1 / FLUX.2 (Prompt Narrativo T5)</option>
     <option value="midjourney">Midjourney v6 (--ar, parametri nativi)</option>

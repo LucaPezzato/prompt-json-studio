@@ -1900,15 +1900,15 @@ export class PromptService {
       const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side profile view, Back view';
       let layoutIntro = '';
       if (cs.layout_mode === 'expressions_grid') {
-        layoutIntro = `Editorial studio photography composite of ${cs.character_name}. The image is a multi-panel photographic portrait grid displaying distinct emotional expressions of the exact same real human person in a single frame: ${views}. Facial features, natural skin pores, eye reflections, and hairstyle remain 100% consistent across all portraits.`;
+        layoutIntro = `EDITORIAL STUDIO PHOTOGRAPHY - CHARACTER MODEL SHEET COMPOSITE of ${cs.character_name}. The image is a multi-panel photographic portrait grid displaying distinct emotional expressions of the exact same real human person in a single frame: ${views}. Facial features, natural skin pores, eye reflections, and hairstyle remain 100% consistent across all portraits.`;
       } else if (cs.layout_mode === 'outfit_study') {
-        layoutIntro = `High-end fashion editorial wardrobe study of ${cs.character_name}. The image displays the same real person in multiple simultaneous outfits in a single photographic contact sheet: ${views}.`;
+        layoutIntro = `EDITORIAL STUDIO PHOTOGRAPHY - WARDROBE CHARACTER MODEL SHEET of ${cs.character_name}. The image displays the same real person in multiple simultaneous outfits in a single photographic contact sheet: ${views}.`;
       } else if (cs.layout_mode === 'full_body_and_portraits') {
-        layoutIntro = `Professional editorial casting composite of ${cs.character_name} combining full-body studio lineup and high-resolution facial close-ups: ${views}.`;
+        layoutIntro = `EDITORIAL STUDIO PHOTOGRAPHY - CHARACTER MODEL SHEET COMPOSITE of ${cs.character_name} combining full-body studio lineup and high-resolution facial close-ups: ${views}.`;
       } else if (cs.layout_mode === 'turnaround_3_views') {
-        layoutIntro = `Professional studio casting photographic composite of ${cs.character_name}. The image displays three simultaneous photographic angles of the same real human being in a single frame: ${views}.`;
+        layoutIntro = `EDITORIAL STUDIO PHOTOGRAPHY - 3-VIEW CHARACTER MODEL SHEET of ${cs.character_name}. The image displays three simultaneous photographic angles of the same real human being in a single frame: ${views}.`;
       } else {
-        layoutIntro = `Professional studio casting photographic composite of ${cs.character_name}. The image displays multiple simultaneous photographic angles of the same real human person in a single clean contact sheet: ${views}.`;
+        layoutIntro = `EDITORIAL STUDIO PHOTOGRAPHY - CHARACTER MODEL SHEET COMPOSITE of ${cs.character_name}. The image displays multiple simultaneous photographic angles of the same real human person in a single clean contact sheet: ${views}.`;
       }
 
       const hasFaceCloseUp = cs.views.some((v) => /close-?up|face|portrait|vis[oa]|primo\s*piano|macro/i.test(v));
@@ -2157,7 +2157,7 @@ export class PromptService {
    * Compiles a hybrid instruction + JSON prompt ideal for Google Gemini (Imagen 3 / Nano Banana) and ChatGPT / GPT-4o.
    */
   compileForGpt4oAndGemini(spec: ImagePromptSpec): string {
-    const jsonStr = JSON.stringify(this.buildCleanJsonObject(spec), null, 2);
+    const naturalPrompt = this.compileForFlux(spec);
 
     if (
       spec.character_sheet?.enabled &&
@@ -2177,59 +2177,18 @@ export class PromptService {
           `distinctive features (${cs.distinctive_marks || 'as shown in sheet'}), and build (${cs.body_build || 'as shown in sheet'}).\n` +
           `Do not invent a new face or alter ${charName}'s somatic identity. Only alter the scene setting, pose, expression, and attire as specified below.\n\n` +
           `[SCENE PRODUCTION SPECIFICATION]\n` +
-          `Render ${charName} in a new scene strictly executing every camera, lighting, environmental, and compositional parameter defined in this structured JSON brief:\n\n` +
-          '```json\n' +
-          jsonStr +
-          '\n```'
+          naturalPrompt
         );
       } else {
         return (
           `[CHARACTER CONSISTENCY DIRECTIVE - TEXTUAL BIOMETRICS]\n` +
-          `Render the character "${charName}" strictly adhering to the deterministic biometric DNA defined in the brief:\n` +
-          `Execute every visual, camera, lighting, and composition parameter specified in this structured JSON production brief:\n\n` +
-          '```json\n' +
-          jsonStr +
-          '\n```'
+          `Render the character "${charName}" strictly adhering to the deterministic biometric DNA defined in the brief:\n\n` +
+          naturalPrompt
         );
       }
     }
 
-    if (
-      spec.character_sheet?.enabled &&
-      spec.character_sheet.character_name.trim() &&
-      spec.character_sheet.mode === 'sheet_generation'
-    ) {
-      const cs = spec.character_sheet;
-      const views = cs.views.length > 0 ? cs.views.join(', ') : 'Front view, 3/4 Profile view, Side profile view, Back view';
-      const hasFaceCloseUp = cs.views.some((v) => /close-?up|face|portrait|vis[oa]|primo\s*piano|macro/i.test(v));
-      const faceMarginNote = hasFaceCloseUp
-        ? ' The facial close-up / portrait panel must be rendered as an uncropped, 100% complete headshot fully contained within the frame, with generous clear white space separating it from the right border.'
-        : '';
-
-      return (
-        `[EDITORIAL STUDIO PHOTOGRAPHY REFERENCE - AUTHENTIC HUMAN CASTING COMPOSITE / CHARACTER MODEL SHEET]\n` +
-        `High-end editorial studio portraiture and full-body multi-angle casting composite of an authentic, real living human person: "${cs.character_name}".\n` +
-        `Photographed on medium format Hasselblad H6D-100c camera, 85mm portrait prime lens, natural human skin micro-texture, visible skin pores, natural eye moisture reflections, and authentic fabric texture.\n\n` +
-        `CRITICAL REQUIREMENTS FOR CONSISTENCY ANCHOR:\n` +
-        `1. BACKDROP: Solid clean white seamless photo studio cyclorama backdrop, soft diffuse floor contact shadow, high-key even studio softbox lighting, zero scene clutter, 100% visual isolation.\n` +
-        `2. SOMATIC CONTINUITY: Identical facial bone structure, eyes (${cs.eye_details || 'as specified in brief'}), hair (${cs.hair_details || 'as specified in brief'}), skin tone (${cs.ethnicity_and_skin || 'as specified in brief'}), and physique across all angles.\n` +
-        `3. ATTIRE & WARDROBE: ${cs.signature_outfit || 'Neutral minimalist athletic basics'}${cs.signature_props ? ', accessories: ' + cs.signature_props : ''}.\n` +
-        `4. FRAME COMPOSITION & SAFE CANVAS MARGINS: Multi-view studio contact sheet showing: ${views}. Every figure and portrait panel must be 100% completely visible inside the canvas with generous safe padding margins from all canvas edges (left, right, top, bottom).${faceMarginNote} ABSOLUTELY ZERO figures or faces cut in half, truncated, or bleeding off the canvas border.\n` +
-        `5. STRICT ANTI-CGI / ANTI-VIDEOGAME DIRECTIVE: 100% authentic raw photography of a real human being. ABSOLUTELY NO 3D render, NO video game graphics, NO Unreal Engine / Unity 3D asset, NO CGI, NO digital painting, NO plastic or airbrushed skin, NO cartoon, NO anime, NO stylized concept art. The subject must look undeniably like an authentic human model photographed in a real studio.\n` +
-        `6. STRICT ANTI-CROPPING & SAFE BOUNDARIES: No cropped faces, no half-heads at edges, no partial portraits, no figures bleeding off-frame, no clipped limbs, no cutoff anatomy.\n\n` +
-        `[PRODUCTION SPECIFICATION JSON]\n` +
-        '```json\n' +
-        jsonStr +
-        '\n```'
-      );
-    }
-
-    return (
-      `Generate an image strictly following every visual, camera, lighting, and composition parameter specified in this structured JSON production brief:\n\n` +
-      '```json\n' +
-      jsonStr +
-      '\n```'
-    );
+    return naturalPrompt;
   }
 
   /**
