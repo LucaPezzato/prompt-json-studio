@@ -1421,16 +1421,16 @@
       type="button"
       class="mtab-btn"
       [class.active]="imgSettingsTab() === 'new_profile'"
-      (click)="openCreateProfile()"
+      (click)="editProfileId() ? imgSettingsTab.set('new_profile') : openCreateProfile()"
     >
-      ＋ Nuovo Profilo Modello
+      {{ editProfileId() ? '✏️ Modifica Profilo' : '＋ Nuovo Profilo Modello' }}
     </button>
   </div>
 
   <!-- TAB 1: PROFILES LIST -->
   @if (imgSettingsTab() === 'profiles') {
     <p class="muted" style="margin-top: 10px; margin-bottom: 12px; font-size: 12.5px;">
-      Seleziona con un clic il modello attivo per la generazione immediata, oppure aggiungi un nuovo modello o LoRA personalizzato.
+      Seleziona con un clic il modello attivo per la generazione immediata, oppure modifica, duplica o aggiungi nuovi modelli e LoRA personalizzati.
     </p>
 
     <div class="profiles-list-grid">
@@ -1467,21 +1467,24 @@
 
           <div class="pc-actions">
             @if (activeProfileId() === p.id) {
-              <span class="pc-in-use-label">In uso per il prossimo scatto</span>
+              <span class="pc-in-use-label">● In uso per lo scatto</span>
             } @else {
-              <button type="button" class="btn small ghost" (click)="onSwitchProfile(p.id)">
-                Seleziona
+              <button type="button" class="btn small ghost" (click)="onSwitchProfile(p.id)" title="Attiva questo modello">
+                ⚡ Attiva
               </button>
             }
-            <button type="button" class="btn small ghost" (click)="openEditProfile(p)" [title]="p.isBuiltIn ? 'Duplica come modello personalizzato' : 'Modifica parametri'">
-              {{ p.isBuiltIn ? '📋 Clona' : '✏️ Modifica' }}
+            <button type="button" class="btn small ghost" (click)="openEditProfile(p)" title="Modifica parametri di questo modello">
+              ✏️ Modifica
+            </button>
+            <button type="button" class="btn small ghost" (click)="cloneProfile(p)" title="Duplica come nuovo modello">
+              📋 Clona
             </button>
             @if (imageGenProfiles().length > 1) {
               <button
                 type="button"
                 class="btn small ghost danger"
                 (click)="deleteProfile(p.id)"
-                title="Elimina questo modello dalla lista"
+                title="Elimina questo modello dalla libreria"
               >
                 🗑️ Elimina
               </button>
@@ -1617,9 +1620,24 @@
 
   <!-- TAB 3: CREATE / EDIT CUSTOM PROFILE -->
   @if (imgSettingsTab() === 'new_profile') {
-    <p class="muted" style="margin-top: 10px; margin-bottom: 14px; font-size: 12.5px;">
-      Crea un nuovo profilo per un modello specifico su <b>fal.ai</b>, o aggiungi un <b>LoRA</b> personalizzato per preservare l'identità della tua AI Influencer.
-    </p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 12px; padding: 10px 14px; background: rgba(189, 147, 249, 0.08); border: 1px solid rgba(189, 147, 249, 0.25); border-radius: 8px;">
+      <div>
+        <h4 style="margin: 0; font-size: 13.5px; color: var(--purple, #bd93f9); display: flex; align-items: center; gap: 8px;">
+          <span>{{ editProfileId() ? '✏️ Modifica Profilo Modello' : '✨ Crea Nuovo Profilo Modello' }}</span>
+          @if (editProfileId()) {
+            <code style="font-size: 11px; padding: 1px 6px; background: rgba(0,0,0,0.3); border-radius: 4px; color: var(--cyan, #8be9fd);">ID: {{ editProfileId() }}</code>
+          }
+        </h4>
+        <p class="muted" style="margin: 3px 0 0 0; font-size: 12px;">
+          {{ editProfileId() ? 'Modifica parametri, ID modello endpoint, provider, API key o LoRA per questo profilo.' : 'Crea un nuovo profilo per fal.ai, Gemini, OpenAI, ComfyUI o con un LoRA personalizzato.' }}
+        </p>
+      </div>
+      @if (editProfileId()) {
+        <button type="button" class="btn small ghost" (click)="openCreateProfile()" title="Passa alla creazione di un nuovo profilo vuoto">
+          ＋ Crea Nuovo invece
+        </button>
+      }
+    </div>
 
     <label>Nome del Profilo</label>
     <input
@@ -1635,14 +1653,14 @@
         <select [value]="newProfileProvider()" (change)="newProfileProvider.set($any($event.target).value)">
           <option value="fal_ai">⚡ fal.ai (FLUX, LoRA, Realism)</option>
           <option value="gemini_imagen">✨ Google Gemini</option>
-          <option value="openai_dalle">🤖 OpenAI</option>
+          <option value="openai_dalle">🤖 OpenAI (DALL-E 3)</option>
           <option value="comfyui">🖥️ ComfyUI (Locale)</option>
           <option value="custom">🌐 Endpoint Custom</option>
         </select>
       </div>
 
       <div>
-        <label>Badge / Tag</label>
+        <label>Badge / Tag Visivo</label>
         <input
           type="text"
           [value]="newProfileBadge()"
@@ -1657,7 +1675,7 @@
       type="text"
       [value]="newProfileModel()"
       (input)="newProfileModel.set($any($event.target).value)"
-      placeholder="es. fal-ai/flux-realism oppure fal-ai/flux-lora"
+      placeholder="es. fal-ai/flux-realism oppure gemini-2.5-flash-image"
     />
 
     <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
@@ -1666,42 +1684,76 @@
       <button type="button" class="chip" (click)="newProfileModel.set('fal-ai/flux-pro/v1.1')">fal-ai/flux-pro/v1.1</button>
       <button type="button" class="chip" (click)="newProfileModel.set('fal-ai/flux/schnell')">fal-ai/flux/schnell</button>
       <button type="button" class="chip" (click)="newProfileModel.set('fal-ai/flux-lora')">fal-ai/flux-lora</button>
+      <button type="button" class="chip" (click)="newProfileModel.set('gemini-2.5-flash-image')">gemini-2.5-flash-image</button>
+      <button type="button" class="chip" (click)="newProfileModel.set('dall-e-3')">dall-e-3</button>
     </div>
 
-    <label style="margin-top: 12px;">URL LoRA Custom (Opzionale per fal.ai)</label>
+    @if (newProfileProvider() === 'comfyui' || newProfileProvider() === 'custom') {
+      <label style="margin-top: 12px;">URL Endpoint</label>
+      <input
+        type="text"
+        [value]="newProfileEndpointUrl()"
+        (input)="newProfileEndpointUrl.set($any($event.target).value)"
+        placeholder="http://127.0.0.1:7860/sdapi/v1/txt2img oppure https://api.mioendpoint.com/generate"
+      />
+    }
+
+    <label style="margin-top: 12px;">API Key Dedicata per questo Profilo (Opzionale)</label>
     <input
-      type="text"
-      [value]="newProfileLoraUrl()"
-      (input)="newProfileLoraUrl.set($any($event.target).value)"
-      placeholder="https://v3.fal.media/files/... o HuggingFace URL"
+      [type]="showApiKeyValues() ? 'text' : 'password'"
+      [value]="newProfileApiKey()"
+      (input)="newProfileApiKey.set($any($event.target).value)"
+      placeholder="Lascia vuoto per ereditare la chiave globale configurata in 'Gestione Chiavi API'"
     />
 
-    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-top: 10px;">
-      <div>
-        <label>Scala LoRA (Weight)</label>
-        <input
-          type="number"
-          step="0.05"
-          min="0.1"
-          max="2.0"
-          [value]="newProfileLoraScale()"
-          (input)="newProfileLoraScale.set(+$any($event.target).value)"
-        />
+    @if (newProfileProvider() === 'fal_ai') {
+      <label style="margin-top: 12px;">URL LoRA Custom (Opzionale per fal.ai)</label>
+      <input
+        type="text"
+        [value]="newProfileLoraUrl()"
+        (input)="newProfileLoraUrl.set($any($event.target).value)"
+        placeholder="https://v3.fal.media/files/... o HuggingFace URL"
+      />
+
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-top: 10px;">
+        <div>
+          <label>Scala LoRA (Weight)</label>
+          <input
+            type="number"
+            step="0.05"
+            min="0.1"
+            max="2.0"
+            [value]="newProfileLoraScale()"
+            (input)="newProfileLoraScale.set(+$any($event.target).value)"
+          />
+        </div>
+        <div>
+          <label>Descrizione Breve</label>
+          <input
+            type="text"
+            [value]="newProfileDesc()"
+            (input)="newProfileDesc.set($any($event.target).value)"
+            placeholder="es. Modello calibrato per influencer realistica"
+          />
+        </div>
       </div>
-      <div>
+    } @else {
+      <div style="margin-top: 10px;">
         <label>Descrizione Breve</label>
         <input
           type="text"
           [value]="newProfileDesc()"
           (input)="newProfileDesc.set($any($event.target).value)"
-          placeholder="es. Addestrato su 20 foto dell'influencer"
+          placeholder="es. Descrizione per il modello o note d'uso"
         />
       </div>
-    </div>
+    }
 
     <div class="modal-actions" style="margin-top: 18px;">
-      <button type="button" class="btn secondary" (click)="imgSettingsTab.set('profiles')">Annulla</button>
-      <button type="button" class="btn primary" (click)="saveCustomProfile()">💾 Salva Profilo</button>
+      <button type="button" class="btn secondary" (click)="imgSettingsTab.set('profiles'); editProfileId.set(null)">Annulla</button>
+      <button type="button" class="btn primary" (click)="saveCustomProfile()">
+        {{ editProfileId() ? '💾 Salva Modifiche' : '✨ Crea e Salva Profilo' }}
+      </button>
     </div>
   }
 </app-modal>

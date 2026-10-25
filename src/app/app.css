@@ -3948,8 +3948,20 @@ app-output-panel {
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  flex-wrap: wrap;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding-top: 8px;
+}
+
+.btn.danger {
+  color: #ff5555;
+  border-color: rgba(255, 85, 85, 0.35);
+}
+
+.btn.danger:hover {
+  background: rgba(255, 85, 85, 0.15);
+  border-color: #ff5555;
+  color: #ff5555;
 }
 
 .pc-in-use-label {

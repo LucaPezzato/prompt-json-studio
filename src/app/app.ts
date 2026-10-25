@@ -84,6 +84,8 @@ export class App {
   readonly newProfileName = signal<string>('');
   readonly newProfileProvider = signal<ImageGenProvider>('fal_ai');
   readonly newProfileModel = signal<string>('fal-ai/flux-realism');
+  readonly newProfileApiKey = signal<string>('');
+  readonly newProfileEndpointUrl = signal<string>('');
   readonly newProfileLoraUrl = signal<string>('');
   readonly newProfileLoraScale = signal<number>(1.0);
   readonly newProfileBadge = signal<string>('🌟 Influencer');
@@ -823,6 +825,8 @@ export class App {
     this.newProfileName.set('');
     this.newProfileProvider.set('fal_ai');
     this.newProfileModel.set('fal-ai/flux-realism');
+    this.newProfileApiKey.set('');
+    this.newProfileEndpointUrl.set('');
     this.newProfileLoraUrl.set('');
     this.newProfileLoraScale.set(1.0);
     this.newProfileBadge.set('🌟 Influencer');
@@ -835,9 +839,25 @@ export class App {
     this.newProfileName.set(p.name);
     this.newProfileProvider.set(p.provider);
     this.newProfileModel.set(p.model);
+    this.newProfileApiKey.set(p.apiKey || '');
+    this.newProfileEndpointUrl.set(p.endpointUrl || '');
     this.newProfileLoraUrl.set(p.loraUrl || '');
     this.newProfileLoraScale.set(p.loraScale ?? 1.0);
     this.newProfileBadge.set(p.badge || '');
+    this.newProfileDesc.set(p.description || '');
+    this.imgSettingsTab.set('new_profile');
+  }
+
+  cloneProfile(p: ImageGenProfile): void {
+    this.editProfileId.set(null);
+    this.newProfileName.set(`${p.name} (Copia)`);
+    this.newProfileProvider.set(p.provider);
+    this.newProfileModel.set(p.model);
+    this.newProfileApiKey.set(p.apiKey || '');
+    this.newProfileEndpointUrl.set(p.endpointUrl || '');
+    this.newProfileLoraUrl.set(p.loraUrl || '');
+    this.newProfileLoraScale.set(p.loraScale ?? 1.0);
+    this.newProfileBadge.set(p.badge ? `${p.badge} Copia` : '📋 Copia');
     this.newProfileDesc.set(p.description || '');
     this.imgSettingsTab.set('new_profile');
   }
@@ -853,12 +873,15 @@ export class App {
       this.showToast('Inserisci l\'ID del modello (es. fal-ai/flux-realism)');
       return;
     }
+    const isEdit = !!this.editProfileId();
     const id = this.editProfileId() || `custom-${Date.now()}`;
     const prof: ImageGenProfile = {
       id,
       name,
       provider: this.newProfileProvider(),
       model,
+      apiKey: this.newProfileApiKey().trim() || undefined,
+      endpointUrl: this.newProfileEndpointUrl().trim() || undefined,
       loraUrl: this.newProfileLoraUrl().trim() || undefined,
       loraScale: this.newProfileLoraScale(),
       badge: this.newProfileBadge().trim() || undefined,
@@ -867,12 +890,16 @@ export class App {
     };
     this.svc.saveProfile(prof);
     this.svc.switchActiveProfile(id);
+    this.editProfileId.set(null);
     this.imgSettingsTab.set('profiles');
-    this.showToast(`✨ Profilo "${name}" salvato e attivato!`);
+    this.showToast(isEdit ? `✏️ Modello "${name}" modificato con successo!` : `✨ Profilo "${name}" creato e attivato!`);
   }
 
   deleteProfile(profileId: string): void {
     const prof = this.imageGenProfiles().find((p) => p.id === profileId);
+    if (this.editProfileId() === profileId) {
+      this.editProfileId.set(null);
+    }
     this.svc.deleteProfile(profileId);
     this.showToast(`🗑️ Modello "${prof?.name || 'Profilo'}" eliminato`);
   }
@@ -882,6 +909,7 @@ export class App {
   }
 
   resetDefaultProfiles(): void {
+    this.editProfileId.set(null);
     this.svc.resetDefaultProfiles();
     this.showToast('↺ Modelli predefiniti ripristinati');
   }
