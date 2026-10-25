@@ -2327,26 +2327,30 @@
 </app-modal>
 
 <!-- Gallery / Generation Archive Modal -->
-<app-modal title="🖼️ Archivio Scatti &amp; Configurazioni per Soggetto" [wide]="true" [(open)]="showGalleryModal">
+<app-modal title="🖼️ Archivio Scatti &amp; Configurazioni per Soggetto" [gallery]="true" [(open)]="showGalleryModal">
   <div class="gallery-toolbar">
     <div class="gallery-filters-left">
       <div class="gallery-filter-item">
-        <label>Soggetto:</label>
-        <select [value]="gallerySelectedSubject()" (change)="gallerySelectedSubject.set($any($event.target).value)">
-          <option value="all">Tutti i Soggetti ({{ historyItems().length }})</option>
-          @for (sub of uniqueSubjects(); track sub.name) {
-            <option [value]="sub.name">{{ sub.name }} ({{ sub.count }})</option>
-          }
-        </select>
+        <label for="gallery-sub-filter">Soggetto:</label>
+        <div class="gallery-select-wrapper">
+          <select id="gallery-sub-filter" [value]="gallerySelectedSubject()" (change)="gallerySelectedSubject.set($any($event.target).value)">
+            <option value="all">Tutti i Soggetti ({{ historyItems().length }})</option>
+            @for (sub of uniqueSubjects(); track sub.name) {
+              <option [value]="sub.name">{{ sub.name }} ({{ sub.count }})</option>
+            }
+          </select>
+        </div>
       </div>
 
       <div class="gallery-filter-item">
-        <label>Tipologia:</label>
-        <select [value]="gallerySelectedMode()" (change)="gallerySelectedMode.set($any($event.target).value)">
-          <option value="all">Tutti gli scatti</option>
-          <option value="scene">🎬 Scene Fotografiche</option>
-          <option value="sheet">👤 Schede Personaggio</option>
-        </select>
+        <label for="gallery-type-filter">Tipologia:</label>
+        <div class="gallery-select-wrapper">
+          <select id="gallery-type-filter" [value]="gallerySelectedMode()" (change)="gallerySelectedMode.set($any($event.target).value)">
+            <option value="all">Tutti gli scatti</option>
+            <option value="scene">🎬 Scene Fotografiche</option>
+            <option value="sheet">👤 Schede Personaggio</option>
+          </select>
+        </div>
       </div>
 
       <div class="gallery-search-wrap">

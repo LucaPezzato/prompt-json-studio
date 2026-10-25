@@ -1,5 +1,6 @@
 /* ===== Dracula design tokens ===== */
 :root {
+  color-scheme: dark;
   --bg: #1e1f29;
   --bg-2: #282a36;
   --bg-3: #343746;
@@ -68,6 +69,12 @@ textarea.mono { font-family: var(--mono); font-size: 12.5px; }
 input:focus, textarea:focus, select:focus {
   border-color: var(--purple);
   box-shadow: 0 0 0 3px rgba(189, 147, 249, 0.18);
+}
+
+select option {
+  background-color: var(--bg-2, #282a36);
+  color: var(--fg, #f8f8f2);
+  padding: 8px 12px;
 }
 
 input[type='range'] { width: 100%; accent-color: var(--purple); }
