@@ -622,10 +622,9 @@
             <div class="scene-card-info">
               <strong>Modalità Scena Attiva con Personaggio Vincolato</strong>
               <p>Il soggetto principale è bloccato su <strong>{{ spec().character_sheet.character_name || 'Elena Vance' }}</strong>.
+                Tutti i formati (FLUX, Gemini, Midjourney, SDXL, JSON) includono ora la clausola esplicita di <strong>Visual Grounding al Model Sheet</strong> per garantire continuità biometrica assoluta tra le scene.
                 @if ((spec().character_sheet.consistency_method || 'multimodal_attached_sheet') === 'multimodal_attached_sheet') {
-                  <span>Nel tab <em>Gemini / GPT-4o</em> trovi l'istruzione in lingua inglese di visual grounding pronta da inviare a Gemini insieme all'immagine dello sheet del personaggio allegata.</span>
-                } @else {
-                  <span>Il DNA biometrico viene descritto in modo autonomo nel testo.</span>
+                  <span>Nel tab <em>Gemini / GPT-4o</em> è inoltre presente la direttiva multimodale completa con l'immagine della scheda allegata.</span>
                 }
               </p>
             </div>

@@ -1844,9 +1844,16 @@ export class PromptService {
         const parts: string[] = [];
         const med = spec.style_and_rendering.medium || 'Photograph';
         const shot = spec.camera.shot_type ? `${spec.camera.shot_type} of ` : '';
+        const charName = cs.character_name.trim();
+        const hasSheet = !!(cs.image_data_url || cs.cref_url || cs.consistency_method === 'multimodal_attached_sheet');
+        const groundingClause = hasSheet
+          ? `[Character Sheet Grounding]: Strictly anchored to the multi-angle character model sheet of "${charName}". Faithfully preserve 100% identical facial bone structure, facial identity, eye morphology, distinct gaze, skin micro-texture, and somatic likeness from the reference turnaround sheet. This is the exact same human person across all scenes, zero facial distortion or altered identity.`
+          : `[Character Sheet Biometric Anchor]: Strictly anchored to the deterministic biometric DNA and character model sheet of "${charName}". Maintain 100% identical facial bone structure, facial identity, eye details (${cs.eye_details}), skin texture (${cs.ethnicity_and_skin}), and somatic likeness from the character model sheet. The subject is the exact same person across all scenes.`;
+
         parts.push(
-          `${med} (${spec.style_and_rendering.aesthetic}). ${shot}${cs.character_name}, a ${cs.gender_and_age} with ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, ${cs.distinctive_marks}, physique: ${cs.body_build}.`
+          `${med} (${spec.style_and_rendering.aesthetic}). ${shot}${charName}, a ${cs.gender_and_age} with ${cs.ethnicity_and_skin}, eye details: ${cs.eye_details}, hairstyle: ${cs.hair_details}, ${cs.distinctive_marks}, physique: ${cs.body_build}.`
         );
+        parts.push(groundingClause);
         parts.push(`Attire & clothing: ${attire}.`);
         if (spec.subject.pose_or_action || spec.subject.expression_or_mood) {
           parts.push(
@@ -1877,9 +1884,13 @@ export class PromptService {
             `Text rendering: The exact text "${spec.typography.exact_text}" written in ${spec.typography.font_style}, ${spec.typography.placement_and_material}.`
           );
         }
-        if (spec.style_and_rendering.quality_tags.length > 0) {
+        const qualityTags = [...spec.style_and_rendering.quality_tags];
+        if (!qualityTags.some((t) => /character (sheet|consistency)|same person/i.test(t))) {
+          qualityTags.push('character sheet consistency', 'identical facial likeness', 'same person across scenes');
+        }
+        if (qualityTags.length > 0) {
           parts.push(
-            `Color grade: ${spec.style_and_rendering.color_grading}. ${spec.style_and_rendering.quality_tags.join(', ')}.`
+            `Color grade: ${spec.style_and_rendering.color_grading}. ${qualityTags.join(', ')}.`
           );
         }
         return parts.join(' ');
@@ -1965,8 +1976,12 @@ export class PromptService {
       // MODE: SCENE WITH BOUND CHARACTER
       if (cs.mode === 'scene_with_character') {
         const attire = spec.subject.clothing_or_materials.trim() || cs.signature_outfit;
+        const charName = cs.character_name.trim();
         const tokens: string[] = [
-          `${spec.style_and_rendering.medium} of ${cs.character_name}`,
+          `${spec.style_and_rendering.medium} of ${charName}`,
+          `character consistency strictly anchored to reference character model sheet of ${charName}`,
+          `identical facial likeness and features from character turnaround sheet`,
+          `same person across scenes`,
           `a ${cs.gender_and_age}`,
           cs.ethnicity_and_skin,
           `eyes: ${cs.eye_details}`,
@@ -2226,11 +2241,15 @@ export class PromptService {
 
       if (cs.mode === 'scene_with_character') {
         const attire = spec.subject.clothing_or_materials.trim() || cs.signature_outfit;
+        const charName = cs.character_name.trim();
         const pos = [
           `(masterpiece, best quality:1.2)`,
           spec.style_and_rendering.medium,
           spec.style_and_rendering.aesthetic,
-          `(${cs.character_name}:1.25)`,
+          `(${charName}:1.25)`,
+          `(character consistency strictly anchored to reference character model sheet of ${charName}:1.3)`,
+          `(identical facial features and somatic likeness from reference sheet:1.25)`,
+          `(same person across scenes:1.2)`,
           cs.gender_and_age,
           cs.ethnicity_and_skin,
           `(${cs.eye_details}:1.1)`,
