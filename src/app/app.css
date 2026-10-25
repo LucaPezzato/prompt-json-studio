@@ -4299,6 +4299,26 @@ app-output-panel {
   margin-left: 6px;
 }
 
+.desktop-folder-btn {
+  border-color: rgba(139, 233, 253, 0.4) !important;
+  color: var(--cyan, #8be9fd) !important;
+}
+
+.desktop-folder-btn:hover {
+  background: rgba(139, 233, 253, 0.12) !important;
+  border-color: var(--cyan, #8be9fd) !important;
+}
+
+.desktop-open-disk-btn {
+  border-color: rgba(139, 233, 253, 0.5) !important;
+  color: var(--cyan, #8be9fd) !important;
+}
+
+.desktop-open-disk-btn:hover {
+  background: rgba(139, 233, 253, 0.15) !important;
+  border-color: var(--cyan, #8be9fd) !important;
+}
+
 @media (max-width: 980px) {
   :host { height: 100vh; overflow: hidden; }
   .layout { display: flex; flex-direction: column; height: calc(100vh - 105px); max-height: calc(100vh - 105px); overflow: hidden; }

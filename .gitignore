@@ -8,3 +8,5 @@ out-tsc/
 .env.*
 !.env.example
 public/env.json
+src-tauri/target/
+src-tauri/gen/schemas/

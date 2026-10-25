@@ -14,6 +14,7 @@ import { PromptStore } from './services/prompt.store';
 import { PromptService } from './services/prompt.service';
 import { CharacterLayoutMode, CharacterPhotoItem, CharacterSheetBlock, CharacterWorkflowMode, CustomProperty, GeneratedImageResult, ImageGenConfig, ImageGenProfile, ImageGenProvider, LAYOUT_MODE_VIEWS, PromptTemplate, ProviderApiKeys, SavedCharacter, SavedGenerationItem } from './models/prompt.model';
 import { GenerationHistoryService } from './services/generation-history.service';
+import { DesktopService } from './services/desktop.service';
 
 @Component({
   selector: 'app-root',
@@ -35,6 +36,7 @@ import { GenerationHistoryService } from './services/generation-history.service'
 export class App {
   readonly store = inject(PromptStore);
   readonly svc = inject(PromptService);
+  readonly desktop = inject(DesktopService);
 
   readonly spec = this.store.spec;
   readonly templates = this.svc.allTemplates;
@@ -1061,6 +1063,22 @@ export class App {
         specSnapshot: structuredClone(curSpec),
       });
 
+      // Direct-to-disk native save when running as Desktop App (Tauri)
+      if (this.desktop.isDesktopApp()) {
+        const datePrefix = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        const cleanModel = res.model.replace(/[^a-zA-Z0-9_-]/g, '_');
+        this.desktop.saveGeneration(
+          subjectName,
+          `${datePrefix}_${cleanModel}`,
+          res.dataUrl,
+          JSON.stringify(curSpec, null, 2)
+        ).then((deskRes) => {
+          if (deskRes) {
+            console.log('Saved directly to local disk folder:', deskRes.image_path);
+          }
+        });
+      }
+
       if (this.isSheetMode() || this.spec().character_sheet.mode === 'sheet_generation') {
         const charName = this.spec().character_sheet.character_name.trim();
         const optimized = await this.optimizeImageDataUrl(res.dataUrl);
@@ -1675,6 +1693,10 @@ export class App {
 
   downloadSavedGenerationImage(item: SavedGenerationItem): void {
     this.historySvc.downloadImage(item);
+  }
+
+  openDesktopStorageFolder(subject?: string): void {
+    this.desktop.openFolder(subject);
   }
 
   exportSavedGenerationJson(item: SavedGenerationItem): void {

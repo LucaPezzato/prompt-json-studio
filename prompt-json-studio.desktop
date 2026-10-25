@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Prompt JSON Studio
+GenericName=AI Structured Visual Studio
+Comment=AI Image Structured JSON Prompt Builder, Character Studio & Multi-Model Engine
+Exec=/home/pez/.local/bin/prompt-json-studio
+Icon=prompt-json-studio
+Terminal=false
+Categories=Graphics;Photography;Development;
+Keywords=ai;prompt;json;flux;gemini;imagen;photography;character;portrait;
+StartupWMClass=prompt-json-studio

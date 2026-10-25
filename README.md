@@ -41,6 +41,15 @@
 - ✨ **"Magic Expand" AI Assistant**:
   - Type a 5-word concept (e.g. *"gatto astronauta su Marte al tramonto"*) and expand it automatically into all structured JSON fields.
   - Works **offline** with a smart heuristic analyzer, or connects to **Google Gemini**, **OpenAI**, **OpenRouter**, or **Local Ollama** (`http://localhost:11434`) using your own client-side API key.
+- 👤 **Dedicated Character Studio (AI Influencer & Consistency)**:
+  - Generate multi-angle Character Reference Sheets (front, 3/4 profile, profile, candid action).
+  - Ground characters with explicit physical traits (heterochromia, age, hair, body contours, styling).
+  - Bind characters into any photographic scene while enforcing exact appearance consistency.
+- 🖥️ **Native Desktop App (Tauri v2 + Rust)** & Local Storage:
+  - Runs natively on Linux (Hyprland / Wayland / X11) or as a Web App.
+  - **Auto-Archiving directly to disk**: every generation automatically saves both the high-res `.png` and the complete `.json` prompt snapshot into `~/Pictures/PromptStudio/<Soggetto>/`.
+  - **Archivio Scatti & Gallery**: filter by subject, search prompts, restore previous setups (`↺ Ripristina Setup`), or open the local folder directly via `xdg-open`.
+  - Native Linux `.desktop` launcher and icon included.
 
 ---
 
@@ -59,6 +68,17 @@ npm start
 ```
 
 Visit `http://localhost:4200` in your browser.
+
+### 🖥️ Desktop App (Linux / Tauri v2)
+
+```bash
+# Run as native desktop application
+npm run desktop
+
+# Or launch directly from the application launcher / terminal:
+prompt-json-studio
+```
+When running as desktop app, generations are saved automatically to `~/Pictures/PromptStudio/<Soggetto>/<timestamp>_<modello>.png` with accompanying `.json` configuration files.
 
 ---
 

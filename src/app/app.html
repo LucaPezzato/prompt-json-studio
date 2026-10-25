@@ -53,6 +53,18 @@
       }
     </button>
 
+    <!-- Desktop Storage Folder Button (Tauri Native Mode) -->
+    @if (desktop.isDesktopApp()) {
+      <button
+        type="button"
+        class="btn ghost desktop-folder-btn"
+        (click)="openDesktopStorageFolder()"
+        title="Apri la cartella di archiviazione automatica su disco (~/Pictures/PromptStudio)"
+      >
+        📂 Cartella Foto
+      </button>
+    }
+
     <!-- Compact Project Menu Dropdown -->
     <div class="project-dropdown-wrap">
       <button
@@ -2347,16 +2359,28 @@
       </div>
     </div>
 
-    @if (historyItems().length > 0) {
+    @if (historyItems().length > 0 || desktop.isDesktopApp()) {
       <div class="gallery-actions-right">
-        <button
-          type="button"
-          class="btn small ghost danger"
-          (click)="clearAllGenerations()"
-          title="Elimina tutti gli scatti salvati in archivio"
-        >
-          🗑️ Svuota Archivio
-        </button>
+        @if (desktop.isDesktopApp()) {
+          <button
+            type="button"
+            class="btn small ghost accent desktop-open-disk-btn"
+            (click)="openDesktopStorageFolder(gallerySelectedSubject() !== 'all' ? gallerySelectedSubject() : undefined)"
+            title="Apri la cartella locale su disco con le foto e i file JSON (~/Pictures/PromptStudio)"
+          >
+            📂 Apri Cartella Disco
+          </button>
+        }
+        @if (historyItems().length > 0) {
+          <button
+            type="button"
+            class="btn small ghost danger"
+            (click)="clearAllGenerations()"
+            title="Elimina tutti gli scatti salvati in archivio"
+          >
+            🗑️ Svuota Archivio
+          </button>
+        }
       </div>
     }
   </div>
@@ -2426,6 +2450,16 @@
                 >
                   📥 JSON
                 </button>
+                @if (desktop.isDesktopApp()) {
+                  <button
+                    type="button"
+                    class="btn small ghost"
+                    (click)="openDesktopStorageFolder(item.subjectName)"
+                    title="Apri la cartella di questo soggetto su disco"
+                  >
+                    📂
+                  </button>
+                }
                 <button
                   type="button"
                   class="btn small ghost danger"
