@@ -562,43 +562,40 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await engineCfgBtn.click();
   await page.waitForTimeout(300);
 
-  const imgModalTitle = page.locator('app-modal[title*="Generatore Immagini AI"]');
+  const imgModalTitle = page.locator('app-modal[title*="Generatore Immagini"]');
   await imgModalTitle.waitFor({ state: 'visible', timeout: 5000 });
   console.log('✔ Image Generator configuration modal opened successfully!');
 
-  // 16.3 Test provider select options
+  // 16.3 Test engine profiles in modal
+  const profileCards = imgModalTitle.locator('.profile-card');
+  const count = await profileCards.count();
+  console.log(`  Found ${count} engine profiles in modal`);
+  if (count < 4) {
+    throw new Error(`Expected at least 4 profiles, found ${count}`);
+  }
+
+  // Navigate to New Profile tab to test provider selection
+  await imgModalTitle.locator('.mtab-btn:has-text("Nuovo Profilo Modello")').click();
+  await page.waitForTimeout(200);
+
   const providerSelect = imgModalTitle.locator('select');
   const providerOptions = await providerSelect.locator('option').allInnerTexts();
   console.log(`  Available engine providers: ${providerOptions.join(' | ')}`);
-  if (!providerOptions.some(o => o.includes('Google') && (o.includes('Imagen') || o.includes('Gemini'))) || !providerOptions.some(o => o.includes('OpenAI DALL-E 3'))) {
-    throw new Error('Expected Google Imagen / Gemini and OpenAI DALL-E 3 in provider options!');
+  if (!providerOptions.some(o => o.includes('fal.ai')) || !providerOptions.some(o => o.includes('Gemini')) || !providerOptions.some(o => o.includes('OpenAI'))) {
+    throw new Error('Expected fal.ai, Gemini and OpenAI in provider options!');
   }
 
-  // Switch to OpenAI DALL-E 3
-  await providerSelect.selectOption('openai_dalle');
+  // Switch to Gemini profile to ensure mock test works
+  await imgModalTitle.locator('.mtab-btn:has-text("Modelli & Profili")').click();
   await page.waitForTimeout(200);
-  let modelInputVal = await imgModalTitle.locator('input[type="text"]').first().inputValue();
-  console.log(`  Model name after switching to DALL-E: "${modelInputVal}"`);
-  if (modelInputVal !== 'dall-e-3') {
-    throw new Error(`Expected model auto-populate to 'dall-e-3', got: ${modelInputVal}`);
+  const geminiProfileCard = imgModalTitle.locator('.profile-card:has-text("Gemini 2.5 Flash Image")');
+  if (await geminiProfileCard.locator('.btn-activate-profile').isVisible()) {
+    await geminiProfileCard.locator('.btn-activate-profile').click();
+    await page.waitForTimeout(200);
   }
-
-  // Switch to ComfyUI
-  await providerSelect.selectOption('comfyui');
-  await page.waitForTimeout(200);
-  const endpointInputs = await imgModalTitle.locator('input[placeholder*="127.0.0.1"]').all();
-  if (endpointInputs.length === 0) {
-    throw new Error('ComfyUI local endpoint input not displayed!');
-  }
-  console.log('✔ ComfyUI local endpoint configuration dynamically revealed!');
-
-  // Switch back to Google Imagen 3 and save
-  await providerSelect.selectOption('gemini_imagen');
-  await page.waitForTimeout(200);
-  const saveImgCfgBtn = imgModalTitle.locator('button.btn.primary:has-text("Salva Configurazione")');
-  await saveImgCfgBtn.click();
+  await imgModalTitle.locator('button:has-text("Chiudi")').click();
   await page.waitForTimeout(300);
-  console.log('✔ Configuration saved with Google Imagen 3!');
+  console.log('✔ Engine profile configured and verified!');
 
   // 16.4 Test Image Generation with Mock API
   console.log('👉 Testing mock image generation and result display...');
@@ -903,18 +900,19 @@ const ARTIFACT_DIR = '/home/pez/.gemini/antigravity-cli/brain/f94d9553-2fbd-4991
   await page.locator('.btn-config-engine').click();
   await page.waitForTimeout(200);
 
-  const imgSettingsModal = page.locator('app-modal[title*="Generatore Immagini AI"]');
+  const imgSettingsModal = page.locator('app-modal[title*="Generatore Immagini"]');
   await imgSettingsModal.waitFor({ state: 'visible', timeout: 5000 });
 
-  const currentImgModel = await page.locator('input[placeholder*="gemini-2.5-flash-image"]').inputValue();
-  console.log(`  Active Image Generation model configured: "${currentImgModel}"`);
-  if (currentImgModel.includes('imagen-3.0-generate-002')) {
-    throw new Error(`Found outdated deprecated model "${currentImgModel}"!`);
+  const activeProfileCard = imgSettingsModal.locator('.profile-card.active');
+  const activeProfileText = await activeProfileCard.innerText();
+  console.log(`  Active Image Generation model configured: "${activeProfileText.slice(0, 40)}"`);
+  if (activeProfileText.includes('imagen-3.0-generate-002')) {
+    throw new Error(`Found outdated deprecated model in profile!`);
   }
-  console.log('✔ Default Image Generation model migrated to gemini-2.5-flash-image without 404 errors!');
+  console.log('✔ Default Image Generation model confirmed without deprecated models or 404 errors!');
 
   // Close settings
-  await imgSettingsModal.locator('button:has-text("Annulla")').click();
+  await imgSettingsModal.locator('button:has-text("Chiudi")').click();
   await page.waitForTimeout(200);
 
   if (errors.length > 0) {

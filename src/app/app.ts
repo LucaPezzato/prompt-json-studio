@@ -12,7 +12,7 @@ import { TemplateSidebar } from './components/template-sidebar/template-sidebar'
 import { OutputPanel, OutputTab, CompiledOutputs } from './components/output-panel/output-panel';
 import { PromptStore } from './services/prompt.store';
 import { PromptService } from './services/prompt.service';
-import { CharacterLayoutMode, CharacterPhotoItem, CharacterSheetBlock, CharacterWorkflowMode, CustomProperty, GeneratedImageResult, ImageGenConfig, ImageGenProvider, LAYOUT_MODE_VIEWS, PromptTemplate, SavedCharacter } from './models/prompt.model';
+import { CharacterLayoutMode, CharacterPhotoItem, CharacterSheetBlock, CharacterWorkflowMode, CustomProperty, GeneratedImageResult, ImageGenConfig, ImageGenProfile, ImageGenProvider, LAYOUT_MODE_VIEWS, PromptTemplate, ProviderApiKeys, SavedCharacter } from './models/prompt.model';
 
 @Component({
   selector: 'app-root',
@@ -57,12 +57,36 @@ export class App {
   readonly elapsedGenSeconds = signal<number>(0);
   readonly showImageGenSettings = signal<boolean>(false);
   readonly showImageLightbox = signal<boolean>(false);
-  readonly imgProvider = signal<ImageGenProvider>('gemini_imagen');
-  readonly imgModel = signal<string>('gemini-2.5-flash-image');
+  readonly imgProvider = signal<ImageGenProvider>('fal_ai');
+  readonly imgModel = signal<string>('fal-ai/flux-realism');
   readonly imgApiKey = signal<string>('');
   readonly imgEndpointUrl = signal<string>('');
+  readonly imgLoraUrl = signal<string>('');
+  readonly imgLoraScale = signal<number>(1.0);
   private abortGenController: AbortController | null = null;
   private genTimerId: any = null;
+
+  // Profiles & API Keys management signals
+  readonly imageGenProfiles = computed(() => this.svc.imageGenConfig().profiles || []);
+  readonly activeProfileId = computed(() => this.svc.imageGenConfig().activeProfileId || '');
+  readonly providerApiKeys = computed(() => this.svc.imageGenConfig().providerApiKeys || {});
+
+  readonly imgSettingsTab = signal<'profiles' | 'apikeys' | 'new_profile'>('profiles');
+  readonly falKeyInput = signal<string>('');
+  readonly geminiKeyInput = signal<string>('');
+  readonly openaiKeyInput = signal<string>('');
+  readonly showApiKeyValues = signal<boolean>(false);
+  readonly falTestStatus = signal<{ loading: boolean; result?: string; success?: boolean }>({ loading: false });
+
+  // Custom Profile Form signals
+  readonly editProfileId = signal<string | null>(null);
+  readonly newProfileName = signal<string>('');
+  readonly newProfileProvider = signal<ImageGenProvider>('fal_ai');
+  readonly newProfileModel = signal<string>('fal-ai/flux-realism');
+  readonly newProfileLoraUrl = signal<string>('');
+  readonly newProfileLoraScale = signal<number>(1.0);
+  readonly newProfileBadge = signal<string>('🌟 Influencer');
+  readonly newProfileDesc = signal<string>('');
 
   // Reverse Image to Prompt signals
   readonly showReverseModal = signal(false);
@@ -200,6 +224,79 @@ export class App {
   switchToFullBodyAndPortraits(): void {
     this.store.setLayoutMode('full_body_and_portraits');
     this.showToast('✨ Layout "Figura Intera + Ritratti" attivato!');
+  }
+
+  applyCameraPreset(preset: 'iphone17pro_candid' | 'iphone17pro_selfie' | 'iphone17pro_ultrawide' | 'leica_street' | 'kodak_film' | 'hasselblad_studio'): void {
+    if (preset === 'iphone17pro_candid') {
+      this.store.set('camera', 'camera_body_or_film', 'Apple iPhone 17 Pro Max (48MP Fusion Camera, Smart HDR 6, Photonic Engine)');
+      this.store.set('camera', 'lens_focal_length', '24mm f/1.78 iPhone 17 Pro Main Camera (1x Wide-Angle, 48MP)');
+      this.store.set('camera', 'aperture_depth_of_field', 'Natural smartphone mobile depth-of-field, crisp foreground subject and authentic subtle mobile sensor falloff');
+      this.store.set('camera', 'shot_type', 'Medium close-up casual snapshot (Waist-up social framing)');
+      this.store.set('camera', 'angle', 'Eye-level natural human perspective (Handheld smartphone angle)');
+      this.store.set('style_and_rendering', 'medium', 'Authentic Smartphone Mobile Photography (Apple iPhone 17 Pro)');
+      this.store.set('style_and_rendering', 'aesthetic', 'Candid Realistic Social Media Lifestyle (Authentic unposed snapshot, true-to-life mobile sensor)');
+      this.store.set('style_and_rendering', 'color_grading', 'Clean neutral iPhone Photonic Engine color grade (Smart HDR 6, authentic true-to-life skin tones)');
+      const currentTags = this.spec().style_and_rendering.quality_tags || [];
+      const newTags = [...new Set([...currentTags, 'candid mobile snapshot', 'natural unedited skin pores', 'photonic engine micro-details'])];
+      this.store.set('style_and_rendering', 'quality_tags', newTags);
+      if (!this.spec().technical_parameters.aspect_ratio || this.spec().technical_parameters.aspect_ratio === '16:9') {
+        this.store.set('technical_parameters', 'aspect_ratio', '4:5');
+      }
+      this.showToast('📱 Preset iPhone 17 Pro applicato: sensore 48MP, 24mm e stile social realistico!');
+    } else if (preset === 'iphone17pro_selfie') {
+      this.store.set('camera', 'camera_body_or_film', 'Apple iPhone 17 Pro Front TrueDepth Camera (Candid Social Selfie)');
+      this.store.set('camera', 'lens_focal_length', '23mm f/1.9 Front TrueDepth Camera (Arm-Length Selfie Perspective)');
+      this.store.set('camera', 'aperture_depth_of_field', 'iPhone Portrait Mode computational shallow depth-of-field, realistic lens blur with natural hair edge separation');
+      this.store.set('camera', 'shot_type', 'Close-up arm-length front selfie (Natural mobile framing)');
+      this.store.set('camera', 'angle', 'Slightly elevated selfie angle (Arm-length high angle)');
+      this.store.set('style_and_rendering', 'medium', 'Authentic Smartphone Mobile Photography (Apple iPhone 17 Pro)');
+      this.store.set('style_and_rendering', 'aesthetic', 'BeReal / Instagram Casual Snapshot (Natural ambient lighting, authentic mobile look)');
+      this.store.set('style_and_rendering', 'color_grading', 'Clean neutral iPhone Photonic Engine color grade (Smart HDR 6, true-to-life skin tones)');
+      const currentTags = this.spec().style_and_rendering.quality_tags || [];
+      const newTags = [...new Set([...currentTags, 'candid mobile snapshot', 'authentic phone camera texture'])];
+      this.store.set('style_and_rendering', 'quality_tags', newTags);
+      if (!this.spec().technical_parameters.aspect_ratio || this.spec().technical_parameters.aspect_ratio === '16:9') {
+        this.store.set('technical_parameters', 'aspect_ratio', '4:5');
+      }
+      this.showToast('🤳 Preset iPhone 17 Pro Selfie applicato: fotocamera frontale TrueDepth!');
+    } else if (preset === 'iphone17pro_ultrawide') {
+      this.store.set('camera', 'camera_body_or_film', 'Apple iPhone 17 Pro Ultra-Wide Camera (48MP Sensor, 0.5x Mode)');
+      this.store.set('camera', 'lens_focal_length', '13mm f/2.2 iPhone 17 Pro Ultra-Wide Lens (0.5x Dynamic Social Snapshot)');
+      this.store.set('camera', 'aperture_depth_of_field', 'Deep smartphone focus, crisp edge-to-edge mobile clarity');
+      this.store.set('camera', 'shot_type', '0.5x Ultra-wide dynamic angle (Youth social media perspective)');
+      this.store.set('camera', 'angle', 'High-angle looking down (Elevated vantage)');
+      this.store.set('style_and_rendering', 'medium', 'Authentic Smartphone Mobile Photography (Apple iPhone 17 Pro)');
+      this.store.set('style_and_rendering', 'aesthetic', 'Candid Realistic Social Media Lifestyle (Authentic unposed snapshot, true-to-life mobile sensor)');
+      this.showToast('📐 Preset iPhone 17 Pro 0.5x Ultra-Wide applicato!');
+    } else if (preset === 'leica_street') {
+      this.store.set('camera', 'camera_body_or_film', 'Leica M11 Rangefinder (Full-Frame 60MP)');
+      this.store.set('camera', 'lens_focal_length', '35mm f/1.4 Street & Documentary Lens');
+      this.store.set('camera', 'aperture_depth_of_field', 'f/2.8 balanced portrait separation with readable context');
+      this.store.set('camera', 'shot_type', 'Medium close-up portrait (MCU)');
+      this.store.set('camera', 'angle', 'Eye-level angle (Natural human perspective)');
+      this.store.set('style_and_rendering', 'medium', 'Documentary Photojournalism (Magnum Photos style)');
+      this.store.set('style_and_rendering', 'aesthetic', 'Candid Realistic Documentary (Unposed, authentic life)');
+      this.showToast('📷 Preset Leica M11 Street 35mm applicato!');
+    } else if (preset === 'kodak_film') {
+      this.store.set('camera', 'camera_body_or_film', 'Kodak Portra 400 35mm Color Negative Film');
+      this.store.set('camera', 'lens_focal_length', '50mm f/1.2 Standard Human Eye Prime');
+      this.store.set('camera', 'aperture_depth_of_field', 'f/2.0 natural optical subject separation with creamy background falloff');
+      this.store.set('camera', 'shot_type', 'Medium shot (Waist up)');
+      this.store.set('camera', 'angle', 'Eye-level angle (Natural human perspective)');
+      this.store.set('style_and_rendering', 'medium', '35mm Analog Film Photography');
+      this.store.set('style_and_rendering', 'aesthetic', 'Raw Naturalistic Portraiture (Human imperfections, authentic soul)');
+      this.store.set('style_and_rendering', 'color_grading', 'Warm nostalgic Kodak Portra film grade (Gentle roll-off, warm skin tones)');
+      this.showToast('🎞️ Preset Kodak Portra 400 Analogico applicato!');
+    } else if (preset === 'hasselblad_studio') {
+      this.store.set('camera', 'camera_body_or_film', 'Hasselblad H6D-100c / X2D Medium Format (100MP)');
+      this.store.set('camera', 'lens_focal_length', '85mm f/1.4 Prime Portrait Lens');
+      this.store.set('camera', 'aperture_depth_of_field', 'f/8 optical sweet-spot, maximum edge-to-edge sharpness');
+      this.store.set('camera', 'shot_type', 'Full body shot (Environmental portrait)');
+      this.store.set('camera', 'angle', 'Eye-level angle (Natural human perspective)');
+      this.store.set('style_and_rendering', 'medium', 'Medium Format Editorial Photography');
+      this.store.set('style_and_rendering', 'aesthetic', 'Editorial High-Fashion Magazine (Vogue / Harper’s Bazaar)');
+      this.showToast('🏛️ Preset Hasselblad 100MP Studio applicato!');
+    }
   }
 
   readonly studioMode = computed<'scene' | 'character'>(() => {
@@ -633,24 +730,133 @@ export class App {
     }, 2800);
   }
 
-  // ============ DIRECT IMAGE GENERATION METHODS ============
+  // ============ DIRECT IMAGE GENERATION & PROFILES METHODS ============
 
   openImageGenSettings(): void {
     const cfg = this.svc.imageGenConfig();
     this.imgProvider.set(cfg.provider);
-    this.imgModel.set(
-      cfg.model === 'imagen-3.0-generate-002' || !cfg.model ? 'gemini-2.5-flash-image' : cfg.model
-    );
+    this.imgModel.set(cfg.model);
     this.imgApiKey.set(cfg.apiKey);
     this.imgEndpointUrl.set(cfg.endpointUrl);
+    this.imgLoraUrl.set(cfg.loraUrl || '');
+    this.imgLoraScale.set(cfg.loraScale ?? 1.0);
+    this.falKeyInput.set(cfg.providerApiKeys?.fal_ai || '');
+    this.geminiKeyInput.set(cfg.providerApiKeys?.gemini_imagen || '');
+    this.openaiKeyInput.set(cfg.providerApiKeys?.openai_dalle || '');
+    this.imgSettingsTab.set('profiles');
+    this.falTestStatus.set({ loading: false });
     this.showImageGenSettings.set(true);
+  }
+
+  onSwitchProfile(profileId: string): void {
+    this.svc.switchActiveProfile(profileId);
+    const prof = this.imageGenProfiles().find((p) => p.id === profileId);
+    if (prof) {
+      this.imgProvider.set(prof.provider);
+      this.imgModel.set(prof.model);
+      this.showToast(`⚡ Motore AI attivo: ${prof.name}`);
+    }
+  }
+
+  async testFalConnection(): Promise<void> {
+    this.falTestStatus.set({ loading: true, result: 'Verifica account fal.ai in corso…' });
+    const key = this.falKeyInput().trim() || this.providerApiKeys().fal_ai;
+    const res = await this.svc.testFalApiKey(key);
+    if (res.success) {
+      this.falTestStatus.set({
+        loading: false,
+        success: true,
+        result: `✅ Connessione fal.ai verificata! Utente: ${res.name}${res.email ? ' (' + res.email + ')' : ''} — Credito attivo`,
+      });
+      this.showToast('✅ Chiave fal.ai verificata con successo!');
+    } else {
+      this.falTestStatus.set({
+        loading: false,
+        success: false,
+        result: `❌ Errore fal.ai: ${res.error}`,
+      });
+      this.showToast('❌ Errore verifica chiave fal.ai');
+    }
+  }
+
+  saveGlobalApiKeys(): void {
+    if (this.falKeyInput().trim()) {
+      this.svc.setProviderApiKey('fal_ai', this.falKeyInput().trim());
+    }
+    if (this.geminiKeyInput().trim()) {
+      this.svc.setProviderApiKey('gemini_imagen', this.geminiKeyInput().trim());
+    }
+    if (this.openaiKeyInput().trim()) {
+      this.svc.setProviderApiKey('openai_dalle', this.openaiKeyInput().trim());
+    }
+    this.showToast('🔑 Chiavi API provider salvate con successo');
+  }
+
+  openCreateProfile(): void {
+    this.editProfileId.set(null);
+    this.newProfileName.set('');
+    this.newProfileProvider.set('fal_ai');
+    this.newProfileModel.set('fal-ai/flux-realism');
+    this.newProfileLoraUrl.set('');
+    this.newProfileLoraScale.set(1.0);
+    this.newProfileBadge.set('🌟 Influencer');
+    this.newProfileDesc.set('');
+    this.imgSettingsTab.set('new_profile');
+  }
+
+  openEditProfile(p: ImageGenProfile): void {
+    this.editProfileId.set(p.id);
+    this.newProfileName.set(p.name);
+    this.newProfileProvider.set(p.provider);
+    this.newProfileModel.set(p.model);
+    this.newProfileLoraUrl.set(p.loraUrl || '');
+    this.newProfileLoraScale.set(p.loraScale ?? 1.0);
+    this.newProfileBadge.set(p.badge || '');
+    this.newProfileDesc.set(p.description || '');
+    this.imgSettingsTab.set('new_profile');
+  }
+
+  saveCustomProfile(): void {
+    const name = this.newProfileName().trim();
+    if (!name) {
+      this.showToast('Inserisci un nome per il profilo');
+      return;
+    }
+    const model = this.newProfileModel().trim();
+    if (!model) {
+      this.showToast('Inserisci l\'ID del modello (es. fal-ai/flux-realism)');
+      return;
+    }
+    const id = this.editProfileId() || `custom-${Date.now()}`;
+    const prof: ImageGenProfile = {
+      id,
+      name,
+      provider: this.newProfileProvider(),
+      model,
+      loraUrl: this.newProfileLoraUrl().trim() || undefined,
+      loraScale: this.newProfileLoraScale(),
+      badge: this.newProfileBadge().trim() || undefined,
+      description: this.newProfileDesc().trim() || undefined,
+      isBuiltIn: false,
+    };
+    this.svc.saveProfile(prof);
+    this.svc.switchActiveProfile(id);
+    this.imgSettingsTab.set('profiles');
+    this.showToast(`✨ Profilo "${name}" salvato e attivato!`);
+  }
+
+  deleteCustomProfile(profileId: string): void {
+    this.svc.deleteProfile(profileId);
+    this.showToast('Profilo eliminato');
   }
 
   onImgProviderChange(prov: ImageGenProvider): void {
     this.imgProvider.set(prov);
-    if (prov === 'gemini_imagen' && (!this.imgModel() || this.imgModel() === 'dall-e-3' || this.imgModel() === 'imagen-3.0-generate-002')) {
+    if (prov === 'fal_ai' && (!this.imgModel() || !this.imgModel().startsWith('fal-ai'))) {
+      this.imgModel.set('fal-ai/flux-realism');
+    } else if (prov === 'gemini_imagen' && (!this.imgModel() || !this.imgModel().startsWith('gemini'))) {
       this.imgModel.set('gemini-2.5-flash-image');
-    } else if (prov === 'openai_dalle' && (!this.imgModel() || this.imgModel() === 'imagen-3.0-generate-002' || this.imgModel() === 'gemini-2.5-flash-image')) {
+    } else if (prov === 'openai_dalle' && (!this.imgModel() || this.imgModel() !== 'dall-e-3')) {
       this.imgModel.set('dall-e-3');
     } else if (prov === 'comfyui' && !this.imgEndpointUrl()) {
       this.imgEndpointUrl.set('http://127.0.0.1:7860/sdapi/v1/txt2img');
@@ -658,11 +864,15 @@ export class App {
   }
 
   saveImageGenSettings(): void {
+    this.saveGlobalApiKeys();
     this.svc.setImageGenConfig({
+      ...this.svc.imageGenConfig(),
       provider: this.imgProvider(),
       model: this.imgModel().trim(),
       apiKey: this.imgApiKey().trim(),
       endpointUrl: this.imgEndpointUrl().trim(),
+      loraUrl: this.imgLoraUrl().trim() || undefined,
+      loraScale: this.imgLoraScale(),
     });
     this.showImageGenSettings.set(false);
     this.showToast('⚙ Configurazione motore di generazione salvata');
@@ -671,13 +881,28 @@ export class App {
   async runGenerateImage(): Promise<void> {
     if (this.generatingImage()) return;
 
-    // Guard: check Gemini API key
     const cfg = this.svc.imageGenConfig();
-    const apiKey = (cfg.provider === 'gemini_imagen') ? (cfg.apiKey || this.svc.aiConfig().apiKey) : cfg.apiKey;
-    if (cfg.provider === 'gemini_imagen' && !apiKey) {
-      this.showImageGenSettings.set(true);
-      this.showToast('⚠️ Inserisci la tua API Key Gemini nelle impostazioni per generare');
-      return;
+
+    // Guard: check Fal.ai API key
+    if (cfg.provider === 'fal_ai') {
+      const falKey = cfg.apiKey || cfg.providerApiKeys?.fal_ai;
+      if (!falKey) {
+        this.showImageGenSettings.set(true);
+        this.imgSettingsTab.set('apikeys');
+        this.showToast('⚠️ Inserisci la tua API Key fal.ai per generare');
+        return;
+      }
+    }
+
+    // Guard: check Gemini API key
+    if (cfg.provider === 'gemini_imagen') {
+      const apiKey = cfg.apiKey || this.svc.aiConfig().apiKey || cfg.providerApiKeys?.gemini_imagen;
+      if (!apiKey) {
+        this.showImageGenSettings.set(true);
+        this.imgSettingsTab.set('apikeys');
+        this.showToast('⚠️ Inserisci la tua API Key Gemini nelle impostazioni per generare');
+        return;
+      }
     }
 
     this.generatingImage.set(true);

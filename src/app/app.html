@@ -938,6 +938,70 @@
         </div>
       }
       <div class="grid-2" [class.section-dimmed-sheet]="isSheetMode()">
+        <!-- Quick Camera Hardware Presets Bar -->
+        <div class="camera-hardware-presets span-2">
+          <div class="chp-header">
+            <span class="chp-title">⚡ Setup Rapidi Sensore &amp; Ottica:</span>
+            <span class="chp-hint">1-click per corpo macchina, ottica e stile ottimizzati</span>
+          </div>
+          <div class="chp-chips">
+            <button
+              type="button"
+              class="chp-chip"
+              [class.active]="spec().camera.camera_body_or_film.includes('iPhone 17 Pro Max')"
+              (click)="applyCameraPreset('iphone17pro_candid')"
+              title="Foto realistica spontanea da social media con iPhone 17 Pro Max (48MP, 24mm, Photonic Engine)"
+            >
+              📱 iPhone 17 Pro (Social Candid)
+            </button>
+            <button
+              type="button"
+              class="chp-chip"
+              [class.active]="spec().camera.camera_body_or_film.includes('TrueDepth')"
+              (click)="applyCameraPreset('iphone17pro_selfie')"
+              title="Selfie realistico a braccio con fotocamera frontale TrueDepth iPhone 17 Pro"
+            >
+              🤳 iPhone 17 Pro Selfie
+            </button>
+            <button
+              type="button"
+              class="chp-chip"
+              [class.active]="spec().camera.lens_focal_length.includes('Ultra-Wide') && spec().camera.camera_body_or_film.includes('iPhone')"
+              (click)="applyCameraPreset('iphone17pro_ultrawide')"
+              title="Scatto dinamico 0.5x ultra-wide stile social media generation Z"
+            >
+              📐 iPhone 17 Pro 0.5x Wide
+            </button>
+            <button
+              type="button"
+              class="chp-chip"
+              [class.active]="spec().camera.camera_body_or_film.includes('Leica M11')"
+              (click)="applyCameraPreset('leica_street')"
+              title="Fotografia street e reportage urbano con Leica M11 e 35mm"
+            >
+              📷 Leica M11 (Street 35mm)
+            </button>
+            <button
+              type="button"
+              class="chp-chip"
+              [class.active]="spec().camera.camera_body_or_film.includes('Portra 400')"
+              (click)="applyCameraPreset('kodak_film')"
+              title="Pellicola analogica Kodak Portra 400 a 35mm con grana e toni caldi"
+            >
+              🎞️ Kodak Portra 400 (Analogico)
+            </button>
+            <button
+              type="button"
+              class="chp-chip"
+              [class.active]="spec().camera.camera_body_or_film.includes('Hasselblad')"
+              (click)="applyCameraPreset('hasselblad_studio')"
+              title="Medio formato Hasselblad 100MP per ritratti editoriali di massima fedeltà"
+            >
+              🏛️ Hasselblad 100MP (Studio)
+            </button>
+          </div>
+        </div>
+
         <app-smart-field
           label="Tipo di inquadratura"
           category="shot_type"
@@ -1308,6 +1372,8 @@
     [generating]="generatingImage()"
     [generatedImage]="generatedImage()"
     [imageGenConfig]="svc.imageGenConfig()"
+    [profiles]="imageGenProfiles()"
+    [activeProfileId]="activeProfileId()"
     [imageGenError]="imageGenError()"
     [elapsedGenTime]="elapsedGenSeconds()"
     [characterSheetImage]="boundCharacterImage()"
@@ -1319,6 +1385,7 @@
     (generate)="runGenerateImage()"
     (cancelGenerate)="cancelGenerateImage()"
     (switchModelAndRetry)="switchModelAndRetry($event)"
+    (switchProfile)="onSwitchProfile($event)"
     (openSettings)="openImageGenSettings()"
     (openLightbox)="openImageLightbox()"
     (download)="downloadGeneratedImage()"
@@ -1330,89 +1397,288 @@
 </main>
 
 <!-- ============ MODALS ============ -->
-<!-- AI Image Generator Settings Modal -->
-<app-modal title="🎨 Configurazione Generatore Immagini AI" [(open)]="showImageGenSettings">
-  <p class="muted">
-    Genera rendering direttamente dalla spalla destra dello studio. Puoi utilizzare <b>Google Gemini Imagen</b> (gemini-2.5-flash-image), <b>OpenAI DALL-E 3</b>, oppure un endpoint locale/custom come <b>ComfyUI</b> o <b>SD WebUI</b>.
-  </p>
+<!-- AI Image Generator Settings & Profiles Modal -->
+<app-modal title="🎨 Configurazione Generatore Immagini &amp; Motori AI (fal.ai, Gemini, Local)" [wide]="true" [(open)]="showImageGenSettings">
+  <!-- Nav tabs -->
+  <div class="modal-tab-bar">
+    <button
+      type="button"
+      class="mtab-btn"
+      [class.active]="imgSettingsTab() === 'profiles'"
+      (click)="imgSettingsTab.set('profiles')"
+    >
+      🌟 Modelli &amp; Profili ({{ imageGenProfiles().length }})
+    </button>
+    <button
+      type="button"
+      class="mtab-btn"
+      [class.active]="imgSettingsTab() === 'apikeys'"
+      (click)="imgSettingsTab.set('apikeys')"
+    >
+      🔑 Gestione Chiavi API
+    </button>
+    <button
+      type="button"
+      class="mtab-btn"
+      [class.active]="imgSettingsTab() === 'new_profile'"
+      (click)="openCreateProfile()"
+    >
+      ＋ Nuovo Profilo Modello
+    </button>
+  </div>
 
-  <label>Provider Motore Immagini</label>
-  <select [value]="imgProvider()" (change)="onImgProviderChange($any($event.target).value)">
-    <option value="gemini_imagen">Google Imagen / Gemini Image (gemini-2.5-flash-image)</option>
-    <option value="openai_dalle">OpenAI DALL-E 3</option>
-    <option value="comfyui">ComfyUI / Stable Diffusion WebUI (Locale)</option>
-    <option value="custom">Endpoint HTTP Custom</option>
-  </select>
+  <!-- TAB 1: PROFILES LIST -->
+  @if (imgSettingsTab() === 'profiles') {
+    <p class="muted" style="margin-top: 10px; margin-bottom: 12px; font-size: 12.5px;">
+      Seleziona con un clic il modello attivo per la generazione immediata, oppure aggiungi un nuovo modello o LoRA personalizzato.
+    </p>
 
-  <label>Modello</label>
-  @if (imgProvider() === 'gemini_imagen') {
-    <div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
-      <button
-        type="button"
-        class="chip"
-        [class.active]="imgModel() === 'gemini-2.5-flash-image'"
-        (click)="imgModel.set('gemini-2.5-flash-image')"
-      >
-        ⚡ gemini-2.5-flash-image (Consigliato)
+    <div class="profiles-list-grid">
+      @for (p of imageGenProfiles(); track p.id) {
+        <div class="profile-card" [class.active]="activeProfileId() === p.id">
+          <div class="pc-top">
+            <div class="pc-badge-wrap">
+              <span class="pc-provider-tag" [attr.data-provider]="p.provider">{{ p.provider === 'fal_ai' ? '⚡ fal.ai' : (p.provider === 'gemini_imagen' ? '✨ Gemini' : (p.provider === 'openai_dalle' ? '🤖 OpenAI' : '🖥️ Locale')) }}</span>
+              @if (p.badge) {
+                <span class="pc-custom-badge">{{ p.badge }}</span>
+              }
+            </div>
+            @if (activeProfileId() === p.id) {
+              <span class="pc-active-indicator">● ATTIVO</span>
+            } @else {
+              <button type="button" class="btn-activate-profile" (click)="onSwitchProfile(p.id)">
+                ⚡ Attiva
+              </button>
+            }
+          </div>
+
+          <div class="pc-main">
+            <strong class="pc-name">{{ p.name }}</strong>
+            <code class="pc-model-id">{{ p.model }}</code>
+            @if (p.description) {
+              <p class="pc-desc">{{ p.description }}</p>
+            }
+            @if (p.loraUrl) {
+              <div class="pc-lora-info">
+                <span>🧬 LoRA: <code>{{ p.loraUrl }}</code> (peso: {{ p.loraScale || 1.0 }})</span>
+              </div>
+            }
+          </div>
+
+          <div class="pc-actions">
+            @if (activeProfileId() === p.id) {
+              <span class="pc-in-use-label">In uso per il prossimo scatto</span>
+            } @else {
+              <button type="button" class="btn small ghost" (click)="onSwitchProfile(p.id)">
+                Seleziona
+              </button>
+            }
+            @if (!p.isBuiltIn) {
+              <button type="button" class="btn small ghost" (click)="openEditProfile(p)" title="Modifica parametri">✏️</button>
+              <button type="button" class="btn small ghost danger" (click)="deleteCustomProfile(p.id)" title="Elimina profilo">🗑️</button>
+            } @else {
+              <button type="button" class="btn small ghost" (click)="openEditProfile(p)" title="Duplica come profilo personalizzato">📋 Clona</button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="profile-footer-actions">
+      <button type="button" class="btn secondary" (click)="openCreateProfile()">
+        ＋ Aggiungi Nuovo Modello / LoRA
       </button>
-      <button
-        type="button"
-        class="chip"
-        [class.active]="imgModel() === 'gemini-3-pro-image'"
-        (click)="imgModel.set('gemini-3-pro-image')"
-      >
-        🎨 gemini-3-pro-image (Pro)
-      </button>
-      <button
-        type="button"
-        class="chip"
-        [class.active]="imgModel() === 'imagen-3.0-generate-002'"
-        (click)="imgModel.set('imagen-3.0-generate-002')"
-      >
-        Google Imagen 3
+      <button type="button" class="btn primary" (click)="showImageGenSettings.set(false)">
+        Chiudi
       </button>
     </div>
   }
-  <input
-    type="text"
-    [value]="imgModel()"
-    (input)="imgModel.set($any($event.target).value)"
-    placeholder="es. gemini-2.5-flash-image o dall-e-3"
-  />
 
-  @if (imgProvider() === 'gemini_imagen') {
-    <p class="muted" style="font-size: 11.5px; margin-top: -4px;">
-      💡 Se hai già configurato <code>GEMINI_API_KEY</code> nel file <code>env.json</code>, puoi lasciare il campo API Key vuoto: verrà riutilizzata in automatico senza configurazione manuale.
+  <!-- TAB 2: GLOBAL API KEYS -->
+  @if (imgSettingsTab() === 'apikeys') {
+    <p class="muted" style="margin-top: 10px; margin-bottom: 14px; font-size: 12.5px;">
+      Configura qui le chiavi API dei vari provider. Vengono salvate sul tuo browser e riutilizzate automaticamente ogni volta che cambi modello ("al volo"), senza dover reinserire nulla.
     </p>
+
+    <div class="api-key-section">
+      <!-- FAL.AI API KEY -->
+      <div class="key-card">
+        <div class="key-card-header">
+          <div class="kch-left">
+            <span class="provider-logo">⚡</span>
+            <strong>fal.ai API Key</strong>
+            <span class="badge-recommended">Consigliato per AI Influencer</span>
+          </div>
+          <button type="button" class="btn small secondary" [disabled]="falTestStatus().loading" (click)="testFalConnection()">
+            {{ falTestStatus().loading ? 'Verifica in corso…' : '🔍 Verifica Chiave &amp; Crediti' }}
+          </button>
+        </div>
+        <p class="muted" style="font-size: 12px; margin-bottom: 8px;">
+          Utilizzata per i modelli <b>FLUX Realism</b>, <b>FLUX.1 [dev]</b>, <b>FLUX Schnell</b> e <b>FLUX 1.1 Pro</b>. Formato: <code>fal_sk_...:secret</code>
+        </p>
+        <div class="key-input-wrap">
+          <input
+            [type]="showApiKeyValues() ? 'text' : 'password'"
+            [value]="falKeyInput()"
+            (input)="falKeyInput.set($any($event.target).value)"
+            placeholder="fal_sk_..."
+            class="key-input"
+          />
+        </div>
+        @if (falTestStatus().result) {
+          <div class="key-test-feedback" [class.success]="falTestStatus().success" [class.error]="!falTestStatus().success">
+            {{ falTestStatus().result }}
+          </div>
+        }
+      </div>
+
+      <!-- GOOGLE GEMINI / IMAGEN KEY -->
+      <div class="key-card" style="margin-top: 14px;">
+        <div class="key-card-header">
+          <div class="kch-left">
+            <span class="provider-logo">✨</span>
+            <strong>Google Gemini / Imagen API Key</strong>
+            <span class="badge-multimodal">Grounding Scheda</span>
+          </div>
+        </div>
+        <p class="muted" style="font-size: 12px; margin-bottom: 8px;">
+          Utilizzata per <b>gemini-2.5-flash-image</b> e <b>gemini-3-pro-image</b>. Se impostata in <code>env.json</code>, viene caricata automaticamente.
+        </p>
+        <div class="key-input-wrap">
+          <input
+            [type]="showApiKeyValues() ? 'text' : 'password'"
+            [value]="geminiKeyInput()"
+            (input)="geminiKeyInput.set($any($event.target).value)"
+            placeholder="AIzaSy..."
+            class="key-input"
+          />
+        </div>
+      </div>
+
+      <!-- OPENAI KEY -->
+      <div class="key-card" style="margin-top: 14px;">
+        <div class="key-card-header">
+          <div class="kch-left">
+            <span class="provider-logo">🤖</span>
+            <strong>OpenAI API Key</strong>
+          </div>
+        </div>
+        <p class="muted" style="font-size: 12px; margin-bottom: 8px;">
+          Utilizzata per <b>DALL-E 3</b>.
+        </p>
+        <div class="key-input-wrap">
+          <input
+            [type]="showApiKeyValues() ? 'text' : 'password'"
+            [value]="openaiKeyInput()"
+            (input)="openaiKeyInput.set($any($event.target).value)"
+            placeholder="sk-..."
+            class="key-input"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer;">
+        <input type="checkbox" [checked]="showApiKeyValues()" (change)="showApiKeyValues.set($any($event.target).checked)" />
+        Mostra chiavi in chiaro
+      </label>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn secondary" (click)="showImageGenSettings.set(false)">Chiudi</button>
+        <button type="button" class="btn primary" (click)="saveGlobalApiKeys()">💾 Salva Chiavi</button>
+      </div>
+    </div>
   }
 
-  @if (imgProvider() === 'gemini_imagen' || imgProvider() === 'openai_dalle' || imgProvider() === 'custom') {
-    <label>API Key</label>
-    <input
-      type="password"
-      [value]="imgApiKey()"
-      (input)="imgApiKey.set($any($event.target).value)"
-      placeholder="Incolla la tua API Key..."
-    />
-  }
+  <!-- TAB 3: CREATE / EDIT CUSTOM PROFILE -->
+  @if (imgSettingsTab() === 'new_profile') {
+    <p class="muted" style="margin-top: 10px; margin-bottom: 14px; font-size: 12.5px;">
+      Crea un nuovo profilo per un modello specifico su <b>fal.ai</b>, o aggiungi un <b>LoRA</b> personalizzato per preservare l'identità della tua AI Influencer.
+    </p>
 
-  @if (imgProvider() === 'comfyui' || imgProvider() === 'custom') {
-    <label>URL Endpoint HTTP</label>
+    <label>Nome del Profilo</label>
     <input
       type="text"
-      [value]="imgEndpointUrl()"
-      (input)="imgEndpointUrl.set($any($event.target).value)"
-      placeholder="http://127.0.0.1:7860/sdapi/v1/txt2img"
+      [value]="newProfileName()"
+      (input)="newProfileName.set($any($event.target).value)"
+      placeholder="es. Sofia AI - My Influencer LoRA"
     />
-    <p class="muted" style="font-size: 11.5px; margin-top: -4px;">
-      Per ComfyUI o Automatic1111 assicurati che il server locale sia avviato abilitando le chiamate API e CORS.
-    </p>
-  }
 
-  <div class="modal-actions" style="margin-top: 16px;">
-    <button type="button" class="btn secondary" (click)="showImageGenSettings.set(false)">Annulla</button>
-    <button type="button" class="btn primary" (click)="saveImageGenSettings()">Salva Configurazione</button>
-  </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+      <div>
+        <label>Provider</label>
+        <select [value]="newProfileProvider()" (change)="newProfileProvider.set($any($event.target).value)">
+          <option value="fal_ai">⚡ fal.ai (FLUX, LoRA, Realism)</option>
+          <option value="gemini_imagen">✨ Google Gemini</option>
+          <option value="openai_dalle">🤖 OpenAI</option>
+          <option value="comfyui">🖥️ ComfyUI (Locale)</option>
+          <option value="custom">🌐 Endpoint Custom</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Badge / Tag</label>
+        <input
+          type="text"
+          [value]="newProfileBadge()"
+          (input)="newProfileBadge.set($any($event.target).value)"
+          placeholder="es. 🌟 Influencer o 👑 Custom"
+        />
+      </div>
+    </div>
+
+    <label style="margin-top: 10px;">ID Modello Endpoint</label>
+    <input
+      type="text"
+      [value]="newProfileModel()"
+      (input)="newProfileModel.set($any($event.target).value)"
+      placeholder="es. fal-ai/flux-realism oppure fal-ai/flux-lora"
+    />
+
+    <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+      <button type="button" class="chip" (click)="newProfileModel.set('fal-ai/flux-realism')">fal-ai/flux-realism</button>
+      <button type="button" class="chip" (click)="newProfileModel.set('fal-ai/flux/dev')">fal-ai/flux/dev</button>
+      <button type="button" class="chip" (click)="newProfileModel.set('fal-ai/flux-pro/v1.1')">fal-ai/flux-pro/v1.1</button>
+      <button type="button" class="chip" (click)="newProfileModel.set('fal-ai/flux/schnell')">fal-ai/flux/schnell</button>
+      <button type="button" class="chip" (click)="newProfileModel.set('fal-ai/flux-lora')">fal-ai/flux-lora</button>
+    </div>
+
+    <label style="margin-top: 12px;">URL LoRA Custom (Opzionale per fal.ai)</label>
+    <input
+      type="text"
+      [value]="newProfileLoraUrl()"
+      (input)="newProfileLoraUrl.set($any($event.target).value)"
+      placeholder="https://v3.fal.media/files/... o HuggingFace URL"
+    />
+
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-top: 10px;">
+      <div>
+        <label>Scala LoRA (Weight)</label>
+        <input
+          type="number"
+          step="0.05"
+          min="0.1"
+          max="2.0"
+          [value]="newProfileLoraScale()"
+          (input)="newProfileLoraScale.set(+$any($event.target).value)"
+        />
+      </div>
+      <div>
+        <label>Descrizione Breve</label>
+        <input
+          type="text"
+          [value]="newProfileDesc()"
+          (input)="newProfileDesc.set($any($event.target).value)"
+          placeholder="es. Addestrato su 20 foto dell'influencer"
+        />
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top: 18px;">
+      <button type="button" class="btn secondary" (click)="imgSettingsTab.set('profiles')">Annulla</button>
+      <button type="button" class="btn primary" (click)="saveCustomProfile()">💾 Salva Profilo</button>
+    </div>
+  }
 </app-modal>
 <!-- AI Settings Modal -->
 <app-modal title="⚙ Impostazioni &amp; Formato Predefinito" [(open)]="showSettings">

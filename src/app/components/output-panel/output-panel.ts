@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, model, output, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { CompiledOutputs, GeneratedImageResult, ImageGenConfig, OutputTab } from '../../models/prompt.model';
+import { CompiledOutputs, GeneratedImageResult, ImageGenConfig, ImageGenProfile, OutputTab } from '../../models/prompt.model';
 
 export type { OutputTab, CompiledOutputs };
 
@@ -74,6 +74,32 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
         <span class="cfg-text">{{ activeEngineLabel() }}</span>
       </button>
     </div>
+
+    <!-- Quick Engine / Profile Switcher Strip -->
+    @if (profiles().length) {
+      <div class="quick-profile-bar" role="toolbar" aria-label="Cambio rapido modello AI">
+        <div class="qpb-header">
+          <span class="qpb-label">⚡ Switch Modello al Volo:</span>
+          <button type="button" class="qpb-manage-link" (click)="openSettings.emit()">Gestisci ⚙</button>
+        </div>
+        <div class="qpb-chips">
+          @for (p of profiles(); track p.id) {
+            <button
+              type="button"
+              class="qpb-chip"
+              [class.active]="activeProfileId() === p.id"
+              (click)="switchProfile.emit(p.id)"
+              [title]="(p.description || p.name) + ' (' + p.provider + ')'"
+            >
+              @if (p.badge) {
+                <span class="qpb-badge">{{ p.badge }}</span>
+              }
+              <span class="qpb-name">{{ p.name.replace('fal.ai: ', '').replace('Gemini ', '').replace('OpenAI ', '') }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
 
     <!-- Attached Character Sheet Strip (Visible when in Scene Mode with an attached sheet) -->
     @if (isSceneWithCharacter() && characterSheetImage()) {
@@ -408,6 +434,8 @@ export class OutputPanel {
   readonly generating = input<boolean>(false);
   readonly generatedImage = input<GeneratedImageResult | null>(null);
   readonly imageGenConfig = input<ImageGenConfig | null>(null);
+  readonly profiles = input<ImageGenProfile[]>([]);
+  readonly activeProfileId = input<string>('');
   readonly imageGenError = input<string | null>(null);
   readonly elapsedGenTime = input<number>(0);
 
@@ -423,6 +451,7 @@ export class OutputPanel {
   readonly generate = output<void>();
   readonly cancelGenerate = output<void>();
   readonly switchModelAndRetry = output<string>();
+  readonly switchProfile = output<string>();
   readonly openSettings = output<void>();
   readonly openLightbox = output<void>();
   readonly download = output<void>();
@@ -475,9 +504,10 @@ export class OutputPanel {
 
   readonly activeProviderLabel = computed(() => {
     const cfg = this.imageGenConfig();
-    if (!cfg) return 'Google Imagen 3';
+    if (!cfg) return 'fal.ai FLUX';
     switch (cfg.provider) {
-      case 'gemini_imagen': return 'Google Imagen 3';
+      case 'fal_ai': return 'fal.ai FLUX';
+      case 'gemini_imagen': return 'Google Gemini';
       case 'openai_dalle': return 'OpenAI DALL-E 3';
       case 'comfyui': return 'ComfyUI / Local WebUI';
       case 'custom': return 'Endpoint Personalizzato';
@@ -487,7 +517,12 @@ export class OutputPanel {
 
   readonly activeEngineLabel = computed(() => {
     const cfg = this.imageGenConfig();
-    if (!cfg) return 'Imagen 3';
+    if (!cfg) return 'FLUX Realism';
+    const activeProf = this.profiles().find((p) => p.id === this.activeProfileId() || p.model === cfg.model);
+    if (activeProf) {
+      return activeProf.name.replace('fal.ai: ', '');
+    }
+    if (cfg.provider === 'fal_ai') return cfg.model || 'FLUX';
     if (cfg.provider === 'gemini_imagen') return cfg.model || 'gemini-2.5-flash-image';
     if (cfg.provider === 'openai_dalle') return cfg.model || 'dall-e-3';
     if (cfg.provider === 'comfyui') return cfg.model || 'ComfyUI';

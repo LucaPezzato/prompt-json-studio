@@ -263,14 +263,116 @@ export interface AiAssistantConfig {
 export type OutputTab = 'gpt' | 'json' | 'flux' | 'midjourney' | 'sdxl';
 export type CompiledOutputs = Record<OutputTab, string>;
 
-export type ImageGenProvider = 'gemini_imagen' | 'openai_dalle' | 'comfyui' | 'custom';
+export type ImageGenProvider = 'fal_ai' | 'gemini_imagen' | 'openai_dalle' | 'comfyui' | 'custom';
+
+export interface ImageGenProfile {
+  id: string;
+  name: string;
+  provider: ImageGenProvider;
+  model: string;
+  apiKey?: string;
+  endpointUrl?: string;
+  loraUrl?: string;
+  loraScale?: number;
+  badge?: string;
+  description?: string;
+  isBuiltIn?: boolean;
+}
+
+export interface ProviderApiKeys {
+  fal_ai?: string;
+  gemini_imagen?: string;
+  openai_dalle?: string;
+  custom?: string;
+}
 
 export interface ImageGenConfig {
   provider: ImageGenProvider;
   model: string;
   apiKey: string;
   endpointUrl: string;
+  activeProfileId?: string;
+  profiles?: ImageGenProfile[];
+  providerApiKeys?: ProviderApiKeys;
+  loraUrl?: string;
+  loraScale?: number;
 }
+
+export const DEFAULT_IMAGE_GEN_PROFILES: ImageGenProfile[] = [
+  {
+    id: 'fal-flux-realism',
+    name: 'fal.ai: FLUX Realism (AI Influencer)',
+    provider: 'fal_ai',
+    model: 'fal-ai/flux-realism',
+    badge: '🌟 Top Influencer',
+    description: 'FLUX.1 [dev] con LoRA Realism: texture pelle autentica, pori e illuminazione naturale smartphone.',
+    isBuiltIn: true,
+  },
+  {
+    id: 'fal-flux-dev',
+    name: 'fal.ai: FLUX.1 [dev]',
+    provider: 'fal_ai',
+    model: 'fal-ai/flux/dev',
+    badge: '🎨 Pro 12B',
+    description: 'Modello 12B di Black Forest Labs ad altissima fedeltà e composizione artistica.',
+    isBuiltIn: true,
+  },
+  {
+    id: 'fal-flux-schnell',
+    name: 'fal.ai: FLUX Schnell (Ultra-Fast)',
+    provider: 'fal_ai',
+    model: 'fal-ai/flux/schnell',
+    badge: '⚡ Fast 0.8s',
+    description: 'Rendering ultra-rapido in 4 passi (~0.8s), perfetto per test e bozze immediate.',
+    isBuiltIn: true,
+  },
+  {
+    id: 'fal-flux-pro',
+    name: 'fal.ai: FLUX 1.1 Pro',
+    provider: 'fal_ai',
+    model: 'fal-ai/flux-pro/v1.1',
+    badge: '👑 Pro 1.1',
+    description: 'Massima aderenza a prompt narrativi complessi e risoluzione ultra-nitida.',
+    isBuiltIn: true,
+  },
+  {
+    id: 'gemini-flash-image',
+    name: 'Gemini 2.5 Flash Image',
+    provider: 'gemini_imagen',
+    model: 'gemini-2.5-flash-image',
+    badge: '✨ Multimodale',
+    description: 'Google Gemini con grounding visivo nativo della scheda personaggio allegata.',
+    isBuiltIn: true,
+  },
+  {
+    id: 'gemini-pro-image',
+    name: 'Gemini 3 Pro Image',
+    provider: 'gemini_imagen',
+    model: 'gemini-3-pro-image',
+    badge: '💎 Pro',
+    description: 'Modello Google ad alta risoluzione per composizioni complesse.',
+    isBuiltIn: true,
+  },
+  {
+    id: 'openai-dalle-3',
+    name: 'OpenAI DALL-E 3',
+    provider: 'openai_dalle',
+    model: 'dall-e-3',
+    badge: '🤖 OpenAI',
+    description: 'Motore semantico OpenAI per illustrazioni e stili narrativi.',
+    isBuiltIn: true,
+  },
+  {
+    id: 'comfyui-local',
+    name: 'ComfyUI / SD WebUI Locale',
+    provider: 'comfyui',
+    model: 'local-sd',
+    endpointUrl: 'http://127.0.0.1:7860/sdapi/v1/txt2img',
+    badge: '🖥️ Locale',
+    description: 'Esecuzione locale su GPU tramite WebUI o ComfyUI (default porta 7860).',
+    isBuiltIn: true,
+  },
+];
 
 export interface GeneratedImageResult {
   dataUrl: string;

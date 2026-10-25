@@ -3,13 +3,16 @@ import {
   AiAssistantConfig,
   CharacterSheetBlock,
   CustomOptionsMap,
+  DEFAULT_IMAGE_GEN_PROFILES,
   GeneratedImageResult,
   ImageGenConfig,
+  ImageGenProfile,
   ImageGenProvider,
   ImagePromptSpec,
   OutputTab,
   PresetCategoryKey,
   PromptTemplate,
+  ProviderApiKeys,
   SavedCharacter,
 } from '../models/prompt.model';
 
@@ -19,6 +22,7 @@ const AI_CONFIG_STORAGE_KEY = 'prompt_json_studio_ai_config_v1';
 const SAVED_CHARACTERS_STORAGE_KEY = 'prompt_json_studio_saved_characters_v1';
 const DEFAULT_OUTPUT_MODEL_STORAGE_KEY = 'prompt_json_studio_default_output_model_v1';
 const IMAGE_GEN_CONFIG_STORAGE_KEY = 'prompt_json_studio_image_gen_config_v1';
+export const DEFAULT_FAL_KEY = 'fal_sk_f426dd68780e4165b106fac05bbb4e67:796cab5f4471c3717777c10a5ae52eb7';
 
 export const DEFAULT_CHARACTER_SHEET: CharacterSheetBlock = {
   enabled: false,
@@ -166,6 +170,9 @@ export class PromptService {
       'Smoky atmospheric haze with cinematic depth',
     ],
     shot_type: [
+      'Medium close-up casual snapshot (Waist-up social framing)',
+      'Close-up arm-length front selfie (Natural mobile framing)',
+      '0.5x Ultra-wide dynamic angle (Youth social media perspective)',
       'Macro detail shot (1:1 close-up)',
       'Extreme close-up (ECU - Eyes/Textures)',
       'Medium close-up portrait (MCU - Chest up)',
@@ -177,6 +184,8 @@ export class PromptService {
     ],
     camera_angle: [
       'Eye-level angle (Natural human perspective)',
+      'Casual handheld eye-level angle (Spontaneous phone perspective)',
+      'Slightly elevated selfie angle (Arm-length high angle)',
       'Low-angle heroic shot (Looking up)',
       'High-angle looking down (Elevated vantage)',
       'Bird’s-eye overhead view (Top-down 90° flat lay)',
@@ -186,6 +195,10 @@ export class PromptService {
       '45-degree tabletop angle (Food & product)',
     ],
     lens_focal_length: [
+      '24mm f/1.78 iPhone 17 Pro Main Camera (1x Wide-Angle, 48MP)',
+      '13mm f/2.2 iPhone 17 Pro Ultra-Wide Lens (0.5x Dynamic Social Snapshot)',
+      '120mm f/2.8 iPhone 17 Pro 5x Tetraprism Telephoto (Portrait Mode)',
+      '23mm f/1.9 Front TrueDepth Camera (Arm-Length Selfie Perspective)',
       '85mm f/1.4 Prime Portrait Lens',
       '50mm f/1.2 Standard Human Eye Prime',
       '35mm f/1.4 Street & Documentary Lens',
@@ -198,6 +211,9 @@ export class PromptService {
       'Tilt-Shift 45mm Perspective Control Lens',
     ],
     aperture_depth_of_field: [
+      'Natural smartphone mobile depth-of-field, crisp foreground subject and authentic subtle mobile sensor falloff',
+      'iPhone Portrait Mode computational shallow depth-of-field, realistic lens blur with natural hair edge separation',
+      'Deep smartphone focus, crisp edge-to-edge mobile clarity',
       'f/1.2 ultra-shallow DoF, dreamlike creamy spherical bokeh',
       'f/1.4 razor-thin focus on subject iris, soft background falloff',
       'f/2.8 balanced portrait separation with readable context',
@@ -208,6 +224,9 @@ export class PromptService {
       'Tilt-shift selective miniature focus plane',
     ],
     camera_body_or_film: [
+      'Apple iPhone 17 Pro Max (48MP Fusion Camera, Smart HDR 6, Photonic Engine)',
+      'Apple iPhone 17 Pro Front TrueDepth Camera (Candid Social Selfie)',
+      'Apple iPhone 17 Pro Ultra-Wide Camera (48MP Sensor, 0.5x Mode)',
       'Leica M11 Rangefinder (Full-Frame 60MP)',
       'Hasselblad H6D-100c / X2D Medium Format (100MP)',
       'Sony A7R V (High-Resolution 61MP)',
@@ -298,6 +317,8 @@ export class PromptService {
       'Compressed telephoto perspective with flattened layers',
     ],
     medium: [
+      'Authentic Smartphone Mobile Photography (Apple iPhone 17 Pro)',
+      'Candid Social Media Snapshot (Instagram / BeReal style)',
       'Photorealistic photography',
       '35mm Analog Film Photography',
       'Medium Format Editorial Photography',
@@ -310,6 +331,8 @@ export class PromptService {
       'Oil painting with impasto brushstrokes',
     ],
     aesthetic: [
+      'Candid Realistic Social Media Lifestyle (Authentic unposed snapshot, true-to-life mobile sensor)',
+      'BeReal / Instagram Casual Snapshot (Natural ambient lighting, authentic mobile look)',
       'Candid Realistic Documentary (Unposed, authentic life)',
       'Raw Naturalistic Portraiture (Human imperfections, authentic soul)',
       'Editorial High-Fashion Magazine (Vogue / Harper’s Bazaar)',
@@ -322,6 +345,8 @@ export class PromptService {
       'Dark Fantasy Souls-like (Elden grandeur, melancholic ruined majesty)',
     ],
     color_grading: [
+      'Clean neutral iPhone Photonic Engine color grade (Smart HDR 6, authentic true-to-life skin tones)',
+      'Instagram Warm Lifestyle VSCO Mobile Grade (Subtle warm highlights, gentle shadow lift)',
       'Warm nostalgic Kodak Portra film grade (Gentle roll-off, warm skin tones)',
       'Cinematic Teal and Orange (Hollywood blockbuster contrast)',
       'Clean neutral documentary grade (True-to-life colors and white balance)',
@@ -332,6 +357,10 @@ export class PromptService {
       'Cool alpine desaturated grade with crisp whites and deep slate blues',
     ],
     quality_tags: [
+      'candid mobile snapshot',
+      'photonic engine micro-details',
+      'authentic phone camera texture',
+      'subtle mobile sensor noise',
       'natural skin pores & micro-details',
       'subsurface scattering (SSS)',
       'fine 35mm film grain',
@@ -695,6 +724,84 @@ export class PromptService {
           negative_prompt: 'inconsistent character, different people, distorted facial features, cartoon, blurry, busy background',
           seed: 739102,
           stylize: 80,
+          chaos: 0,
+          raw_mode: true,
+        },
+        custom_properties: [],
+      },
+    },
+    {
+      id: 'iphone-17-pro-social-candid',
+      name: 'iPhone 17 Pro: Social Candid Snapshot',
+      category: 'Fotografia & Ritratti',
+      badgeColor: '#50fa7b',
+      description: 'Foto realistica da social media (Instagram/TikTok/BeReal) scattata con Apple iPhone 17 Pro Max: texture autentica della pelle, luce naturale diffusa, zero aria da rendering 3D o studio finto.',
+      spec: {
+        meta: {
+          version: '2.0',
+          title: 'iPhone 17 Pro Social Candid in Outdoor Cafe',
+          target_engine: 'universal',
+        },
+        character_sheet: structuredClone(DEFAULT_CHARACTER_SHEET),
+        subject: {
+          primary_entity: 'Attractive 24-year-old person with natural unedited features',
+          description: 'Spontaneous casual lifestyle portrait, relaxed natural smile, unposed authenticity, genuine eye warmth',
+          pose_or_action: 'Sitting casually at an outdoor bistro table, holding an iced drink, looking slightly off-camera with a genuine laugh',
+          expression_or_mood: 'Warm spontaneous laugh, authentic cheerful expression, joyful social media candid vibe',
+          clothing_or_materials: 'Oversized beige knit sweater over a simple white tee, minimalist silver hoop earrings',
+          placement: 'Slightly off-center right according to rule of thirds',
+        },
+        additional_subjects: [],
+        scene: {
+          environment: 'Sunlit outdoor terrace cafe on a lively European pedestrian street',
+          background_details: 'Softly blurred cobblestone street, outdoor greenery in terracotta planters, warm ambient afternoon cafe crowd',
+          time_of_day: 'Late afternoon golden hour (Soft ambient backlight)',
+          atmosphere_weather: 'Warm sunny afternoon with soft clear air',
+        },
+        camera: {
+          shot_type: 'Medium close-up casual snapshot (Waist-up social framing)',
+          angle: 'Eye-level natural human perspective (Handheld smartphone angle)',
+          lens_focal_length: '24mm f/1.78 iPhone 17 Pro Main Camera (1x Wide-Angle, 48MP)',
+          aperture_depth_of_field: 'Natural smartphone mobile depth-of-field, crisp foreground subject and authentic subtle mobile sensor falloff',
+          camera_body_or_film: 'Apple iPhone 17 Pro Max (48MP Fusion Camera, Smart HDR 6, Photonic Engine)',
+        },
+        lighting: {
+          key_light: 'Warm natural afternoon sunlight streaming from side-back through cafe awning',
+          fill_or_ambient: 'Soft diffuse ambient bounce from light wooden table and sunlit pavement',
+          color_temperature: 'Neutral daylight with warm golden undertones (5200K)',
+          shadow_quality: 'Natural soft smartphone mobile shadows (Clean feathered edges)',
+          color_palette: ['#e0a96d', '#282a36', '#f8f8f2', '#6272a4'],
+        },
+        composition: {
+          framing_rule: 'Casual Rule of Thirds (Authentic unposed framing)',
+          focal_point: 'Natural facial features, joyful eyes, and realistic skin micro-pores',
+          foreground_elements: 'Softly blurred edge of a ceramic cafe cup in bottom foreground',
+          perspective: 'Natural 1-point handheld smartphone perspective',
+        },
+        style_and_rendering: {
+          medium: 'Authentic Smartphone Mobile Photography (Apple iPhone 17 Pro)',
+          aesthetic: 'Candid Realistic Social Media Lifestyle (Authentic unposed snapshot, true-to-life mobile sensor)',
+          color_grading: 'Clean neutral iPhone Photonic Engine color grade (Smart HDR 6, authentic true-to-life skin tones)',
+          quality_tags: [
+            'candid mobile snapshot',
+            'natural unedited skin pores',
+            'photonic engine micro-details',
+            'authentic phone camera texture',
+            'subtle mobile sensor noise',
+            '8k resolution',
+          ],
+        },
+        typography: {
+          enabled: false,
+          exact_text: '',
+          font_style: 'Bold geometric sans-serif (Futura / Helvetica)',
+          placement_and_material: '',
+        },
+        technical_parameters: {
+          aspect_ratio: '4:5',
+          negative_prompt: 'plastic skin, airbrushed, cartoon, CGI, 3D render, smooth doll skin, oversharpened, studio lighting backdrop, fake eyes, deformed hands, extra fingers, watermark, blurry',
+          seed: 481920,
+          stylize: 60,
           chaos: 0,
           raw_mode: true,
         },
@@ -2939,33 +3046,170 @@ Instructions:
   }
 
   private loadImageGenConfig(): ImageGenConfig {
+    const defaultProfiles = [...DEFAULT_IMAGE_GEN_PROFILES];
+    const defaultProviderKeys: ProviderApiKeys = {
+      fal_ai: DEFAULT_FAL_KEY,
+      gemini_imagen: '',
+      openai_dalle: '',
+      custom: '',
+    };
+
     try {
       const raw = localStorage.getItem(IMAGE_GEN_CONFIG_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed.model === 'imagen-3.0-generate-002' || !parsed.model) {
-          parsed.model = 'gemini-2.5-flash-image';
+        const providerApiKeys: ProviderApiKeys = {
+          ...defaultProviderKeys,
+          ...(parsed.providerApiKeys || {}),
+        };
+        // Always ensure fal.ai key is available if user has not set a different one
+        if (!providerApiKeys.fal_ai) {
+          providerApiKeys.fal_ai = DEFAULT_FAL_KEY;
         }
-        return parsed;
+
+        const savedProfiles: ImageGenProfile[] = Array.isArray(parsed.profiles) ? parsed.profiles : [];
+        const mergedProfiles: ImageGenProfile[] = [...defaultProfiles];
+        for (const sp of savedProfiles) {
+          if (!sp.isBuiltIn && !mergedProfiles.some((p) => p.id === sp.id)) {
+            mergedProfiles.push(sp);
+          }
+        }
+
+        const activeProfileId = parsed.activeProfileId || (parsed.provider === 'gemini_imagen' ? 'gemini-flash-image' : 'fal-flux-realism');
+        const activeProfile = mergedProfiles.find((p) => p.id === activeProfileId) || mergedProfiles[0];
+
+        return {
+          provider: parsed.provider || activeProfile.provider,
+          model: parsed.model || activeProfile.model,
+          apiKey: parsed.apiKey || providerApiKeys[parsed.provider as keyof ProviderApiKeys] || activeProfile.apiKey || '',
+          endpointUrl: parsed.endpointUrl || activeProfile.endpointUrl || 'http://127.0.0.1:7860/sdapi/v1/txt2img',
+          activeProfileId,
+          profiles: mergedProfiles,
+          providerApiKeys,
+          loraUrl: parsed.loraUrl || activeProfile.loraUrl || '',
+          loraScale: parsed.loraScale ?? activeProfile.loraScale ?? 1.0,
+        };
       }
     } catch {}
+
+    const first = defaultProfiles[0]; // fal-flux-realism
     return {
-      provider: 'gemini_imagen',
-      model: 'gemini-2.5-flash-image',
-      apiKey: '',
+      provider: first.provider,
+      model: first.model,
+      apiKey: DEFAULT_FAL_KEY,
       endpointUrl: 'http://127.0.0.1:7860/sdapi/v1/txt2img',
+      activeProfileId: first.id,
+      profiles: defaultProfiles,
+      providerApiKeys: defaultProviderKeys,
+      loraUrl: '',
+      loraScale: 1.0,
     };
+  }
+
+  switchActiveProfile(profileId: string): void {
+    const cur = this.imageGenConfig();
+    const profiles = cur.profiles && cur.profiles.length ? cur.profiles : DEFAULT_IMAGE_GEN_PROFILES;
+    const profile = profiles.find((p) => p.id === profileId);
+    if (!profile) return;
+
+    const providerKeys: ProviderApiKeys = cur.providerApiKeys || { fal_ai: DEFAULT_FAL_KEY, gemini_imagen: '', openai_dalle: '', custom: '' };
+    const effectiveApiKey = profile.apiKey || providerKeys[profile.provider as keyof ProviderApiKeys] || (profile.provider === 'fal_ai' ? DEFAULT_FAL_KEY : '');
+
+    this.imageGenConfig.set({
+      ...cur,
+      activeProfileId: profile.id,
+      provider: profile.provider,
+      model: profile.model,
+      apiKey: effectiveApiKey,
+      endpointUrl: profile.endpointUrl || cur.endpointUrl,
+      loraUrl: profile.loraUrl || '',
+      loraScale: profile.loraScale ?? 1.0,
+    });
+  }
+
+  saveProfile(profile: ImageGenProfile): void {
+    const cur = this.imageGenConfig();
+    const profiles = [...(cur.profiles || DEFAULT_IMAGE_GEN_PROFILES)];
+    const idx = profiles.findIndex((p) => p.id === profile.id);
+    if (idx >= 0) {
+      profiles[idx] = { ...profiles[idx], ...profile };
+    } else {
+      profiles.push(profile);
+    }
+    this.imageGenConfig.set({
+      ...cur,
+      profiles,
+    });
+  }
+
+  deleteProfile(profileId: string): void {
+    const cur = this.imageGenConfig();
+    const profiles = (cur.profiles || DEFAULT_IMAGE_GEN_PROFILES).filter((p) => p.id !== profileId || p.isBuiltIn);
+    let nextActiveId = cur.activeProfileId;
+    if (cur.activeProfileId === profileId) {
+      nextActiveId = profiles[0]?.id || 'fal-flux-realism';
+    }
+    this.imageGenConfig.set({
+      ...cur,
+      profiles,
+      activeProfileId: nextActiveId,
+    });
+    if (nextActiveId) {
+      this.switchActiveProfile(nextActiveId);
+    }
+  }
+
+  setProviderApiKey(provider: ImageGenProvider, key: string): void {
+    const cur = this.imageGenConfig();
+    const keys: ProviderApiKeys = {
+      ...(cur.providerApiKeys || {}),
+      [provider]: key.trim(),
+    };
+    const updateActiveKey = cur.provider === provider;
+    this.imageGenConfig.set({
+      ...cur,
+      providerApiKeys: keys,
+      apiKey: updateActiveKey ? key.trim() : cur.apiKey,
+    });
+  }
+
+  async testFalApiKey(key?: string): Promise<{ success: boolean; name?: string; email?: string; error?: string }> {
+    const curKey = key?.trim() || this.imageGenConfig().providerApiKeys?.fal_ai || this.imageGenConfig().apiKey || DEFAULT_FAL_KEY;
+    if (!curKey) {
+      return { success: false, error: 'Chiave API fal.ai vuota o non inserita.' };
+    }
+    try {
+      const res = await fetch('https://rest.alpha.fal.ai/users/current', {
+        headers: {
+          'Authorization': `Key ${curKey}`,
+        },
+      });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          return { success: false, error: 'Chiave fal.ai non valida o non autorizzata (401/403).' };
+        }
+        return { success: false, error: `Errore verifica API (${res.status}): ${await res.text()}` };
+      }
+      const data = await res.json();
+      return {
+        success: true,
+        name: data.full_name || data.nickname || 'Utente fal.ai',
+        email: data.email,
+      };
+    } catch (e: any) {
+      return { success: false, error: 'Impossibile contattare i server di fal.ai: ' + (e.message || String(e)) };
+    }
   }
 
   getImageGenerationPrompt(spec: ImagePromptSpec, provider?: ImageGenProvider): string {
     const prov = provider || this.imageGenConfig().provider;
 
-    if (prov === 'gemini_imagen') {
-      return this.compileForGpt4oAndGemini(spec);
+    if (prov === 'fal_ai' || prov === 'openai_dalle') {
+      return this.compileForFlux(spec);
     }
 
-    if (prov === 'openai_dalle') {
-      return this.compileForFlux(spec);
+    if (prov === 'gemini_imagen') {
+      return this.compileForGpt4oAndGemini(spec);
     }
 
     if (prov === 'comfyui' || prov === 'custom') {
@@ -2982,7 +3226,118 @@ Instructions:
     const startTime = Date.now();
     const isSceneWithCharacter = spec.character_sheet?.enabled && spec.character_sheet?.mode === 'scene_with_character';
 
-    if (config.provider === 'gemini_imagen') {
+    if (config.provider === 'fal_ai') {
+      const apiKey = config.apiKey || this.imageGenConfig().providerApiKeys?.fal_ai || DEFAULT_FAL_KEY;
+      if (!apiKey) {
+        throw new Error('API Key fal.ai mancante. Inseriscila nelle impostazioni (icona ⚙).');
+      }
+
+      const model = config.model?.trim() || 'fal-ai/flux-realism';
+      const url = `https://fal.run/${model}`;
+
+      // Aspect ratio mapping for fal.ai FLUX
+      let imageSize: any = 'landscape_16_9';
+      if (aspect === '16:9') {
+        imageSize = 'landscape_16_9';
+      } else if (aspect === '4:5') {
+        imageSize = { width: 896, height: 1152 }; // Standard 4:5 vertical portrait (Instagram/Social)
+      } else if (aspect === '9:16') {
+        imageSize = 'portrait_16_9';
+      } else if (aspect === '1:1') {
+        imageSize = 'square_hd';
+      } else if (aspect === '4:3') {
+        imageSize = 'landscape_4_3';
+      } else if (aspect === '3:4') {
+        imageSize = 'portrait_4_3';
+      } else if (aspect === '21:9') {
+        imageSize = { width: 1280, height: 544 };
+      } else if (aspect === '2:3') {
+        imageSize = { width: 768, height: 1152 };
+      } else if (aspect === '3:2') {
+        imageSize = { width: 1152, height: 768 };
+      }
+
+      const bodyPayload: any = {
+        prompt,
+        image_size: imageSize,
+        num_images: 1,
+        enable_safety_checker: false,
+        sync_mode: true,
+      };
+
+      if (config.loraUrl?.trim()) {
+        bodyPayload.loras = [
+          {
+            path: config.loraUrl.trim(),
+            scale: config.loraScale ?? 1.0,
+          },
+        ];
+      }
+
+      if (model.includes('schnell')) {
+        bodyPayload.num_inference_steps = 4;
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Key ${apiKey.trim()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bodyPayload),
+        signal,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        let message = `Errore generazione fal.ai (${res.status})`;
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.detail) {
+            if (typeof parsed.detail === 'string') message = parsed.detail;
+            else if (Array.isArray(parsed.detail)) message = parsed.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+          } else if (parsed.message) {
+            message = parsed.message;
+          }
+        } catch {}
+        if (res.status === 401 || res.status === 403) {
+          message = 'Chiave fal.ai non valida o non autorizzata. Verifica la tua chiave nelle impostazioni (⚙).';
+        } else if (res.status === 402) {
+          message = 'Credito fal.ai esaurito. Ricarica il tuo conto su fal.ai.';
+        }
+        throw new Error(message);
+      }
+
+      const data = await res.json();
+      const imgItem = data?.images?.[0];
+      if (!imgItem?.url) {
+        throw new Error('Nessuna immagine restituita dal modello fal.ai.');
+      }
+
+      // Convert image to local dataUrl so it can be saved locally, cached, and used for character sheet bindings
+      let dataUrl = imgItem.url;
+      try {
+        const imgRes = await fetch(imgItem.url);
+        const blob = await imgRes.blob();
+        dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      } catch (e) {
+        console.warn('Fallback to remote fal.media URL:', e);
+      }
+
+      return {
+        dataUrl,
+        mimeType: imgItem.content_type || 'image/jpeg',
+        model,
+        prompt,
+        aspectRatio: aspect,
+        timeMs: Date.now() - startTime,
+        timestamp: Date.now(),
+      };
+    } else if (config.provider === 'gemini_imagen') {
       const apiKey = config.apiKey || this.aiConfig().apiKey;
       if (!apiKey) {
         throw new Error('API Key mancante per Google Gemini / Imagen. Inseriscila nelle impostazioni (icona ⚙).');
