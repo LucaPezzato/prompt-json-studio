@@ -1518,19 +1518,28 @@ export class PromptService {
       const res = await fetch('/env.json');
       if (res.ok) {
         const data = await res.json();
-        if (data.GEMINI_API_KEY) {
+        const geminiKey = data.GEMINI_API_KEY || '';
+        if (geminiKey) {
           this.aiConfig.update((c) => ({
             ...c,
-            apiKey: c.apiKey || data.GEMINI_API_KEY,
+            apiKey: c.apiKey || geminiKey,
             model: (c.model === 'imagen-3.0-generate-002' || !c.model || c.model === 'gemini-2.5-flash' || c.model === 'gemini-1.5-flash' || c.model === 'gemini-pro')
               ? (data.DEFAULT_MODEL || 'gemini-3.8-flash')
               : c.model,
           }));
-          this.imageGenConfig.update((c) => ({
-            ...c,
-            apiKey: c.apiKey || data.GEMINI_API_KEY,
-            model: (c.model === 'imagen-3.0-generate-002' || !c.model) ? 'gemini-2.5-flash-image' : c.model,
-          }));
+          this.imageGenConfig.update((c) => {
+            const providerApiKeys: ProviderApiKeys = {
+              ...(c.providerApiKeys || {}),
+              gemini_imagen: c.providerApiKeys?.gemini_imagen || geminiKey,
+              fal_ai: c.providerApiKeys?.fal_ai || DEFAULT_FAL_KEY,
+            };
+            return {
+              ...c,
+              providerApiKeys,
+              apiKey: (c.provider === 'gemini_imagen' && !c.apiKey) ? geminiKey : c.apiKey,
+              model: (c.model === 'imagen-3.0-generate-002' || !c.model) ? 'gemini-2.5-flash-image' : c.model,
+            };
+          });
         }
       }
     } catch {}
@@ -3047,9 +3056,10 @@ Instructions:
 
   private loadImageGenConfig(): ImageGenConfig {
     const defaultProfiles = [...DEFAULT_IMAGE_GEN_PROFILES];
+    const defaultGeminiKey = this.loadAiConfig()?.apiKey || '';
     const defaultProviderKeys: ProviderApiKeys = {
       fal_ai: DEFAULT_FAL_KEY,
-      gemini_imagen: '',
+      gemini_imagen: defaultGeminiKey,
       openai_dalle: '',
       custom: '',
     };
@@ -3065,6 +3075,10 @@ Instructions:
         // Always ensure fal.ai key is available if user has not set a different one
         if (!providerApiKeys.fal_ai) {
           providerApiKeys.fal_ai = DEFAULT_FAL_KEY;
+        }
+        // Always ensure gemini key is available if user has not set a different one
+        if (!providerApiKeys.gemini_imagen) {
+          providerApiKeys.gemini_imagen = defaultGeminiKey;
         }
 
         const savedProfiles: ImageGenProfile[] = Array.isArray(parsed.profiles) ? parsed.profiles : [];
@@ -3112,8 +3126,16 @@ Instructions:
     const profile = profiles.find((p) => p.id === profileId);
     if (!profile) return;
 
-    const providerKeys: ProviderApiKeys = cur.providerApiKeys || { fal_ai: DEFAULT_FAL_KEY, gemini_imagen: '', openai_dalle: '', custom: '' };
-    const effectiveApiKey = profile.apiKey || providerKeys[profile.provider as keyof ProviderApiKeys] || (profile.provider === 'fal_ai' ? DEFAULT_FAL_KEY : '');
+    const defaultGeminiKey = this.aiConfig().apiKey || '';
+    const providerKeys: ProviderApiKeys = cur.providerApiKeys || {
+      fal_ai: DEFAULT_FAL_KEY,
+      gemini_imagen: defaultGeminiKey,
+      openai_dalle: '',
+      custom: '',
+    };
+    const effectiveApiKey = profile.apiKey ||
+      providerKeys[profile.provider as keyof ProviderApiKeys] ||
+      (profile.provider === 'fal_ai' ? DEFAULT_FAL_KEY : (profile.provider === 'gemini_imagen' ? defaultGeminiKey : ''));
 
     this.imageGenConfig.set({
       ...cur,
@@ -3198,6 +3220,30 @@ Instructions:
       };
     } catch (e: any) {
       return { success: false, error: 'Impossibile contattare i server di fal.ai: ' + (e.message || String(e)) };
+    }
+  }
+
+  async testGeminiApiKey(key?: string): Promise<{ success: boolean; modelsCount?: number; error?: string }> {
+    const curKey = key?.trim() || this.imageGenConfig().providerApiKeys?.gemini_imagen || this.aiConfig().apiKey || '';
+    if (!curKey) {
+      return { success: false, error: 'Chiave API Google Gemini vuota o non inserita.' };
+    }
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(curKey)}`);
+      if (!res.ok) {
+        if (res.status === 400) {
+          return { success: false, error: 'Chiave Gemini non valida o non autorizzata (400).' };
+        }
+        return { success: false, error: `Errore verifica API Gemini (${res.status}): ${await res.text()}` };
+      }
+      const data = await res.json();
+      const count = Array.isArray(data.models) ? data.models.length : 0;
+      return {
+        success: true,
+        modelsCount: count,
+      };
+    } catch (e: any) {
+      return { success: false, error: 'Impossibile contattare i server Google Gemini: ' + (e.message || String(e)) };
     }
   }
 

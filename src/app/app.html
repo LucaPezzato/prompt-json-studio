@@ -1540,9 +1540,12 @@
             <strong>Google Gemini / Imagen API Key</strong>
             <span class="badge-multimodal">Grounding Scheda</span>
           </div>
+          <button type="button" class="btn small secondary" [disabled]="geminiTestStatus().loading" (click)="testGeminiConnection()">
+            {{ geminiTestStatus().loading ? 'Verifica in corso…' : '🔍 Verifica Chiave' }}
+          </button>
         </div>
         <p class="muted" style="font-size: 12px; margin-bottom: 8px;">
-          Utilizzata per <b>gemini-2.5-flash-image</b> e <b>gemini-3-pro-image</b>. Se impostata in <code>env.json</code>, viene caricata automaticamente.
+          Utilizzata per <b>gemini-2.5-flash-image</b>, <b>gemini-3-pro-image</b>, Magic Expand e Analisi Biometrica. Caricata automaticamente da <code>public/env.json</code>.
         </p>
         <div class="key-input-wrap">
           <input
@@ -1553,6 +1556,11 @@
             class="key-input"
           />
         </div>
+        @if (geminiTestStatus().result) {
+          <div class="key-test-feedback" [class.success]="geminiTestStatus().success" [class.error]="!geminiTestStatus().success">
+            {{ geminiTestStatus().result }}
+          </div>
+        }
       </div>
 
       <!-- OPENAI KEY -->

@@ -77,6 +77,7 @@ export class App {
   readonly openaiKeyInput = signal<string>('');
   readonly showApiKeyValues = signal<boolean>(false);
   readonly falTestStatus = signal<{ loading: boolean; result?: string; success?: boolean }>({ loading: false });
+  readonly geminiTestStatus = signal<{ loading: boolean; result?: string; success?: boolean }>({ loading: false });
 
   // Custom Profile Form signals
   readonly editProfileId = signal<string | null>(null);
@@ -741,10 +742,12 @@ export class App {
     this.imgLoraUrl.set(cfg.loraUrl || '');
     this.imgLoraScale.set(cfg.loraScale ?? 1.0);
     this.falKeyInput.set(cfg.providerApiKeys?.fal_ai || '');
-    this.geminiKeyInput.set(cfg.providerApiKeys?.gemini_imagen || '');
+    const geminiKey = cfg.providerApiKeys?.gemini_imagen || this.svc.aiConfig().apiKey || '';
+    this.geminiKeyInput.set(geminiKey);
     this.openaiKeyInput.set(cfg.providerApiKeys?.openai_dalle || '');
     this.imgSettingsTab.set('profiles');
     this.falTestStatus.set({ loading: false });
+    this.geminiTestStatus.set({ loading: false });
     this.showImageGenSettings.set(true);
   }
 
@@ -779,12 +782,35 @@ export class App {
     }
   }
 
+  async testGeminiConnection(): Promise<void> {
+    this.geminiTestStatus.set({ loading: true, result: 'Verifica account Google Gemini in corso…' });
+    const key = this.geminiKeyInput().trim() || this.providerApiKeys().gemini_imagen || this.svc.aiConfig().apiKey;
+    const res = await this.svc.testGeminiApiKey(key);
+    if (res.success) {
+      this.geminiTestStatus.set({
+        loading: false,
+        success: true,
+        result: `✅ Connessione Gemini verificata! (${res.modelsCount || 0} modelli autorizzati disponibili)`,
+      });
+      this.showToast('✅ Chiave Gemini verificata con successo!');
+    } else {
+      this.geminiTestStatus.set({
+        loading: false,
+        success: false,
+        result: `❌ Errore Gemini: ${res.error}`,
+      });
+      this.showToast('❌ Errore verifica chiave Gemini');
+    }
+  }
+
   saveGlobalApiKeys(): void {
     if (this.falKeyInput().trim()) {
       this.svc.setProviderApiKey('fal_ai', this.falKeyInput().trim());
     }
     if (this.geminiKeyInput().trim()) {
-      this.svc.setProviderApiKey('gemini_imagen', this.geminiKeyInput().trim());
+      const gKey = this.geminiKeyInput().trim();
+      this.svc.setProviderApiKey('gemini_imagen', gKey);
+      this.svc.aiConfig.update((c) => ({ ...c, apiKey: gKey }));
     }
     if (this.openaiKeyInput().trim()) {
       this.svc.setProviderApiKey('openai_dalle', this.openaiKeyInput().trim());
