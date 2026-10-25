@@ -4344,13 +4344,63 @@ app-output-panel {
   justify-content: center;
 }
 
-.gc-btn-group {
+.gc-btn-row {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
-.gc-btn-group button {
+.gc-action-sub-btn {
   flex: 1;
+  min-width: 60px;
+  justify-content: center;
+  font-size: 11.5px !important;
+  padding: 6px 6px !important;
+}
+
+.gc-delete-sub-btn {
+  background: rgba(255, 85, 85, 0.12) !important;
+  border: 1px solid rgba(255, 85, 85, 0.45) !important;
+  color: #ff6e6e !important;
+  font-weight: 600 !important;
+  font-size: 11.5px !important;
+  padding: 6px 10px !important;
+  justify-content: center;
+}
+
+.gc-delete-sub-btn:hover {
+  background: #ff5555 !important;
+  color: #ffffff !important;
+  border-color: #ff5555 !important;
+}
+
+.gc-delete-corner-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  background: rgba(30, 31, 41, 0.88);
+  border: 1px solid rgba(255, 85, 85, 0.5);
+  color: #ff5555;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(4px);
+  padding: 0;
+}
+
+.gc-delete-corner-btn:hover {
+  background: #ff5555;
+  color: #ffffff;
+  border-color: #ff5555;
+  transform: scale(1.1);
+  box-shadow: 0 4px 14px rgba(255, 85, 85, 0.5);
 }
 
 .gallery-empty-state {

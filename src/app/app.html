@@ -2412,6 +2412,14 @@
           <div class="gc-image-wrap" (click)="openLightboxForUrl(item.dataUrl)" title="Clicca per ingrandire a schermo intero">
             <img [src]="item.dataUrl" [alt]="item.subjectName" class="gc-thumb" />
             <span class="gc-aspect-badge">{{ item.aspectRatio }}</span>
+            <button
+              type="button"
+              class="gc-delete-corner-btn"
+              (click)="$event.stopPropagation(); deleteSavedGeneration(item.id)"
+              title="Elimina questo scatto dall'archivio"
+            >
+              🗑️
+            </button>
             <div class="gc-overlay">
               <span>🔍 Ingrandisci</span>
             </div>
@@ -2441,10 +2449,10 @@
               >
                 ↺ Ripristina Setup
               </button>
-              <div class="gc-btn-group">
+              <div class="gc-btn-row">
                 <button
                   type="button"
-                  class="btn small ghost"
+                  class="btn small ghost gc-action-sub-btn"
                   (click)="downloadSavedGenerationImage(item)"
                   title="Scarica immagine PNG"
                 >
@@ -2452,7 +2460,7 @@
                 </button>
                 <button
                   type="button"
-                  class="btn small ghost"
+                  class="btn small ghost gc-action-sub-btn"
                   (click)="exportSavedGenerationJson(item)"
                   title="Esporta configurazione JSON"
                 >
@@ -2461,20 +2469,20 @@
                 @if (desktop.isDesktopApp()) {
                   <button
                     type="button"
-                    class="btn small ghost"
+                    class="btn small ghost gc-action-sub-btn"
                     (click)="openDesktopStorageFolder(item.subjectName)"
-                    title="Apri la cartella di questo soggetto su disco"
+                    title="Apri la cartella di questo soggetto su disco (~/Pictures/PromptStudio)"
                   >
-                    📂
+                    📂 Disco
                   </button>
                 }
                 <button
                   type="button"
-                  class="btn small ghost danger"
+                  class="btn small ghost danger gc-delete-sub-btn"
                   (click)="deleteSavedGeneration(item.id)"
                   title="Elimina questo scatto dall'archivio"
                 >
-                  🗑️
+                  🗑️ Elimina
                 </button>
               </div>
             </div>
