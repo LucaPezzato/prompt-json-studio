@@ -383,3 +383,19 @@ export interface GeneratedImageResult {
   timeMs: number;
   timestamp: number;
 }
+
+export interface SavedGenerationItem {
+  id: string;
+  timestamp: number;
+  subjectName: string;
+  characterId?: string;
+  mode: 'sheet_generation' | 'scene_with_character' | 'standard_scene';
+  model: string;
+  prompt: string;
+  dataUrl: string;
+  mimeType: string;
+  aspectRatio: string;
+  timeMs: number;
+  specSnapshot: ImagePromptSpec;
+  favorite?: boolean;
+}

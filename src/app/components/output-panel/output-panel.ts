@@ -259,6 +259,14 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
               >
                 🔄 Rigenera
               </button>
+              <button
+                type="button"
+                class="img-action-btn gallery-btn"
+                (click)="openGallery.emit()"
+                title="Apri l'archivio storico di tutti gli scatti salvati per soggetto"
+              >
+                🖼️ Archivio @if (historyCount() > 0) { ({{ historyCount() }}) }
+              </button>
             </div>
 
             @if (isSheetMode()) {
@@ -329,6 +337,11 @@ const TABS: { key: OutputTab; label: string; hint: string }[] = [
             <button type="button" class="btn-empty-generate" (click)="onGenerateClick()">
               ✨ Avvia Generazione con {{ activeEngineLabel() }}
             </button>
+            @if (historyCount() > 0) {
+              <button type="button" class="btn ghost" style="margin-top: 8px; width: 100%; justify-content: center;" (click)="openGallery.emit()">
+                🖼️ Esplora Archivio Scatti ({{ historyCount() }})
+              </button>
+            }
           </div>
         }
       </div>
@@ -438,6 +451,7 @@ export class OutputPanel {
   readonly activeProfileId = input<string>('');
   readonly imageGenError = input<string | null>(null);
   readonly elapsedGenTime = input<number>(0);
+  readonly historyCount = input<number>(0);
 
   // Character Sheet Attachment inputs
   readonly characterSheetImage = input<string | null>(null);
@@ -456,6 +470,7 @@ export class OutputPanel {
   readonly openLightbox = output<void>();
   readonly download = output<void>();
   readonly copyImage = output<void>();
+  readonly openGallery = output<void>();
 
   // Character Sheet Attachment outputs
   readonly openSheetLightbox = output<void>();

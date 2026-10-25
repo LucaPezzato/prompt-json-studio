@@ -40,6 +40,19 @@
       </button>
     }
 
+    <!-- Generation Archive / Gallery Button -->
+    <button
+      type="button"
+      class="btn ghost gallery-open-btn"
+      (click)="openGallery()"
+      title="Apri l'archivio storico di tutte le foto e configurazioni salvate in automatico per soggetto"
+    >
+      🖼️ Archivio Scatti
+      @if (historyItems().length > 0) {
+        <span class="gallery-count-badge">{{ historyItems().length }}</span>
+      }
+    </button>
+
     <!-- Compact Project Menu Dropdown -->
     <div class="project-dropdown-wrap">
       <button
@@ -1375,6 +1388,7 @@
     [activeProfileId]="activeProfileId()"
     [imageGenError]="imageGenError()"
     [elapsedGenTime]="elapsedGenSeconds()"
+    [historyCount]="historyItems().length"
     [characterSheetImage]="boundCharacterImage()"
     [characterName]="boundCharacterName()"
     [isSceneWithCharacter]="isSceneWithCharacter()"
@@ -1387,6 +1401,7 @@
     (switchProfile)="onSwitchProfile($event)"
     (openSettings)="openImageGenSettings()"
     (openLightbox)="openImageLightbox()"
+    (openGallery)="openGallery()"
     (download)="downloadGeneratedImage()"
     (copyImage)="copyGeneratedImage()"
     (openSheetLightbox)="openBoundSheetLightbox()"
@@ -2295,24 +2310,161 @@
   </div>
 </app-modal>
 
+<!-- Gallery / Generation Archive Modal -->
+<app-modal title="🖼️ Archivio Scatti &amp; Configurazioni per Soggetto" [wide]="true" [(open)]="showGalleryModal">
+  <div class="gallery-toolbar">
+    <div class="gallery-filters-left">
+      <div class="gallery-filter-item">
+        <label>Soggetto:</label>
+        <select [value]="gallerySelectedSubject()" (change)="gallerySelectedSubject.set($any($event.target).value)">
+          <option value="all">Tutti i Soggetti ({{ historyItems().length }})</option>
+          @for (sub of uniqueSubjects(); track sub.name) {
+            <option [value]="sub.name">{{ sub.name }} ({{ sub.count }})</option>
+          }
+        </select>
+      </div>
+
+      <div class="gallery-filter-item">
+        <label>Tipologia:</label>
+        <select [value]="gallerySelectedMode()" (change)="gallerySelectedMode.set($any($event.target).value)">
+          <option value="all">Tutti gli scatti</option>
+          <option value="scene">🎬 Scene Fotografiche</option>
+          <option value="sheet">👤 Schede Personaggio</option>
+        </select>
+      </div>
+
+      <div class="gallery-search-wrap">
+        <input
+          type="text"
+          placeholder="Cerca per prompt, modello o soggetto..."
+          [value]="gallerySearchQuery()"
+          (input)="gallerySearchQuery.set($any($event.target).value)"
+          class="gallery-search-input"
+        />
+        @if (gallerySearchQuery()) {
+          <button type="button" class="btn-clear-search" (click)="gallerySearchQuery.set('')">✕</button>
+        }
+      </div>
+    </div>
+
+    @if (historyItems().length > 0) {
+      <div class="gallery-actions-right">
+        <button
+          type="button"
+          class="btn small ghost danger"
+          (click)="clearAllGenerations()"
+          title="Elimina tutti gli scatti salvati in archivio"
+        >
+          🗑️ Svuota Archivio
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (filteredGenerations().length === 0) {
+    <div class="gallery-empty-state">
+      <span class="ges-icon">🖼️</span>
+      <h3>Nessun rendering trovato</h3>
+      <p class="muted">
+        @if (historyItems().length === 0) {
+          Genera la tua prima immagine con il pulsante <b>🎨 Genera Immagine</b>. Ogni scatto verrà archiviato automaticamente qui con la foto in alta risoluzione e tutta la configurazione usata.
+        } @else {
+          Nessuno scatto corrisponde ai filtri selezionati. Prova a selezionare "Tutti i Soggetti" o a cancellare la ricerca.
+        }
+      </p>
+    </div>
+  } @else {
+    <div class="gallery-grid">
+      @for (item of filteredGenerations(); track item.id) {
+        <div class="gallery-card">
+          <div class="gc-image-wrap" (click)="openLightboxForUrl(item.dataUrl)" title="Clicca per ingrandire a schermo intero">
+            <img [src]="item.dataUrl" [alt]="item.subjectName" class="gc-thumb" />
+            <span class="gc-aspect-badge">{{ item.aspectRatio }}</span>
+            <div class="gc-overlay">
+              <span>🔍 Ingrandisci</span>
+            </div>
+          </div>
+
+          <div class="gc-body">
+            <div class="gc-header">
+              <span class="gc-subject-badge" [title]="item.subjectName">{{ item.subjectName }}</span>
+              <span class="gc-model-tag">{{ item.model.replace('fal-ai/', '').replace('gemini-', '') }}</span>
+            </div>
+
+            <p class="gc-prompt-snippet" [title]="item.prompt">
+              {{ item.prompt }}
+            </p>
+
+            <div class="gc-meta-row">
+              <span class="gc-date">{{ formatDate(item.timestamp) }}</span>
+              <span class="gc-time">{{ (item.timeMs / 1000).toFixed(1) }}s</span>
+            </div>
+
+            <div class="gc-actions">
+              <button
+                type="button"
+                class="btn small primary gc-restore-btn"
+                (click)="restoreGenerationSpec(item)"
+                title="Ripristina la configurazione completa (soggetto, camera, luci, stile) per continuare a scattare"
+              >
+                ↺ Ripristina Setup
+              </button>
+              <div class="gc-btn-group">
+                <button
+                  type="button"
+                  class="btn small ghost"
+                  (click)="downloadSavedGenerationImage(item)"
+                  title="Scarica immagine PNG"
+                >
+                  💾 PNG
+                </button>
+                <button
+                  type="button"
+                  class="btn small ghost"
+                  (click)="exportSavedGenerationJson(item)"
+                  title="Esporta configurazione JSON"
+                >
+                  📥 JSON
+                </button>
+                <button
+                  type="button"
+                  class="btn small ghost danger"
+                  (click)="deleteSavedGeneration(item.id)"
+                  title="Elimina questo scatto dall'archivio"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</app-modal>
+
 <!-- Modal: Lightbox Immagine Generata a Schermo Intero -->
-@if (showImageLightbox() && generatedImage()) {
-  <div class="lightbox-overlay" (click)="showImageLightbox.set(false)">
+@if (showImageLightbox() && (lightboxImageUrl() || generatedImage()?.dataUrl)) {
+  <div class="lightbox-overlay" (click)="showImageLightbox.set(false); lightboxImageUrl.set(null)">
     <div class="lightbox-content" (click)="$event.stopPropagation()">
       <div class="lightbox-header">
         <div class="lightbox-title">
-          <span class="lightbox-badge">{{ generatedImage()!.model }}</span>
-          <span>📐 {{ generatedImage()!.aspectRatio }}</span>
-          <span>⚡ {{ (generatedImage()!.timeMs / 1000).toFixed(1) }}s</span>
+          <span class="lightbox-badge">{{ lightboxImageUrl() ? 'Dettaglio Archivio' : generatedImage()?.model }}</span>
+          @if (generatedImage() && !lightboxImageUrl()) {
+            <span>📐 {{ generatedImage()!.aspectRatio }}</span>
+            <span>⚡ {{ (generatedImage()!.timeMs / 1000).toFixed(1) }}s</span>
+          }
         </div>
         <div class="lightbox-actions">
-          <button type="button" class="btn secondary sm" (click)="downloadGeneratedImage()">💾 Scarica</button>
-          <button type="button" class="btn secondary sm" (click)="copyGeneratedImage()">📋 Copia</button>
-          <button type="button" class="btn-close-lightbox" (click)="showImageLightbox.set(false)">✕</button>
+          @if (generatedImage() && !lightboxImageUrl()) {
+            <button type="button" class="btn secondary sm" (click)="downloadGeneratedImage()">💾 Scarica</button>
+            <button type="button" class="btn secondary sm" (click)="copyGeneratedImage()">📋 Copia</button>
+          }
+          <button type="button" class="btn-close-lightbox" (click)="showImageLightbox.set(false); lightboxImageUrl.set(null)">✕</button>
         </div>
       </div>
       <div class="lightbox-image-wrap">
-        <img [src]="generatedImage()!.dataUrl" alt="Immagine generata a risoluzione intera" class="lightbox-full-img" />
+        <img [src]="lightboxImageUrl() || generatedImage()!.dataUrl" alt="Immagine generata a risoluzione intera" class="lightbox-full-img" />
       </div>
     </div>
   </div>

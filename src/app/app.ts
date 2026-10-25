@@ -12,7 +12,8 @@ import { TemplateSidebar } from './components/template-sidebar/template-sidebar'
 import { OutputPanel, OutputTab, CompiledOutputs } from './components/output-panel/output-panel';
 import { PromptStore } from './services/prompt.store';
 import { PromptService } from './services/prompt.service';
-import { CharacterLayoutMode, CharacterPhotoItem, CharacterSheetBlock, CharacterWorkflowMode, CustomProperty, GeneratedImageResult, ImageGenConfig, ImageGenProfile, ImageGenProvider, LAYOUT_MODE_VIEWS, PromptTemplate, ProviderApiKeys, SavedCharacter } from './models/prompt.model';
+import { CharacterLayoutMode, CharacterPhotoItem, CharacterSheetBlock, CharacterWorkflowMode, CustomProperty, GeneratedImageResult, ImageGenConfig, ImageGenProfile, ImageGenProvider, LAYOUT_MODE_VIEWS, PromptTemplate, ProviderApiKeys, SavedCharacter, SavedGenerationItem } from './models/prompt.model';
+import { GenerationHistoryService } from './services/generation-history.service';
 
 @Component({
   selector: 'app-root',
@@ -65,6 +66,49 @@ export class App {
   readonly imgLoraScale = signal<number>(1.0);
   private abortGenController: AbortController | null = null;
   private genTimerId: any = null;
+
+  // Generation Archive / History
+  readonly historySvc = inject(GenerationHistoryService);
+  readonly historyItems = this.historySvc.items;
+  readonly showGalleryModal = signal<boolean>(false);
+  readonly gallerySelectedSubject = signal<string>('all');
+  readonly gallerySearchQuery = signal<string>('');
+  readonly gallerySelectedMode = signal<'all' | 'sheet' | 'scene'>('all');
+  readonly lightboxImageUrl = signal<string | null>(null);
+
+  readonly uniqueSubjects = computed(() => {
+    const items = this.historyItems();
+    const map = new Map<string, number>();
+    for (const item of items) {
+      const name = item.subjectName || 'Senza Nome';
+      map.set(name, (map.get(name) || 0) + 1);
+    }
+    return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
+  });
+
+  readonly filteredGenerations = computed(() => {
+    let list = this.historyItems();
+    const sub = this.gallerySelectedSubject();
+    if (sub !== 'all') {
+      list = list.filter((x) => x.subjectName === sub);
+    }
+    const mode = this.gallerySelectedMode();
+    if (mode === 'sheet') {
+      list = list.filter((x) => x.mode === 'sheet_generation');
+    } else if (mode === 'scene') {
+      list = list.filter((x) => x.mode !== 'sheet_generation');
+    }
+    const q = this.gallerySearchQuery().toLowerCase().trim();
+    if (q) {
+      list = list.filter(
+        (x) =>
+          x.subjectName.toLowerCase().includes(q) ||
+          x.model.toLowerCase().includes(q) ||
+          x.prompt.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  });
 
   // Profiles & API Keys management signals
   readonly imageGenProfiles = computed(() => this.svc.imageGenConfig().profiles || []);
@@ -990,6 +1034,33 @@ export class App {
       const res = await this.svc.generateImage(this.spec(), undefined, this.abortGenController.signal);
       this.generatedImage.set(res);
       this.imageGenError.set(null);
+
+      const curSpec = this.spec();
+      const isSheet = this.isSheetMode() || curSpec.character_sheet?.mode === 'sheet_generation';
+      const isSceneWithChar = curSpec.character_sheet?.enabled && curSpec.character_sheet?.mode === 'scene_with_character';
+      let subjectName = 'Soggetto Generale';
+      if (isSheet || isSceneWithChar) {
+        subjectName = curSpec.character_sheet?.character_name?.trim() || 'Personaggio Senza Nome';
+      } else if (curSpec.subject?.primary_entity?.trim()) {
+        subjectName = curSpec.subject.primary_entity.trim();
+      }
+
+      // Automatically archive this generation with photo and full spec configuration
+      this.historySvc.addGeneration({
+        id: `gen-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        timestamp: Date.now(),
+        subjectName,
+        characterId: this.activeCharacterId() || undefined,
+        mode: isSheet ? 'sheet_generation' : (isSceneWithChar ? 'scene_with_character' : 'standard_scene'),
+        model: res.model,
+        prompt: res.prompt,
+        dataUrl: res.dataUrl,
+        mimeType: res.mimeType,
+        aspectRatio: res.aspectRatio,
+        timeMs: res.timeMs,
+        specSnapshot: structuredClone(curSpec),
+      });
+
       if (this.isSheetMode() || this.spec().character_sheet.mode === 'sheet_generation') {
         const charName = this.spec().character_sheet.character_name.trim();
         const optimized = await this.optimizeImageDataUrl(res.dataUrl);
@@ -1001,9 +1072,9 @@ export class App {
           const saved = this.svc.saveCharacter(charName, this.spec().character_sheet, optimized);
           this.activeCharacterId.set(saved.id);
         }
-        this.showToast(`🎨 Scheda generata e associata a "${charName || 'Personaggio'}"!`);
+        this.showToast(`🎨 Scheda generata e archiviata per "${charName || 'Personaggio'}"!`);
       } else {
-        this.showToast(`🎨 Immagine generata con successo (${(res.timeMs / 1000).toFixed(1)}s)`);
+        this.showToast(`🎨 Immagine generata e archiviata per "${subjectName}" (${(res.timeMs / 1000).toFixed(1)}s)`);
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
@@ -1561,6 +1632,66 @@ export class App {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  openGallery(subjectFilter?: string): void {
+    if (subjectFilter) {
+      this.gallerySelectedSubject.set(subjectFilter);
+    } else {
+      this.gallerySelectedSubject.set('all');
+    }
+    this.gallerySearchQuery.set('');
+    this.showGalleryModal.set(true);
+  }
+
+  openLightboxForUrl(url: string): void {
+    this.lightboxImageUrl.set(url);
+    this.showImageLightbox.set(true);
+  }
+
+  restoreGenerationSpec(item: SavedGenerationItem): void {
+    if (!item.specSnapshot) {
+      this.showToast('Nessuna configurazione trovata per questo scatto.');
+      return;
+    }
+    this.store.replace(item.specSnapshot);
+    this.generatedImage.set({
+      dataUrl: item.dataUrl,
+      mimeType: item.mimeType,
+      model: item.model,
+      prompt: item.prompt,
+      aspectRatio: item.aspectRatio,
+      timeMs: item.timeMs,
+      timestamp: item.timestamp,
+    });
+    this.showGalleryModal.set(false);
+    this.showToast(`↺ Setup ripristinato dallo scatto di "${item.subjectName}"!`);
+  }
+
+  deleteSavedGeneration(id: string): void {
+    this.historySvc.deleteGeneration(id);
+    this.showToast('🗑️ Scatto rimosso dall\'archivio');
+  }
+
+  downloadSavedGenerationImage(item: SavedGenerationItem): void {
+    this.historySvc.downloadImage(item);
+  }
+
+  exportSavedGenerationJson(item: SavedGenerationItem): void {
+    this.historySvc.exportConfigJson(item);
+    this.showToast(`📥 Configurazione di "${item.subjectName}" esportata in JSON`);
+  }
+
+  clearAllGenerations(): void {
+    if (confirm('Sei sicuro di voler eliminare tutti gli scatti dall\'archivio locale?')) {
+      this.historySvc.clearAll();
+      this.showToast('🗑️ Archivio scatti svuotato');
+    }
+  }
+
+  formatDate(ts: number): string {
+    const d = new Date(ts);
+    return `${d.toLocaleDateString('it-IT')} ${d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
   }
 
   onKeydown(ev: KeyboardEvent): void {
